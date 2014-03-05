@@ -9372,7 +9372,7 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <instance part="SUPPLY7" gate="GND" x="-45.72" y="63.5"/>
 <instance part="SUPPLY8" gate="GND" x="-99.06" y="63.5"/>
 <instance part="SUPPLY9" gate="GND" x="-152.4" y="96.52"/>
-<instance part="D2" gate="G$1" x="-111.76" y="127"/>
+<instance part="D2" gate="G$1" x="-109.22" y="127"/>
 <instance part="MP1" gate="G$1" x="-99.06" y="106.68" rot="R90"/>
 <instance part="SUPPLY12" gate="GND" x="-48.26" y="-48.26"/>
 <instance part="SUPPLY14" gate="GND" x="-109.22" y="-15.24"/>
@@ -10377,7 +10377,7 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <wire x1="-45.72" y1="88.9" x2="-45.72" y2="114.3" width="0.1524" layer="91"/>
 <junction x="-45.72" y="114.3"/>
 <pinref part="D2" gate="G$1" pin="C"/>
-<wire x1="-109.22" y1="127" x2="-68.58" y2="127" width="0.1524" layer="91"/>
+<wire x1="-106.68" y1="127" x2="-68.58" y2="127" width="0.1524" layer="91"/>
 <wire x1="-68.58" y1="127" x2="-68.58" y2="114.3" width="0.1524" layer="91"/>
 <junction x="-68.58" y="114.3"/>
 <pinref part="MP1" gate="G$1" pin="S"/>
@@ -10392,14 +10392,6 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <wire x1="109.22" y1="127" x2="127" y2="127" width="0.1524" layer="91"/>
 <wire x1="127" y1="127" x2="127" y2="78.74" width="0.1524" layer="91"/>
 <junction x="109.22" y="127"/>
-</segment>
-<segment>
-<pinref part="D2" gate="G$1" pin="A"/>
-<wire x1="-134.62" y1="127" x2="-114.3" y2="127" width="0.1524" layer="91"/>
-<pinref part="12VDC" gate="G$1" pin="TIP"/>
-<wire x1="-149.86" y1="134.62" x2="-134.62" y2="134.62" width="0.1524" layer="91"/>
-<wire x1="-134.62" y1="134.62" x2="-134.62" y2="127" width="0.1524" layer="91"/>
-<label x="-149.86" y="137.16" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="DIR" class="0">
@@ -10515,6 +10507,16 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <pinref part="A4988_CARRIER" gate="G$1" pin="RST"/>
 <pinref part="R5" gate="G$1" pin="1"/>
 <wire x1="86.36" y1="68.58" x2="60.96" y2="68.58" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="VIN" class="0">
+<segment>
+<pinref part="D2" gate="G$1" pin="A"/>
+<wire x1="-134.62" y1="127" x2="-111.76" y2="127" width="0.1524" layer="91"/>
+<pinref part="12VDC" gate="G$1" pin="TIP"/>
+<wire x1="-149.86" y1="134.62" x2="-134.62" y2="134.62" width="0.1524" layer="91"/>
+<wire x1="-134.62" y1="134.62" x2="-134.62" y2="127" width="0.1524" layer="91"/>
+<label x="-149.86" y="137.16" size="1.778" layer="95"/>
 </segment>
 </net>
 </nets>
