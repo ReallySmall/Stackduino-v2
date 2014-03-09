@@ -1391,16 +1391,6 @@ SMT- SWCH-08247</description>
 <library name="Stackduino">
 <packages>
 <package name="DIGOLE_OLED">
-<pad name="VCC" x="12.521" y="11.916" drill="0.8" shape="long" rot="R90"/>
-<pad name="DATA" x="9.981" y="11.916" drill="0.8" shape="long" rot="R90"/>
-<pad name="CLK" x="7.441" y="11.916" drill="0.8" shape="long" rot="R90"/>
-<pad name="SS" x="4.901" y="11.916" drill="0.8" shape="long" rot="R90"/>
-<pad name="OUT1" x="-6.306" y="12.265" drill="0.8" rot="R90"/>
-<pad name="OUT3" x="-4.306" y="12.265" drill="0.8" rot="R90"/>
-<pad name="OUT4" x="-2.306" y="12.265" drill="0.8" rot="R90"/>
-<pad name="OUT5" x="-2.306" y="10.265" drill="0.8" rot="R90"/>
-<pad name="OUT2" x="-4.306" y="10.265" drill="0.8" rot="R90"/>
-<pad name="GND@1" x="-6.306" y="10.265" drill="0.8" rot="R90"/>
 <wire x1="-15.388" y1="14.158" x2="14.542" y2="14.158" width="0.127" layer="21"/>
 <wire x1="14.542" y1="14.158" x2="14.542" y2="-14.032" width="0.127" layer="21"/>
 <wire x1="14.542" y1="-14.032" x2="6.032" y2="-14.032" width="0.127" layer="21"/>
@@ -1409,9 +1399,17 @@ SMT- SWCH-08247</description>
 <wire x1="-7.108" y1="-14.032" x2="-7.108" y2="-12.062" width="0.127" layer="21"/>
 <wire x1="-7.108" y1="-12.062" x2="6.032" y2="-12.062" width="0.127" layer="21"/>
 <wire x1="6.032" y1="-12.062" x2="6.032" y2="-14.032" width="0.127" layer="21"/>
+<pad name="CLK" x="7.441" y="11.916" drill="0.8" shape="long" rot="R90"/>
+<pad name="DATA" x="9.981" y="11.916" drill="0.8" shape="long" rot="R90"/>
+<pad name="GND@1" x="-6.306" y="10.265" drill="0.8" rot="R90"/>
 <pad name="GND@2" x="2.361" y="11.916" drill="0.8" shape="long" rot="R90"/>
-<hole x="12.054" y="-11.875" drill="1.8"/>
-<hole x="-12.897" y="-11.883" drill="1.8"/>
+<pad name="OUT1" x="-6.306" y="12.265" drill="0.8" rot="R90"/>
+<pad name="OUT2" x="-4.306" y="10.265" drill="0.8" rot="R90"/>
+<pad name="OUT3" x="-4.306" y="12.265" drill="0.8" rot="R90"/>
+<pad name="OUT4" x="-2.306" y="12.265" drill="0.8" rot="R90"/>
+<pad name="OUT5" x="-2.306" y="10.265" drill="0.8" rot="R90"/>
+<pad name="SS" x="4.901" y="11.916" drill="0.8" shape="long" rot="R90"/>
+<pad name="VCC" x="12.521" y="11.916" drill="0.8" shape="long" rot="R90"/>
 <text x="2.343" y="9.948" size="0.6096" layer="21" align="center">GND</text>
 <text x="4.916" y="9.948" size="0.6096" layer="21" align="center">SS</text>
 <text x="7.44" y="9.948" size="0.6096" layer="21" align="center">CLK</text>
@@ -1423,26 +1421,28 @@ SMT- SWCH-08247</description>
 <text x="-2.311" y="13.52" size="0.6096" layer="21" align="center">4</text>
 <text x="-4.324" y="8.967" size="0.6096" layer="21" align="center">2</text>
 <text x="-2.325" y="8.967" size="0.6096" layer="21" align="center">5</text>
-<text x="0.017" y="-0.04" size="1.27" layer="25" align="center">Digole 128 x 64 OLED</text>
+<text x="-0.652" y="-13.295" size="0.8128" layer="25" rot="R180" align="center">Digole 128 x 64 OLED</text>
+<hole x="12.054" y="-11.875" drill="1.8"/>
+<hole x="-12.897" y="-11.883" drill="1.8"/>
 </package>
 </packages>
 <symbols>
 <symbol name="DIGOLE_OLED">
+<wire x1="-10.16" y1="12.7" x2="10.16" y2="12.7" width="0.254" layer="94"/>
+<wire x1="10.16" y1="12.7" x2="10.16" y2="-22.86" width="0.254" layer="94"/>
+<wire x1="10.16" y1="-22.86" x2="-10.16" y2="-22.86" width="0.254" layer="94"/>
+<wire x1="-10.16" y1="-22.86" x2="-10.16" y2="12.7" width="0.254" layer="94"/>
+<pin name="CLK" x="15.24" y="-2.54" length="middle" rot="R180"/>
+<pin name="DATA" x="15.24" y="2.54" length="middle" rot="R180"/>
+<pin name="GND@1" x="-15.24" y="-17.78" length="middle"/>
+<pin name="GND@2" x="15.24" y="-17.78" length="middle" rot="R180"/>
 <pin name="OUT1" x="-15.24" y="7.62" length="middle"/>
 <pin name="OUT2" x="-15.24" y="2.54" length="middle"/>
 <pin name="OUT3" x="-15.24" y="-2.54" length="middle"/>
 <pin name="OUT4" x="-15.24" y="-7.62" length="middle"/>
 <pin name="OUT5" x="-15.24" y="-12.7" length="middle"/>
-<pin name="VCC" x="15.24" y="7.62" length="middle" rot="R180"/>
-<pin name="DATA" x="15.24" y="2.54" length="middle" rot="R180"/>
-<pin name="CLK" x="15.24" y="-2.54" length="middle" rot="R180"/>
 <pin name="SS" x="15.24" y="-7.62" length="middle" rot="R180"/>
-<pin name="GND@1" x="-15.24" y="-17.78" length="middle"/>
-<pin name="GND@2" x="15.24" y="-17.78" length="middle" rot="R180"/>
-<wire x1="-10.16" y1="12.7" x2="10.16" y2="12.7" width="0.254" layer="94"/>
-<wire x1="10.16" y1="12.7" x2="10.16" y2="-22.86" width="0.254" layer="94"/>
-<wire x1="10.16" y1="-22.86" x2="-10.16" y2="-22.86" width="0.254" layer="94"/>
-<wire x1="-10.16" y1="-22.86" x2="-10.16" y2="12.7" width="0.254" layer="94"/>
+<pin name="VCC" x="15.24" y="7.62" length="middle" rot="R180"/>
 <text x="0" y="15.24" size="1.27" layer="95" align="center">Digole 128x64 OLED</text>
 </symbol>
 </symbols>
@@ -6383,7 +6383,7 @@ Source: 008-0260-0_E.pdf</description>
 </class>
 </classes>
 <parts>
-<part name="ATMEGA" library="SparkFun-DigitalIC" deviceset="ATMEGA328_SMT" device="" value="ATMEGA328P"/>
+<part name="ATMEGA328P" library="SparkFun-DigitalIC" deviceset="ATMEGA328_SMT" device="" value="ATMEGA328P"/>
 <part name="DB15" library="SparkFun-Connectors" deviceset="DB15" device=""/>
 <part name="ROTARY_ENCODER" library="SparkFun-Electromechanical" deviceset="ROTARTY_ENCODER" device=""/>
 <part name="U$2" library="Stackduino" deviceset="DIGOLE_OLED" device="" value="OLED Display"/>
@@ -6489,7 +6489,7 @@ Source: 008-0260-0_E.pdf</description>
 <plain>
 </plain>
 <instances>
-<instance part="ATMEGA" gate="G$1" x="-25.4" y="-15.24"/>
+<instance part="ATMEGA328P" gate="G$1" x="-25.4" y="-15.24"/>
 <instance part="DB15" gate="G$1" x="-198.12" y="35.56" rot="R90"/>
 <instance part="ROTARY_ENCODER" gate="G$1" x="-7.62" y="27.94"/>
 <instance part="U$2" gate="G$1" x="121.92" y="-66.04" rot="R180"/>
@@ -6693,10 +6693,10 @@ Source: 008-0260-0_E.pdf</description>
 <junction x="-99.06" y="78.74"/>
 </segment>
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="GND@2"/>
-<pinref part="ATMEGA" gate="G$1" pin="GND@1"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="GND@2"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="GND@1"/>
 <wire x1="-48.26" y1="-45.72" x2="-48.26" y2="-43.18" width="0.1524" layer="91"/>
-<pinref part="ATMEGA" gate="G$1" pin="AGND"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="AGND"/>
 <wire x1="-48.26" y1="-40.64" x2="-48.26" y2="-43.18" width="0.1524" layer="91"/>
 <junction x="-48.26" y="-43.18"/>
 <pinref part="SUPPLY12" gate="GND" pin="GND"/>
@@ -6930,7 +6930,7 @@ Source: 008-0260-0_E.pdf</description>
 <wire x1="-78.74" y1="22.86" x2="-78.74" y2="48.26" width="0.1524" layer="91"/>
 <wire x1="-78.74" y1="48.26" x2="22.86" y2="48.26" width="0.1524" layer="91"/>
 <wire x1="22.86" y1="48.26" x2="22.86" y2="-15.24" width="0.1524" layer="91"/>
-<pinref part="ATMEGA" gate="G$1" pin="PD1(TXD)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PD1(TXD)"/>
 <wire x1="22.86" y1="-15.24" x2="0" y2="-15.24" width="0.1524" layer="91"/>
 </segment>
 </net>
@@ -6941,7 +6941,7 @@ Source: 008-0260-0_E.pdf</description>
 <wire x1="-76.2" y1="20.32" x2="-76.2" y2="45.72" width="0.1524" layer="91"/>
 <wire x1="-76.2" y1="45.72" x2="20.32" y2="45.72" width="0.1524" layer="91"/>
 <wire x1="20.32" y1="45.72" x2="20.32" y2="-12.7" width="0.1524" layer="91"/>
-<pinref part="ATMEGA" gate="G$1" pin="PD0(RXD)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PD0(RXD)"/>
 <wire x1="20.32" y1="-12.7" x2="0" y2="-12.7" width="0.1524" layer="91"/>
 </segment>
 </net>
@@ -6959,7 +6959,7 @@ Source: 008-0260-0_E.pdf</description>
 <wire x1="25.4" y1="-15.24" x2="114.3" y2="-15.24" width="0.1524" layer="91"/>
 <pinref part="R1" gate="G$1" pin="1"/>
 <pinref part="C4" gate="G$1" pin="1"/>
-<pinref part="ATMEGA" gate="G$1" pin="PC6(/RESET)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PC6(/RESET)"/>
 <wire x1="-48.26" y1="10.16" x2="-63.5" y2="10.16" width="0.1524" layer="91"/>
 <junction x="-48.26" y="10.16"/>
 <wire x1="-48.26" y1="10.16" x2="-48.26" y2="17.78" width="0.1524" layer="91"/>
@@ -6970,7 +6970,7 @@ Source: 008-0260-0_E.pdf</description>
 </net>
 <net name="N$15" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PB7(XTAL2/TOSC2)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PB7(XTAL2/TOSC2)"/>
 <wire x1="-55.88" y1="-20.32" x2="-48.26" y2="-20.32" width="0.1524" layer="91"/>
 <pinref part="QF1" gate="G$1" pin="2"/>
 <pinref part="C2" gate="G$1" pin="1"/>
@@ -6981,7 +6981,7 @@ Source: 008-0260-0_E.pdf</description>
 </net>
 <net name="N$16" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PB6(XTAL1/TOSC1)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PB6(XTAL1/TOSC1)"/>
 <wire x1="-55.88" y1="-15.24" x2="-48.26" y2="-15.24" width="0.1524" layer="91"/>
 <pinref part="QF1" gate="G$1" pin="1"/>
 <pinref part="C12" gate="G$1" pin="1"/>
@@ -6995,7 +6995,7 @@ Source: 008-0260-0_E.pdf</description>
 <pinref part="MCP23017" gate="G$1" pin="INTB"/>
 <wire x1="-81.28" y1="-68.58" x2="63.5" y2="-68.58" width="0.1524" layer="91"/>
 <wire x1="63.5" y1="-68.58" x2="63.5" y2="-17.78" width="0.1524" layer="91"/>
-<pinref part="ATMEGA" gate="G$1" pin="PD2(INT0)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PD2(INT0)"/>
 <wire x1="63.5" y1="-17.78" x2="0" y2="-17.78" width="0.1524" layer="91"/>
 </segment>
 </net>
@@ -7007,7 +7007,7 @@ Source: 008-0260-0_E.pdf</description>
 <wire x1="-76.2" y1="-66.04" x2="17.78" y2="-66.04" width="0.1524" layer="91"/>
 <wire x1="17.78" y1="-66.04" x2="58.42" y2="-66.04" width="0.1524" layer="91"/>
 <wire x1="58.42" y1="-66.04" x2="58.42" y2="-2.54" width="0.1524" layer="91"/>
-<pinref part="ATMEGA" gate="G$1" pin="PC5(ADC5/SCL)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PC5(ADC5/SCL)"/>
 <wire x1="58.42" y1="-2.54" x2="0" y2="-2.54" width="0.1524" layer="91"/>
 <wire x1="17.78" y1="-66.04" x2="17.78" y2="-76.2" width="0.1524" layer="91"/>
 <junction x="17.78" y="-66.04"/>
@@ -7016,7 +7016,7 @@ Source: 008-0260-0_E.pdf</description>
 </net>
 <net name="N$19" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PC4(ADC4/SDA)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PC4(ADC4/SDA)"/>
 <wire x1="0" y1="0" x2="53.34" y2="0" width="0.1524" layer="91"/>
 <wire x1="53.34" y1="0" x2="53.34" y2="-63.5" width="0.1524" layer="91"/>
 <wire x1="53.34" y1="-63.5" x2="10.16" y2="-63.5" width="0.1524" layer="91"/>
@@ -7030,7 +7030,7 @@ Source: 008-0260-0_E.pdf</description>
 </net>
 <net name="N$22" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PB2(SS/OC1B)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PB2(SS/OC1B)"/>
 <wire x1="0" y1="-40.64" x2="93.98" y2="-40.64" width="0.1524" layer="91"/>
 <wire x1="93.98" y1="-40.64" x2="93.98" y2="-58.42" width="0.1524" layer="91"/>
 <pinref part="U$2" gate="G$1" pin="SS"/>
@@ -7039,7 +7039,7 @@ Source: 008-0260-0_E.pdf</description>
 </net>
 <net name="N$23" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PB0(ICP)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PB0(ICP)"/>
 <wire x1="0" y1="-35.56" x2="83.82" y2="-35.56" width="0.1524" layer="91"/>
 <wire x1="83.82" y1="-35.56" x2="83.82" y2="-68.58" width="0.1524" layer="91"/>
 <pinref part="U$2" gate="G$1" pin="DATA"/>
@@ -7048,27 +7048,27 @@ Source: 008-0260-0_E.pdf</description>
 </net>
 <net name="N$24" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PB1(OC1A)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PB1(OC1A)"/>
 <wire x1="0" y1="-38.1" x2="88.9" y2="-38.1" width="0.1524" layer="91"/>
 <wire x1="88.9" y1="-38.1" x2="88.9" y2="-63.5" width="0.1524" layer="91"/>
 <pinref part="U$2" gate="G$1" pin="CLK"/>
 <wire x1="88.9" y1="-63.5" x2="106.68" y2="-63.5" width="0.1524" layer="91"/>
 </segment>
 </net>
-<net name="N$25" class="0">
+<net name="SCK" class="0">
 <segment>
 <pinref part="ICSP" gate="G$1" pin="3"/>
 <wire x1="124.46" y1="-17.78" x2="129.54" y2="-17.78" width="0.1524" layer="91"/>
 <wire x1="129.54" y1="-17.78" x2="129.54" y2="-27.94" width="0.1524" layer="91"/>
 <wire x1="129.54" y1="-27.94" x2="68.58" y2="-27.94" width="0.1524" layer="91"/>
 <wire x1="68.58" y1="-27.94" x2="68.58" y2="-48.26" width="0.1524" layer="91"/>
-<pinref part="ATMEGA" gate="G$1" pin="PB5(SCK)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PB5(SCK)"/>
 <wire x1="68.58" y1="-48.26" x2="0" y2="-48.26" width="0.1524" layer="91"/>
 </segment>
 </net>
-<net name="N$26" class="0">
+<net name="MOSI" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PB4(MISO)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PB4(MISO)"/>
 <wire x1="0" y1="-45.72" x2="73.66" y2="-45.72" width="0.1524" layer="91"/>
 <wire x1="73.66" y1="-45.72" x2="73.66" y2="-30.48" width="0.1524" layer="91"/>
 <wire x1="73.66" y1="-30.48" x2="132.08" y2="-30.48" width="0.1524" layer="91"/>
@@ -7077,9 +7077,9 @@ Source: 008-0260-0_E.pdf</description>
 <wire x1="132.08" y1="-15.24" x2="124.46" y2="-15.24" width="0.1524" layer="91"/>
 </segment>
 </net>
-<net name="N$27" class="0">
+<net name="MISO" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PB3(MOSI/OC2)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PB3(MOSI/OC2)"/>
 <wire x1="0" y1="-43.18" x2="78.74" y2="-43.18" width="0.1524" layer="91"/>
 <wire x1="78.74" y1="-43.18" x2="78.74" y2="-33.02" width="0.1524" layer="91"/>
 <wire x1="78.74" y1="-33.02" x2="134.62" y2="-33.02" width="0.1524" layer="91"/>
@@ -7090,7 +7090,7 @@ Source: 008-0260-0_E.pdf</description>
 </net>
 <net name="N$28" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PD3(INT1)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PD3(INT1)"/>
 <wire x1="0" y1="-20.32" x2="66.04" y2="-20.32" width="0.1524" layer="91"/>
 <wire x1="66.04" y1="-20.32" x2="66.04" y2="-7.62" width="0.1524" layer="91"/>
 <pinref part="S2" gate="1" pin="P1"/>
@@ -7098,7 +7098,7 @@ Source: 008-0260-0_E.pdf</description>
 </net>
 <net name="N$20" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PC0(ADC0)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PC0(ADC0)"/>
 <wire x1="0" y1="10.16" x2="2.54" y2="10.16" width="0.1524" layer="91"/>
 <wire x1="2.54" y1="10.16" x2="2.54" y2="22.86" width="0.1524" layer="91"/>
 <pinref part="ROTARY_ENCODER" gate="G$1" pin="A"/>
@@ -7106,7 +7106,7 @@ Source: 008-0260-0_E.pdf</description>
 </net>
 <net name="N$21" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PC1(ADC1)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PC1(ADC1)"/>
 <wire x1="0" y1="7.62" x2="5.08" y2="7.62" width="0.1524" layer="91"/>
 <wire x1="5.08" y1="7.62" x2="5.08" y2="33.02" width="0.1524" layer="91"/>
 <pinref part="ROTARY_ENCODER" gate="G$1" pin="B"/>
@@ -7115,7 +7115,7 @@ Source: 008-0260-0_E.pdf</description>
 </net>
 <net name="N$31" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PD6(AIN0)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PD6(AIN0)"/>
 <wire x1="0" y1="-27.94" x2="40.64" y2="-27.94" width="0.1524" layer="91"/>
 <wire x1="40.64" y1="-27.94" x2="40.64" y2="40.64" width="0.1524" layer="91"/>
 <pinref part="R3" gate="G$1" pin="2"/>
@@ -7124,7 +7124,7 @@ Source: 008-0260-0_E.pdf</description>
 </net>
 <net name="N$32" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PD7(AIN1)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PD7(AIN1)"/>
 <wire x1="0" y1="-30.48" x2="43.18" y2="-30.48" width="0.1524" layer="91"/>
 <wire x1="43.18" y1="-30.48" x2="43.18" y2="20.32" width="0.1524" layer="91"/>
 <pinref part="R4" gate="G$1" pin="2"/>
@@ -7217,7 +7217,7 @@ Source: 008-0260-0_E.pdf</description>
 </net>
 <net name="ALOG1" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PC2(ADC2)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PC2(ADC2)"/>
 <wire x1="0" y1="5.08" x2="5.08" y2="5.08" width="0.1524" layer="91"/>
 <label x="7.62" y="5.08" size="1.778" layer="95"/>
 </segment>
@@ -7229,7 +7229,7 @@ Source: 008-0260-0_E.pdf</description>
 </net>
 <net name="ALOG2" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PC3(ADC3)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PC3(ADC3)"/>
 <wire x1="0" y1="2.54" x2="5.08" y2="2.54" width="0.1524" layer="91"/>
 <label x="7.62" y="2.54" size="1.778" layer="95"/>
 </segment>
@@ -7421,13 +7421,13 @@ Source: 008-0260-0_E.pdf</description>
 <pinref part="P+15" gate="1" pin="+5V"/>
 </segment>
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="AREF"/>
-<pinref part="ATMEGA" gate="G$1" pin="VCC@2"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="AREF"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="VCC@2"/>
 <wire x1="-48.26" y1="-5.08" x2="-48.26" y2="0" width="0.1524" layer="91"/>
-<pinref part="ATMEGA" gate="G$1" pin="VCC@1"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="VCC@1"/>
 <wire x1="-48.26" y1="0" x2="-48.26" y2="2.54" width="0.1524" layer="91"/>
 <junction x="-48.26" y="0"/>
-<pinref part="ATMEGA" gate="G$1" pin="AVCC"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="AVCC"/>
 <wire x1="-48.26" y1="2.54" x2="-48.26" y2="5.08" width="0.1524" layer="91"/>
 <junction x="-48.26" y="2.54"/>
 <wire x1="-48.26" y1="5.08" x2="-58.42" y2="5.08" width="0.1524" layer="91"/>
@@ -7552,7 +7552,7 @@ Source: 008-0260-0_E.pdf</description>
 </net>
 <net name="DIR" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PD4(XCK/T0)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PD4(XCK/T0)"/>
 <wire x1="0" y1="-22.86" x2="30.48" y2="-22.86" width="0.1524" layer="91"/>
 <wire x1="30.48" y1="-22.86" x2="30.48" y2="60.96" width="0.1524" layer="91"/>
 <pinref part="A4988_CARRIER" gate="G$1" pin="DIR"/>
@@ -7577,7 +7577,7 @@ Source: 008-0260-0_E.pdf</description>
 </net>
 <net name="STEP" class="0">
 <segment>
-<pinref part="ATMEGA" gate="G$1" pin="PD5(T1)"/>
+<pinref part="ATMEGA328P" gate="G$1" pin="PD5(T1)"/>
 <wire x1="0" y1="-25.4" x2="33.02" y2="-25.4" width="0.1524" layer="91"/>
 <wire x1="33.02" y1="-25.4" x2="33.02" y2="63.5" width="0.1524" layer="91"/>
 <pinref part="A4988_CARRIER" gate="G$1" pin="STEP"/>
