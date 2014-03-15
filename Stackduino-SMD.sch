@@ -6403,7 +6403,7 @@ Source: 008-0260-0_E.pdf</description>
 <part name="SUPPLY8" library="supply2" deviceset="GND" device=""/>
 <part name="SUPPLY9" library="supply2" deviceset="GND" device=""/>
 <part name="D2" library="SparkFun-DiscreteSemi" deviceset="MBRA140" device="" value="20v 1A"/>
-<part name="MP1" library="sym" deviceset="PMOS" device=""/>
+<part name="MP1" library="sym" deviceset="PMOS" device="" value="FDN306P"/>
 <part name="SUPPLY12" library="supply2" deviceset="GND" device=""/>
 <part name="SUPPLY14" library="supply2" deviceset="GND" device=""/>
 <part name="SUPPLY15" library="supply2" deviceset="GND" device=""/>
@@ -6483,6 +6483,10 @@ Source: 008-0260-0_E.pdf</description>
 <part name="C12" library="eagle-ltspice" deviceset="C" device=""/>
 <part name="SUPPLY6" library="supply2" deviceset="GND" device=""/>
 <part name="SUPPLY11" library="supply2" deviceset="GND" device=""/>
+<part name="C13" library="eagle-ltspice" deviceset="C" device="" value="22uF"/>
+<part name="GND4" library="supply2" deviceset="GND" device=""/>
+<part name="R6" library="eagle-ltspice" deviceset="R" device="" value="10K"/>
+<part name="P+3" library="supply1" deviceset="+5V" device="" value="VCC"/>
 </parts>
 <sheets>
 <sheet>
@@ -6504,7 +6508,7 @@ Source: 008-0260-0_E.pdf</description>
 <instance part="SUPPLY1" gate="GND" x="2.54" y="83.82"/>
 <instance part="D1" gate="G$1" x="43.18" y="93.98" rot="R90"/>
 <instance part="SUPPLY4" gate="GND" x="43.18" y="86.36"/>
-<instance part="GND" gate="GND" x="-73.66" y="63.5"/>
+<instance part="GND" gate="GND" x="-73.66" y="73.66"/>
 <instance part="SUPPLY7" gate="GND" x="-45.72" y="63.5"/>
 <instance part="SUPPLY8" gate="GND" x="-99.06" y="63.5"/>
 <instance part="SUPPLY9" gate="GND" x="-152.4" y="96.52"/>
@@ -6615,6 +6619,12 @@ Source: 008-0260-0_E.pdf</description>
 <instance part="C12" gate="G$1" x="-73.66" y="-27.94"/>
 <instance part="SUPPLY6" gate="GND" x="-63.5" y="-33.02"/>
 <instance part="SUPPLY11" gate="GND" x="-73.66" y="-33.02"/>
+<instance part="C13" gate="G$1" x="-60.96" y="104.14"/>
+<instance part="GND4" gate="GND" x="-60.96" y="96.52"/>
+<instance part="R6" gate="G$1" x="-66.04" y="63.5" rot="R180"/>
+<instance part="P+3" gate="1" x="-86.36" y="66.04" smashed="yes">
+<attribute name="VALUE" x="-84.074" y="64.262" size="1.778" layer="96"/>
+</instance>
 </instances>
 <busses>
 </busses>
@@ -6673,7 +6683,7 @@ Source: 008-0260-0_E.pdf</description>
 <wire x1="43.18" y1="91.44" x2="43.18" y2="88.9" width="0.1524" layer="91"/>
 </segment>
 <segment>
-<wire x1="-73.66" y1="83.82" x2="-73.66" y2="66.04" width="0.1524" layer="91"/>
+<wire x1="-73.66" y1="83.82" x2="-73.66" y2="76.2" width="0.1524" layer="91"/>
 <pinref part="GND" gate="GND" pin="GND"/>
 <pinref part="S1" gate="1" pin="P"/>
 </segment>
@@ -6893,6 +6903,10 @@ Source: 008-0260-0_E.pdf</description>
 <pinref part="C12" gate="G$1" pin="2"/>
 <pinref part="SUPPLY11" gate="GND" pin="GND"/>
 <wire x1="-73.66" y1="-30.48" x2="-73.66" y2="-33.02" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="C13" gate="G$1" pin="2"/>
+<pinref part="GND4" gate="GND" pin="GND"/>
 </segment>
 </net>
 <net name="N$8" class="0">
@@ -7367,8 +7381,11 @@ Source: 008-0260-0_E.pdf</description>
 <segment>
 <pinref part="LTC2950" gate="A" pin="~KILL"/>
 <wire x1="-45.72" y1="78.74" x2="-60.96" y2="78.74" width="0.1524" layer="91"/>
-<wire x1="-60.96" y1="78.74" x2="-60.96" y2="58.42" width="0.1524" layer="91"/>
+<wire x1="-60.96" y1="78.74" x2="-60.96" y2="63.5" width="0.1524" layer="91"/>
 <label x="-63.5" y="55.88" size="1.778" layer="95"/>
+<pinref part="R6" gate="G$1" pin="1"/>
+<wire x1="-60.96" y1="63.5" x2="-60.96" y2="58.42" width="0.1524" layer="91"/>
+<junction x="-60.96" y="63.5"/>
 </segment>
 <segment>
 <pinref part="MCP23017" gate="G$1" pin="GPB2"/>
@@ -7514,6 +7531,11 @@ Source: 008-0260-0_E.pdf</description>
 <wire x1="68.58" y1="104.14" x2="68.58" y2="106.68" width="0.1524" layer="91"/>
 <pinref part="C6" gate="G$1" pin="+"/>
 </segment>
+<segment>
+<pinref part="R6" gate="G$1" pin="2"/>
+<wire x1="-71.12" y1="63.5" x2="-86.36" y2="63.5" width="0.1524" layer="91"/>
+<pinref part="P+3" gate="1" pin="+5V"/>
+</segment>
 </net>
 <net name="V+" class="0">
 <segment>
@@ -7521,7 +7543,8 @@ Source: 008-0260-0_E.pdf</description>
 <wire x1="-109.22" y1="83.82" x2="-78.74" y2="83.82" width="0.1524" layer="91"/>
 <wire x1="-78.74" y1="83.82" x2="-78.74" y2="114.3" width="0.1524" layer="91"/>
 <wire x1="-78.74" y1="114.3" x2="-68.58" y2="114.3" width="0.1524" layer="91"/>
-<wire x1="-68.58" y1="114.3" x2="-45.72" y2="114.3" width="0.1524" layer="91"/>
+<wire x1="-68.58" y1="114.3" x2="-60.96" y2="114.3" width="0.1524" layer="91"/>
+<wire x1="-60.96" y1="114.3" x2="-45.72" y2="114.3" width="0.1524" layer="91"/>
 <wire x1="-45.72" y1="114.3" x2="-25.4" y2="114.3" width="0.1524" layer="91"/>
 <pinref part="LTC2950" gate="A" pin="VIN"/>
 <wire x1="-45.72" y1="88.9" x2="-45.72" y2="114.3" width="0.1524" layer="91"/>
@@ -7548,6 +7571,9 @@ Source: 008-0260-0_E.pdf</description>
 <wire x1="-7.62" y1="114.3" x2="2.54" y2="114.3" width="0.1524" layer="91"/>
 <wire x1="-7.62" y1="109.22" x2="-7.62" y2="114.3" width="0.1524" layer="91"/>
 <junction x="-7.62" y="114.3"/>
+<pinref part="C13" gate="G$1" pin="1"/>
+<wire x1="-60.96" y1="106.68" x2="-60.96" y2="114.3" width="0.1524" layer="91"/>
+<junction x="-60.96" y="114.3"/>
 </segment>
 </net>
 <net name="DIR" class="0">
