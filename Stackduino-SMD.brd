@@ -6,7 +6,7 @@
 <setting alwaysvectorfont="no"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="0.01" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.001" altunitdist="inch" altunit="inch"/>
+<grid distance="0.01" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.0005" altunitdist="inch" altunit="inch"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="yes" active="yes"/>
 <layer number="16" name="Bottom" color="1" fill="1" visible="yes" active="yes"/>
@@ -18,7 +18,7 @@
 <layer number="22" name="bPlace" color="14" fill="1" visible="yes" active="yes"/>
 <layer number="23" name="tOrigins" color="15" fill="1" visible="yes" active="yes"/>
 <layer number="24" name="bOrigins" color="15" fill="1" visible="yes" active="yes"/>
-<layer number="25" name="tNames" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="25" name="tNames" color="7" fill="1" visible="no" active="yes"/>
 <layer number="26" name="bNames" color="7" fill="1" visible="no" active="yes"/>
 <layer number="27" name="tValues" color="7" fill="1" visible="no" active="yes"/>
 <layer number="28" name="bValues" color="7" fill="1" visible="no" active="yes"/>
@@ -160,6 +160,10 @@
 <text x="30.9372" y="13.462" size="1.016" layer="25" font="vector" ratio="15">D</text>
 <text x="54.8132" y="13.4112" size="1.016" layer="25" font="vector" ratio="15">D</text>
 <hole x="59.3992" y="69.0768" drill="2.54"/>
+<wire x1="3.3909" y1="77.0636" x2="3.3909" y2="79.121" width="0.127" layer="21"/>
+<wire x1="12.3825" y1="77.0636" x2="12.3825" y2="79.121" width="0.127" layer="21"/>
+<wire x1="15.2146" y1="76.8985" x2="15.2146" y2="79.0829" width="0.2032" layer="21"/>
+<wire x1="46.0121" y1="76.9112" x2="46.0121" y2="79.0956" width="0.2032" layer="21"/>
 </plain>
 <libraries>
 <library name="SparkFun-DigitalIC">
@@ -512,10 +516,9 @@ JST PH 2-pin thru-home side entry</description>
 <text x="-1.429" y="-1.896" size="1.4224" layer="21" ratio="12">-</text>
 </package>
 <package name="PJ-102A">
-<wire x1="-4.6" y1="4.4" x2="4.4" y2="4.4" width="0.127" layer="21"/>
-<wire x1="4.4" y1="4.4" x2="4.4" y2="-10.2" width="0.127" layer="21"/>
+<wire x1="4.4" y1="0.59" x2="4.4" y2="-10.2" width="0.127" layer="21"/>
 <wire x1="4.4" y1="-10.2" x2="-4.6" y2="-10.2" width="0.127" layer="21"/>
-<wire x1="-4.6" y1="-10.2" x2="-4.6" y2="4.4" width="0.127" layer="21"/>
+<wire x1="-4.6" y1="-10.2" x2="-4.6" y2="0.59" width="0.127" layer="21"/>
 <pad name="RING_SW" x="-4.6" y="-6.29" drill="3" diameter="4.8" rot="R180"/>
 <pad name="TIP" x="0.1" y="-9.29" drill="3" diameter="4.8" rot="R180"/>
 <pad name="RING" x="0.1" y="-3.39" drill="3" diameter="4.8" rot="R180"/>
