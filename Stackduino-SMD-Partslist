@@ -1,0 +1,59 @@
+Partlist
+
+Exported from Stackduino-SMD.sch at 02/04/2014 19:21:40
+
+EAGLE Version 6.5.0 Copyright (c) 1988-2013 CadSoft
+
+Assembly variant: 
+
+Part          Value               Device              Package           Library                  Sheet
+
+12VDC         2.1MMJACKTHM        2.1MMJACKTHM        PJ-102A           adafruit                 1
+A4988_CARRIER A4988BREAKOUT       A4988BREAKOUT       A4988BREAKOUT     RepRapjr                 1
+ATMEGA328P    ATMEGA328P          ATMEGA328_SMT       TQFP32-08         SparkFun-DigitalIC       1
+BATT          Battery Connector   JST_2PIN-THM-RA     JST-PH-2-THM-RA   adafruit                 1
+C1            22uF                C                   C0805             eagle-ltspice            1
+C2            100uF               CAP_POLD            PANASONIC_D       SparkFun-Passives        1
+C3            10nF                C                   C0805             eagle-ltspice            1
+C4            68uF                CAP_POLD            PANASONIC_D       SparkFun-Passives        1
+C5            0.1uF               C                   C0805             eagle-ltspice            1
+C6            100uF               CAP_POLD            PANASONIC_D       SparkFun-Passives        1
+C7            0.1uF               C                   C0805             eagle-ltspice            1
+C8            0.1uF               C                   C0805             eagle-ltspice            1
+C9            0.1uF               C                   C0805             eagle-ltspice            1
+C10           100nF               C                   C0805             eagle-ltspice            1
+C11           0.1uF               C                   C0805             eagle-ltspice            1
+C12           0.1uF               C                   C0805             eagle-ltspice            1
+C13           0.1uF               C                   C0805             eagle-ltspice            1
+D1            20v 1A              MBRA140             SMA-DIODE         SparkFun-DiscreteSemi    1
+D2            20v 1A              MBRA140             SMA-DIODE         SparkFun-DiscreteSemi    1
+DB15          DB15                DB15                DB15              SparkFun-Connectors      1
+ENCODER       JST-PH_3-PIN_HEADER JST-PH_3-PIN_HEADER JST_B3B-PH_HEADER SRG                      1
+FT232RL       FT232RLSSOP         FT232RLSSOP         SSOP28DB          SparkFun-DigitalIC       1
+FWD/BWD       JST-PH_4-PIN_HEADER JST-PH_4-PIN_HEADER JST_B4B-PH_HEADER SRG                      1
+ICSP          AVR-ISP-6           AVR-ISP-6           AVR-ISP-6         avr-5                    1
+L1            47uH                DO3316P             DO3316P           inductor-coilcraft       1
+LM2675        LM2675M             LM2675M             SO08              v-reg-3                  1
+LTC2950       LTC2950CTS8-1TRPBF  LTC2950CTS8-1TRPBF  SOT65P280X100-8N  LTC_By_element14_Batch_1 1
+LTC4412       LTC4412ES6PBF       LTC4412ES6PBF       SOT95P280X100-6N  LTC_By_element14_Batch_1 1
+MCP23017      MCP23017SS          MCP23017SS          SSOP28            adafruit                 1
+MENU_SEL      JST-PH_2-PIN_HEADER JST-PH_2-PIN_HEADER JST_B2B-PH_HEADER SRG                      1
+MP1           FDN306P             PMOS                SOT23             sym                      1
+ON/OFF        JST-PH_2-PIN_HEADER JST-PH_2-PIN_HEADER JST_B2B-PH_HEADER SRG                      1
+OPT1          LTV816S             LTV816S             SMD4              optocoupler              1
+OPT2          LTV816S             LTV816S             SMD4              optocoupler              1
+QF1           16Mhz               CRYSTALHC49U-V      HC49U-V           crystal                  1
+R0            470K                R                   R0805             eagle-ltspice            1
+R1            100K                R                   R0805             eagle-ltspice            1
+R2            100K                R                   R0805             eagle-ltspice            1
+R3            4.7K                R                   R0805             eagle-ltspice            1
+R4            4.7K                R                   R0805             eagle-ltspice            1
+R5            100K                R                   R0805             eagle-ltspice            1
+R6            220K                R                   R0805             eagle-ltspice            1
+R7            220K                R                   R0805             eagle-ltspice            1
+R8            10K                 R                   R0805             eagle-ltspice            1
+R9            4.7K                R                   R0805             eagle-ltspice            1
+R10           10K                 R                   R0805             eagle-ltspice            1
+START/STOP    JST-PH_2-PIN_HEADER JST-PH_2-PIN_HEADER JST_B2B-PH_HEADER SRG                      1
+U$2           OLED Display        DIGOLE_OLED         DIGOLE_OLED       Stackduino               1
+USB           USBSMD              USBSMD              USB-MINIB         SparkFun-Connectors      1
