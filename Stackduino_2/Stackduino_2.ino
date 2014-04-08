@@ -103,13 +103,6 @@ volatile long rbdebounce = 400; //the debounce time, increase if the output flic
 
 void setup() {
 
-  //start serial connection
-  Serial.begin(9600);  
-
-  //set up interrupt handlers
-  attachInterrupt(0,intCallBack,FALLING); //mcp23017 on interrupt 0
-  attachInterrupt(1, buttonChange, CHANGE); //main pushbutton on interrupt 1
-
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //SET ATMEGA PINMODES AND PULLUPS
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -139,16 +132,21 @@ void setup() {
   //set MSCP23017 bank A pins as inputs and switch on internal pullups
   //lots of pins with the same settings so quicker to loop through with array
   int mcpInputPins[] = {
-    0,1,2,3,4,5,6    };
+    0,1,2,3,4,5,6      };
   for(int i=0; i < 7; i++){
     mcp.pinMode(mcpInputPins[i], INPUT);
     mcp.pullUp(mcpInputPins[i], HIGH);
   }
 
+  mcp.setupInterrupts(true,false,LOW);
+  mcp.setupInterruptPin(limitSwitchFront,FALLING);
+  mcp.setupInterruptPin(limitSwitchBack,FALLING);
+  mcp.setupInterruptPin(pbInterrupt,FALLING);
+
   //set MSCP23017 bank B pins as outputs and write HIGH
   //lots of pins with the same settings so quicker to loop through with array
   int mcpOutputPins[] = {
-    8,9,10,11,12,13,14,15    };
+    8,9,10,11,12,13,14,15      };
   for(int i=0; i < 8; i++){
     mcp.pinMode(mcpOutputPins[i], OUTPUT);
     mcp.digitalWrite(mcpOutputPins[i], HIGH);
@@ -157,9 +155,19 @@ void setup() {
   mcp.digitalWrite(enable, LOW);
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  //PRINT WELCOME MESSAGE TO SCREEN
+  //START SERIAL CONNECTION AND ATTACH INTERRUPTS
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+  Serial.begin(9600);  
+
+  attachInterrupt(0,handleInterrupt,FALLING); //mcp23017 on interrupt 0
+  attachInterrupt(1, buttonChange, CHANGE); //main pushbutton on interrupt 1
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //CHECK LIMIT SWITCHES AND PRINT WELCOME MESSAGE TO SCREEN
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  
+  clearLimitSwitch();
   screen.setLCDColRow(0, 0);
   screen.print("Stackduino");
   delay(1000);
@@ -175,250 +183,233 @@ void setup() {
 
 void loop(){
 
-  if (!limitSwitches()){ //if controller is started up hitting a limit switch disable main functions, print warning to screen and move back from the affected switch
-          clearLimitSwitch();
-  }
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //SETTINGS CONFIGURATION AND MANUAL STAGE CONTROL
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  { //if limit switches HIGH run all functions normally
-  
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//SETTINGS CONFIGURATION AND MANUAL STAGE CONTROL
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  if (buttonState == HIGH){ //this section allows manual control and configures settings using a simple screen menu system
 
-    if (buttonState == HIGH){ //this section allows manual control and configures settings using a simple screen menu system
+    disableStepperDriver(); //switch off stepper motor power if option enabled
+    manualControl(); //manual motor control to position stage before stack
 
-      disableStepperDriver(); //switch off stepper motor power if option enabled
-      manualControl(); //manual motor control to position stage before stack
+    if (rbbuttonState == HIGH) { //use encoder to scroll through menu options
+      menuChange(rotaryCount, 0, 8, 1); 
+    } 
 
-      if (rbbuttonState == HIGH) { //use encoder to scroll through menu options
-        menuChange(rotaryCount, 0, 8, 1); 
+    switch (rotaryCount) { //the menu options
+
+    case 1: //this menu screen changes the number of steps to move each time
+
+      menuChange(steps, 1, 1000, 1);
+
+      if (updateScreen){ //only write to the screen when a change to the variables has been flagged
+
+        screen.setLCDColRow(0, 0);
+        screen.print("Set step size:  ");
+        screen.setLCDColRow(0, 1);
+        frontLoadAndPrint(steps); //frontload with correct number of zeroes and print to screen
+        screen.print (steps  , DEC);
+        unitOfMeasure();
+        updateScreen = false;
+
+      }      
+
+      break;
+
+    case 2: //this menu screen changes the number of slices to create in the stack
+
+      menuChange(slices, 10, 5000, 10);
+
+      if (updateScreen){ //only write to the screen when a change to the variables has been flagged
+
+        screen.setLCDColRow(0, 0);
+        screen.print("Set num slices: ");
+        screen.setLCDColRow(0, 1);
+        frontLoadAndPrint(slices); //then use that figure to frontload with correct number of zeroes and print to screen
+        screen.print (slices, DEC);
+        updateScreen = false;
+
       } 
 
-      switch (rotaryCount) { //the menu options
+      break;
 
-      case 1: //this menu screen changes the number of steps to move each time
+    case 3: //this menu screen changes the number of seconds to wait for the camera to take a picture before moving again - 
+      //you may want longer if using flashes for adequate recharge time or shorter with continuous lighting
+      //to reduce overall time taken to complete the stack
 
-        menuChange(steps, 1, 1000, 1);
+      menuChange(pause, 1000, 30000, 1000);
 
-        if (updateScreen){ //only write to the screen when a change to the variables has been flagged
+      if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
-          screen.setLCDColRow(0, 0);
-          screen.print("Set step size:  ");
-          screen.setLCDColRow(0, 1);
-          frontLoadAndPrint(steps); //frontload with correct number of zeroes and print to screen
-          screen.print (steps  , DEC);
-          unitOfMeasure();
-          updateScreen = false;
-
-        }      
-
-        break;
-
-      case 2: //this menu screen changes the number of slices to create in the stack
-
-        menuChange(slices, 10, 5000, 10);
-
-        if (updateScreen){ //only write to the screen when a change to the variables has been flagged
-
-          screen.setLCDColRow(0, 0);
-          screen.print("Set num slices: ");
-          screen.setLCDColRow(0, 1);
-          frontLoadAndPrint(slices); //then use that figure to frontload with correct number of zeroes and print to screen
-          screen.print (slices, DEC);
-          updateScreen = false;
-
-        } 
-
-        break;
-
-      case 3: //this menu screen changes the number of seconds to wait for the camera to take a picture before moving again - 
-        //you may want longer if using flashes for adequate recharge time or shorter with continuous lighting
-        //to reduce overall time taken to complete the stack
-
-        menuChange(pause, 1000, 30000, 1000);
-
-        if (updateScreen){ //only write to the screen when a change to the variables has been flagged
-
-          screen.setLCDColRow(0, 0);
-          screen.print("Set pause time: ");
-          screen.setLCDColRow(0, 1);
-          if (pause < 10000){
-            screen.print (0, DEC); //adds one leading zero to triple digit pause numbers on the display
-          }
-          screen.print ((pause / 1000), DEC); //divide millis by 1000 to display in seconds
-          screen.print(" seconds");  
-          updateScreen = false;
-
+        screen.setLCDColRow(0, 0);
+        screen.print("Set pause time: ");
+        screen.setLCDColRow(0, 1);
+        if (pause < 10000){
+          screen.print (0, DEC); //adds one leading zero to triple digit pause numbers on the display
         }
-
-        break;
-
-      case 4: //toggles whether camera/subject is returned the starting position at the end of the stack
-
-        if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
-          returnToStart = constrain(returnToStart, true, false); //limits choice of returnToStart to specified range
-          returnToStart += read_encoder (); //use encoder reading function to set value of returnToStart variable
-        }
-
-        if (updateScreen){ //only write to the screen when a change to the variables has been flagged
-
-          screen.setLCDColRow(0, 0);
-          screen.print("Return to start:");
-          screen.setLCDColRow(0, 1);
-          if(returnToStart == true){
-            screen.print ("Enabled");
-          }
-          else {
-            screen.print ("Disabled");
-          }
-          updateScreen = false;
-
-        }
-
-        break; 
-
-      case 5: //this menu screen selects the unit of measure to use for steps: Microns, Millimimeters or Centimeteres
-
-        menuChange(measure, 1, 3, 1);
-
-        if (updateScreen){ //only write to the screen when a change to the variables has been flagged
-
-          screen.setLCDColRow(0, 0);
-          screen.print("Unit of measure:");
-          screen.setLCDColRow(0, 1);
-          unitOfMeasure();
-
-          updateScreen = false;
-
-        }
-
-        break; 
-
-      case 6: //this menu screen adjusts the stepper motor speed (delay in microseconds between steps)
-        //setting this to low may cause the motor to begin stalling or failing to move at all
-
-        menuChange(stepDelay, 1000, 9000, 1000);
-
-        if (updateScreen){ //only write to the screen when a change to the variables has been flagged
-
-          screen.setLCDColRow(0, 0);
-          screen.print("Stepper speed: ");
-          screen.setLCDColRow(0, 1);
-          screen.print (stepDelay, DEC);
-          screen.print (" microsecs");
-          updateScreen = false;
-
-        }
-
-        break; 
-
-      case 7: //this menu screen changes the number of images to take per focus slice (exposure bracketing support)
-
-        menuChange(bracket, 1, 10, 1);
-
-        if (updateScreen){ //only write to the screen when a change to the variables has been flagged
-
-          screen.setLCDColRow(0, 0);
-          screen.print("Set bracketing: ");
-          screen.setLCDColRow(0, 1);
-          frontLoadAndPrint(bracket); //then use that figure to frontload with correct number of zeroes and print to screen
-          screen.print (bracket  , DEC);           
-          updateScreen = false;
-
-        }      
-
-        break;
+        screen.print ((pause / 1000), DEC); //divide millis by 1000 to display in seconds
+        screen.print(" seconds");  
+        updateScreen = false;
 
       }
-    } //end of setup menu section
 
-    else { 
-      
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//THE FOCUS STACK, STARTED WHEN THE MAIN PUSHBUTTON IS PRESSED
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
+      break;
 
-      disableStepperDriver();
+    case 4: //toggles whether camera/subject is returned the starting position at the end of the stack
 
-      for (int i = 0; i < slices; i++){ //loop the following actions for number of times dictated by var slices
+      if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
+        returnToStart = constrain(returnToStart, true, false); //limits choice of returnToStart to specified range
+        returnToStart += read_encoder (); //use encoder reading function to set value of returnToStart variable
+      }
 
-        sliceCount++; //count of pictures taken so far
+      if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
-        screen.clearScreen();
-        screen.print("Moving ");
-        screen.print (steps);
-        unitOfMeasure();
+        screen.setLCDColRow(0, 0);
+        screen.print("Return to start:");
         screen.setLCDColRow(0, 1);
-        screen.print("Step ");
-        screen.print (sliceCount);
-        screen.print (" of ");
-        screen.print (slices);
-
-        delay(500);
-        enableStepperDriver();
-        digitalWrite(dir, HIGH); //set the stepper direction for backward travel (if your motor is wired the other way around you may need to reverse this)
-        delay(100);
-
-        int i = 0; //counter for motor steps
-        while (i < steps * 16 * measureMultiplier && limitSwitches()){ //adjust the number in this statement to tune distance travelled on your setup. In this case 16 is a product of 8x microstepping and a 2:1 gearing ratio
-          stepSignal();
-          i++;
+        if(returnToStart == true){
+          screen.print ("Enabled");
         }
-        i = 0; //reset counter
-        disableStepperDriver();
+        else {
+          screen.print ("Disabled");
+        }
+        updateScreen = false;
 
-        if (!limitSwitches()){ //stop motor and reverse if limit switch hit
-          clearLimitSwitch();
-          break;
-        }    
+      }
+
+      break; 
+
+    case 5: //this menu screen selects the unit of measure to use for steps: Microns, Millimimeters or Centimeteres
+
+      menuChange(measure, 1, 3, 1);
+
+      if (updateScreen){ //only write to the screen when a change to the variables has been flagged
+
+        screen.setLCDColRow(0, 0);
+        screen.print("Unit of measure:");
+        screen.setLCDColRow(0, 1);
+        unitOfMeasure();
+
+        updateScreen = false;
+
+      }
+
+      break; 
+
+    case 6: //this menu screen adjusts the stepper motor speed (delay in microseconds between steps)
+      //setting this to low may cause the motor to begin stalling or failing to move at all
+
+      menuChange(stepDelay, 1000, 9000, 1000);
+
+      if (updateScreen){ //only write to the screen when a change to the variables has been flagged
+
+        screen.setLCDColRow(0, 0);
+        screen.print("Stepper speed: ");
+        screen.setLCDColRow(0, 1);
+        screen.print (stepDelay, DEC);
+        screen.print (" microsecs");
+        updateScreen = false;
+
+      }
+
+      break; 
+
+    case 7: //this menu screen changes the number of images to take per focus slice (exposure bracketing support)
+
+      menuChange(bracket, 1, 10, 1);
+
+      if (updateScreen){ //only write to the screen when a change to the variables has been flagged
+
+        screen.setLCDColRow(0, 0);
+        screen.print("Set bracketing: ");
+        screen.setLCDColRow(0, 1);
+        frontLoadAndPrint(bracket); //then use that figure to frontload with correct number of zeroes and print to screen
+        screen.print (bracket  , DEC);           
+        updateScreen = false;
+
+      }      
+
+      break;
+
+    }
+  } //end of setup menu section
+
+  else { 
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //THE FOCUS STACK, STARTED WHEN THE MAIN PUSHBUTTON IS PRESSED
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
+
+    disableStepperDriver();
+
+    for (int i = 0; i < slices; i++){ //loop the following actions for number of times dictated by var slices
+
+      sliceCount++; //count of pictures taken so far
+
+      screen.clearScreen();
+      screen.print("Moving ");
+      screen.print (steps);
+      unitOfMeasure();
+      screen.setLCDColRow(0, 1);
+      screen.print("Step ");
+      screen.print (sliceCount);
+      screen.print (" of ");
+      screen.print (slices);
+
+      delay(500);
+      enableStepperDriver();
+      digitalWrite(dir, HIGH); //set the stepper direction for backward travel (if your motor is wired the other way around you may need to reverse this)
+      delay(100);
+
+      int i = 0; //counter for motor steps
+      while (i < steps * 16 * measureMultiplier){ //adjust the number in this statement to tune distance travelled on your setup. In this case 16 is a product of 8x microstepping and a 2:1 gearing ratio
+        stepSignal();
+        i++;
+      }
+      i = 0; //reset counter
+      disableStepperDriver();   
+
+      if (buttonState == HIGH){ //if the Start/Stop stack button has been pressed, stop the stack even if not complete
+        break;
+      }
+
+      takePicture(); //send signal to camera to take picture
 
         if (buttonState == HIGH){ //if the Start/Stop stack button has been pressed, stop the stack even if not complete
-          break;
-        }
-
-        takePicture(); //send signal to camera to take picture
-
-          if (buttonState == HIGH){ //if the Start/Stop stack button has been pressed, stop the stack even if not complete
-          break;
-        }
-      } 
-      screen.setLCDColRow(0, 0);
-      screen.print("Stack finished");
-      delay(2000);
-      screen.clearScreen(); 
-      if (returnToStart == 1){   
-        digitalWrite(dir, LOW); //set the stepper direction for backward travel (if your motor is wired the other way around this you may need to reverse this)
-        delay(100);
-        screen.setLCDColRow(0, 0);
-        screen.print("<< Returning..."); 
-        int returnSteps = steps * sliceCount;
-        screen.setLCDColRow(0, 1);
-        screen.print (returnSteps);
-        unitOfMeasure();
-
-        enableStepperDriver();
-
-        int i = 0; //counter for motor steps
-        while (i < returnSteps * 16 * measureMultiplier && limitSwitches()){
-
-          stepSignal();
-          i++;
-        }
-        i = 0; //reset counter
-
-        disableStepperDriver();
-
-        if (!limitSwitches()){ //stop motor and reverse if limit switch hit
-          clearLimitSwitch();
-        }  
-
-        screen.clearScreen();
+        break;
       }
-      rotaryCount = 1; //set menu option display to first
-      sliceCount = 0; //reset pic counter
-      buttonState = HIGH; //return to menu options
     } 
-  }
+    screen.setLCDColRow(0, 0);
+    screen.print("Stack finished");
+    delay(2000);
+    screen.clearScreen(); 
+    if (returnToStart == 1){   
+      digitalWrite(dir, LOW); //set the stepper direction for backward travel (if your motor is wired the other way around this you may need to reverse this)
+      delay(100);
+      screen.setLCDColRow(0, 0);
+      screen.print("<< Returning..."); 
+      int returnSteps = steps * sliceCount;
+      screen.setLCDColRow(0, 1);
+      screen.print (returnSteps);
+      unitOfMeasure();
+
+      enableStepperDriver();
+
+      int i = 0; //counter for motor steps
+      while (i < returnSteps * 16 * measureMultiplier){
+
+        stepSignal();
+        i++;
+      }
+      i = 0; //reset counter
+
+      disableStepperDriver(); 
+      screen.clearScreen();
+    }
+    rotaryCount = 1; //set menu option display to first
+    sliceCount = 0; //reset pic counter
+    buttonState = HIGH; //return to menu options
+  } 
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -654,23 +645,6 @@ int8_t read_encoder(){
 
 }
 
-// The int handler will just signal that the int has happen
-// we will do the work from the main loop.
-void intCallBack(){
-
-}
-
-/* RETURN WHETHER A LIMIT SWITCH IS TRIPPED */
-//returns true as long as neither limit switch is tripped
-boolean limitSwitches(){
-  if (mcp.digitalRead(limitSwitchFront) == LOW || mcp.digitalRead(limitSwitchBack) == LOW){ //if controller is started up hitting a limit switch disable main functions and print warning to screen
-    return false;
-  } 
-  else {
-    return true; 
-  }
-}
-
 /* PULL CARRIAGE AWAY FROM TRIPPED LIMIT SWITCH */
 void clearLimitSwitch(){
   enableStepperDriver();
@@ -687,7 +661,7 @@ void clearLimitSwitch(){
     }
     digitalWrite(dir, HIGH); //restore normal stepper motor direction
   }
-  
+
   if (mcp.digitalRead(limitSwitchBack) == LOW){
     digitalWrite(dir, HIGH); //reverse stepper motor direction
     while (mcp.digitalRead(limitSwitchBack) == LOW) //iterate doStep signal for as long as  the limit switch remains pressed 
@@ -701,7 +675,27 @@ void clearLimitSwitch(){
   disableStepperDriver();
 }
 
+/* PROCESS INTERRUPTS FROM THE MCP23017 */
+void handleInterrupt(){
 
+  //find out which pin on the mcp created the interrupt and its current state
+  uint8_t pin=mcp.getLastInterruptPin();
+  uint8_t val=mcp.getLastInterruptPinValue();
+
+  detachInterrupt(0); //detach the interrupt while the current instance is dealt with
+
+  //if a limit switch was tripped call the function to clear it
+  if((pin == limitSwitchFront || pin == limitSwitchBack) && val == LOW){
+    clearLimitSwitch();
+  }
+  //if a switchoff signal was recieved from the pushbutton controller pull kill low to power off
+  if(pin == pbInterrupt && val == LOW) {
+    mcp.digitalWrite(kill, LOW);
+  }
+
+  attachInterrupt(0,handleInterrupt,FALLING); //re-attach the interrupt
+
+}
 
 
 
