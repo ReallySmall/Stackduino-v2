@@ -132,7 +132,7 @@ void setup() {
   //set MSCP23017 bank A pins as inputs and switch on internal pullups
   //lots of pins with the same settings so quicker to loop through with array
   int mcpInputPins[] = {
-    0,1,2,3,4,5,6      };
+    0,1,2,3,4,5,6          };
   for(int i=0; i < 7; i++){
     mcp.pinMode(mcpInputPins[i], INPUT);
     mcp.pullUp(mcpInputPins[i], HIGH);
@@ -146,7 +146,7 @@ void setup() {
   //set MSCP23017 bank B pins as outputs and write HIGH
   //lots of pins with the same settings so quicker to loop through with array
   int mcpOutputPins[] = {
-    8,9,10,11,12,13,14,15      };
+    8,9,10,11,12,13,14,15          };
   for(int i=0; i < 8; i++){
     mcp.pinMode(mcpOutputPins[i], OUTPUT);
     mcp.digitalWrite(mcpOutputPins[i], HIGH);
@@ -164,14 +164,10 @@ void setup() {
   attachInterrupt(1, buttonChange, CHANGE); //main pushbutton on interrupt 1
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  //CHECK LIMIT SWITCHES AND PRINT WELCOME MESSAGE TO SCREEN
+  //CHECK LIMIT SWITCHES
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  
+
   clearLimitSwitch();
-  screen.setLCDColRow(0, 0);
-  screen.print("Stackduino");
-  delay(1000);
-  screen.clearScreen();
 
 }
 
@@ -337,12 +333,12 @@ void loop(){
   else { 
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //THE FOCUS STACK, STARTED WHEN THE MAIN PUSHBUTTON IS PRESSED
+    //THE FOCUS STACK, STARTED WHEN THE MAIN PUSHBUTTON IS PRESSED. THE LOOP ADVANCES THE CAMERA, TAKES A PICTURE AND REPEATS.
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
 
-    disableStepperDriver();
+    disableStepperDriver(); //disable the stepper driver when not in use to save power
 
-    for (int i = 0; i < slices; i++){ //loop the following actions for number of times dictated by var slices
+      for (int i = 0; i < slices; i++){ //loop the following actions for number of times dictated by var slices
 
       sliceCount++; //count of pictures taken so far
 
@@ -351,43 +347,38 @@ void loop(){
       screen.print (steps);
       unitOfMeasure();
       screen.setLCDColRow(0, 1);
-      screen.print("Step ");
+      screen.print("Focus slice ");
       screen.print (sliceCount);
       screen.print (" of ");
       screen.print (slices);
 
-      delay(500);
       enableStepperDriver();
       digitalWrite(dir, HIGH); //set the stepper direction for backward travel (if your motor is wired the other way around you may need to reverse this)
       delay(100);
 
-      int i = 0; //counter for motor steps
-      while (i < steps * 16 * measureMultiplier){ //adjust the number in this statement to tune distance travelled on your setup. In this case 16 is a product of 8x microstepping and a 2:1 gearing ratio
+      for (int i = 0; i < steps * 16 * measureMultiplier; i++){ ////adjust the number in this statement to tune distance travelled on your setup. In this case 16 is a product of 8x microstepping and a 2:1 gearing ratio
         stepSignal();
-        i++;
-      }
-      i = 0; //reset counter
-      disableStepperDriver();   
-
-      if (buttonState == HIGH){ //if the Start/Stop stack button has been pressed, stop the stack even if not complete
-        break;
       }
 
+      disableStepperDriver(); //disable the stepper driver when not in use to save power  
       takePicture(); //send signal to camera to take picture
 
-        if (buttonState == HIGH){ //if the Start/Stop stack button has been pressed, stop the stack even if not complete
-        break;
-      }
-    } 
+    }
+
     screen.setLCDColRow(0, 0);
     screen.print("Stack finished");
     delay(2000);
     screen.clearScreen(); 
-    if (returnToStart == 1){   
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //THE FOCUS STACK HAS FINISHED. IF THE OPTION IS ENABLED THE CAMERA STAGE IS RETURNED TO ITS START POSITION.
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    if (returnToStart){   
       digitalWrite(dir, LOW); //set the stepper direction for backward travel (if your motor is wired the other way around this you may need to reverse this)
       delay(100);
       screen.setLCDColRow(0, 0);
-      screen.print("<< Returning..."); 
+      screen.print("<< Returning"); 
       int returnSteps = steps * sliceCount;
       screen.setLCDColRow(0, 1);
       screen.print (returnSteps);
@@ -395,20 +386,20 @@ void loop(){
 
       enableStepperDriver();
 
-      int i = 0; //counter for motor steps
-      while (i < returnSteps * 16 * measureMultiplier){
-
+      for (int i; i < returnSteps * 16 * measureMultiplier; i++){
         stepSignal();
-        i++;
       }
-      i = 0; //reset counter
 
       disableStepperDriver(); 
       screen.clearScreen();
     }
-    rotaryCount = 1; //set menu option display to first
-    sliceCount = 0; //reset pic counter
-    buttonState = HIGH; //return to menu options
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //RUN CLEANUP ON VARIABLES, HANDLE ANY CALLS TO CANCEL STACK EARLY, THEN GO BACK TO MENU SECTION
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    stackEnd();
+
   } 
 }
 
@@ -420,6 +411,8 @@ void loop(){
 
 /* RETURN CURRENT STATE OF MAIN PUSH BUTTON */
 void buttonChange(){ //function to read the current state of the push button
+
+  detachInterrupt(1); //detach the interrupt while the current instance is dealt with
 
   reading = digitalRead(pushButton);
 
@@ -433,6 +426,8 @@ void buttonChange(){ //function to read the current state of the push button
   }
 
   previous = reading;
+
+  attachInterrupt(1, buttonChange, CHANGE); //main pushbutton on interrupt 1
 } 
 
 /* RETURN CURRENT STATE OF ROTARY ENCODER'S PUSH BUTTON */
@@ -456,14 +451,8 @@ void manualControl(){
 
   while (mcp.digitalRead(forwardControl) == LOW) {
     enableStepperDriver();
-    int i;
-    if(reverseFwdBwd){
-      digitalWrite(dir, LOW);
-    } 
-    else {
-      digitalWrite(dir, HIGH);
-    }
-    for (i = 0; i<1; i++)
+    digitalWrite(dir, HIGH);
+    for (int i = 0; i<1; i++)
     {
       stepSignal(); //move forward
     }
@@ -472,14 +461,8 @@ void manualControl(){
 
   while (mcp.digitalRead(backwardControl) == LOW) {
     enableStepperDriver();
-    int i;
-    if(reverseFwdBwd){
-      digitalWrite(dir, HIGH);
-    } 
-    else {
-      digitalWrite(dir, LOW);
-    } 
-    for (i = 0; i<1; i++)
+    digitalWrite(dir, LOW);
+    for (int i = 0; i<1; i++)
     {
       stepSignal(); //move backward
     }
@@ -684,19 +667,27 @@ void handleInterrupt(){
 
   detachInterrupt(0); //detach the interrupt while the current instance is dealt with
 
-  //if a limit switch was tripped call the function to clear it
-  if((pin == limitSwitchFront || pin == limitSwitchBack) && val == LOW){
-    clearLimitSwitch();
-  }
   //if a switchoff signal was recieved from the pushbutton controller pull kill low to power off
   if(pin == pbInterrupt && val == LOW) {
     mcp.digitalWrite(kill, LOW);
+  }
+
+  //if a limit switch was tripped call the function to clear it
+  if((pin == limitSwitchFront || pin == limitSwitchBack) && val == LOW){
+    clearLimitSwitch();
   }
 
   attachInterrupt(0,handleInterrupt,FALLING); //re-attach the interrupt
 
 }
 
+/* RUN CLEANUP ON VARIABLES, HANDLE ANY CALLS TO CANCEL STACK EARLY, THEN GO BACK TO MENU SECTION */
+void stackEnd(){
 
+  rotaryCount = 1; //set menu to first option screen
+  sliceCount = 0; //reset pic counter
+  buttonState = HIGH; //return to menu options section
+
+}
 
 
