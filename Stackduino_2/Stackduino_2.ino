@@ -1,9 +1,9 @@
 /*
- STACKDUINO 2
- 
- A sketch to drive an Arduino compatible MacroPhotography Focus Stacking Controller
- 
- */
+STACKDUINO 2
+
+A sketch to drive an Arduino compatible MacroPhotography Focus Stacking Controller
+
+*/
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //INCLUDE LIBRARIES
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -66,18 +66,17 @@ int sleep = 15; //sleep/wake A4988 stepper driver to conserve power
 //GLOBAL VARIABLES
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-int steps = 10; //default number of steps which stepper motor should make between slices
-int slices = 10; //default total number of focus slices to make
-int sliceCount = 0; //count of number of focus slices made so far
+int sliceSize = 10; //default number of sliceSize which stepper motor should make between sliceNum
+int sliceNum = 10; //default total number of focus sliceNum to make
+int sliceCounter = 0; //count of number of focus sliceNum made so far
 int pause = 5000; //default time in millis to wait for camera to take picture
-int rotaryCount = 1; //which menu item to display when turning rotary encoder
-int measure = 1; //whether to use microns, mm or cm when making steps
+int encoderPos = 1; //which menu item to display when turning rotary encoder
+int measure = 1; //whether to use microns, mm or cm when making sliceSize
 int measureMultiplier = 1; //multiplier to factor into step signals (1, 1000 or 10,000) depending on unit of measure used
 int stepDelay = 2000; //delay in microseconds between motor steps, governing motor speed in stack
-int bracket = 1; //number of images to bracket per focus slice
+int sliceBracket = 1; //number of images to bracket per focus slice
 int encoderCount = 0; //count pulses from encoder
-boolean disableA4988 = true; //whether to disable easydriver betweem steps to save power and heat
-boolean reverseFwdBwd = false; //change to true to reverse direction of the forward and backward manual control buttons
+boolean disableA4988 = true; //whether to disable easydriver betweem sliceSize to save power and heat
 boolean returnToStart = false; //whether camera/ subject is returned to starting position at end of stack
 boolean updateScreen = true; //flag true on startup and whenever encoder or button functions are called, prompting a screen update
 
@@ -189,22 +188,22 @@ void loop(){
     manualControl(); //manual motor control to position stage before stack
 
     if (rbbuttonState == HIGH) { //use encoder to scroll through menu options
-      menuChange(rotaryCount, 0, 8, 1); 
+      menuChange(encoderPos, 0, 8, 1); 
     } 
 
-    switch (rotaryCount) { //the menu options
+    switch (encoderPos) { //the menu options
 
-    case 1: //this menu screen changes the number of steps to move each time
+    case 1: //this menu screen changes the number of increments to move each time
 
-      menuChange(steps, 1, 1000, 1);
+      menuChange(sliceSize, 1, 1000, 1);
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
         screen.setLCDColRow(0, 0);
-        screen.print("Set step size:  ");
+        screen.print("Set slice size:  ");
         screen.setLCDColRow(0, 1);
-        frontLoadAndPrint(steps); //frontload with correct number of zeroes and print to screen
-        screen.print (steps  , DEC);
+        frontLoadAndPrint(sliceSize); //frontload with correct number of zeroes and print to screen
+        screen.print (sliceSize  , DEC);
         unitOfMeasure();
         updateScreen = false;
 
@@ -212,17 +211,17 @@ void loop(){
 
       break;
 
-    case 2: //this menu screen changes the number of slices to create in the stack
+    case 2: //this menu screen changes the number of sliceNum to create in the stack
 
-      menuChange(slices, 10, 5000, 10);
+      menuChange(sliceNum, 10, 5000, 10);
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
         screen.setLCDColRow(0, 0);
-        screen.print("Set num slices: ");
+        screen.print("Number of sliceNum: ");
         screen.setLCDColRow(0, 1);
-        frontLoadAndPrint(slices); //then use that figure to frontload with correct number of zeroes and print to screen
-        screen.print (slices, DEC);
+        frontLoadAndPrint(sliceNum); //then use that figure to frontload with correct number of zeroes and print to screen
+        screen.print (sliceNum, DEC);
         updateScreen = false;
 
       } 
@@ -275,7 +274,7 @@ void loop(){
 
       break; 
 
-    case 5: //this menu screen selects the unit of measure to use for steps: Microns, Millimimeters or Centimeteres
+    case 5: //this menu screen selects the unit of measure to use for sliceSize: Microns, Millimimeters or Centimeteres
 
       menuChange(measure, 1, 3, 1);
 
@@ -292,7 +291,7 @@ void loop(){
 
       break; 
 
-    case 6: //this menu screen adjusts the stepper motor speed (delay in microseconds between steps)
+    case 6: //this menu screen adjusts the stepper motor speed (delay in microseconds between sliceSize)
       //setting this to low may cause the motor to begin stalling or failing to move at all
 
       menuChange(stepDelay, 1000, 9000, 1000);
@@ -312,15 +311,15 @@ void loop(){
 
     case 7: //this menu screen changes the number of images to take per focus slice (exposure bracketing support)
 
-      menuChange(bracket, 1, 10, 1);
+      menuChange(sliceBracket, 1, 10, 1);
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
         screen.setLCDColRow(0, 0);
         screen.print("Set bracketing: ");
         screen.setLCDColRow(0, 1);
-        frontLoadAndPrint(bracket); //then use that figure to frontload with correct number of zeroes and print to screen
-        screen.print (bracket  , DEC);           
+        frontLoadAndPrint(sliceBracket); //then use that figure to frontload with correct number of zeroes and print to screen
+        screen.print (sliceBracket  , DEC);           
         updateScreen = false;
 
       }      
@@ -338,28 +337,38 @@ void loop(){
 
     disableStepperDriver(); //disable the stepper driver when not in use to save power
 
-      for (int i = 0; i < slices; i++){ //loop the following actions for number of times dictated by var slices
+      for (int i = 0; i < sliceNum; i++){ //loop the following actions for number of times dictated by var sliceNum
 
-      sliceCount++; //count of pictures taken so far
-
+      sliceCounter++; //count of pictures taken so far
+      if(cancelStack()){ //check the button to cancel the stack hasn't been pressed - if yes we'll end this loop early (ie cancel the stack), print a message, then return to the menu section
+        break;
+      } 
       screen.clearScreen();
       screen.print("Moving ");
-      screen.print (steps);
+      screen.print (sliceSize);
       unitOfMeasure();
       screen.setLCDColRow(0, 1);
       screen.print("Focus slice ");
-      screen.print (sliceCount);
+      screen.print (sliceCounter);
       screen.print (" of ");
-      screen.print (slices);
-
+      screen.print (sliceNum);
+      if(cancelStack()){ //check the button to cancel the stack hasn't been pressed - if yes we'll end this loop early (ie cancel the stack), print a message, then return to the menu section
+        break;
+      } 
       enableStepperDriver();
-      digitalWrite(dir, HIGH); //set the stepper direction for backward travel (if your motor is wired the other way around you may need to reverse this)
+      digitalWrite(dir, LOW); //set the stepper direction for forward travel
       delay(100);
 
-      for (int i = 0; i < steps * 16 * measureMultiplier; i++){ ////adjust the number in this statement to tune distance travelled on your setup. In this case 16 is a product of 8x microstepping and a 2:1 gearing ratio
-        stepSignal();
+      for (int i = 0; i < sliceSize * 16 * measureMultiplier; i++){ ////adjust the number in this statement to tune distance travelled on your setup. In this case 16 is a product of 8x microstepping and a 2:1 gearing ratio
+        stepSignal(); //send a step signal to the stepper driver
+        if(cancelStack()){ //check the button to cancel the stack hasn't been pressed - if yes we'll end this loop early (ie cancel the stack), print a message, then return to the menu section
+          break;
+        } 
       }
-
+  
+      if(cancelStack()){ //check the button to cancel the stack hasn't been pressed - if yes we'll end this loop early (ie cancel the stack), print a message, then return to the menu section
+        break;
+      } 
       disableStepperDriver(); //disable the stepper driver when not in use to save power  
       takePicture(); //send signal to camera to take picture
 
@@ -375,11 +384,10 @@ void loop(){
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     if (returnToStart){   
-      digitalWrite(dir, LOW); //set the stepper direction for backward travel (if your motor is wired the other way around this you may need to reverse this)
-      delay(100);
+      digitalWrite(dir, HIGH); //set the stepper direction for backward travel (if your motor is wired the other way around this you may need to reverse this)
       screen.setLCDColRow(0, 0);
       screen.print("<< Returning"); 
-      int returnSteps = steps * sliceCount;
+      int returnSteps = sliceSize * sliceCounter;
       screen.setLCDColRow(0, 1);
       screen.print (returnSteps);
       unitOfMeasure();
@@ -388,6 +396,9 @@ void loop(){
 
       for (int i; i < returnSteps * 16 * measureMultiplier; i++){
         stepSignal();
+        if(cancelStack()){ //check the button to cancel the stack hasn't been pressed - if yes we'll end this loop early (ie cancel the stack), print a message, then return to the menu section
+          break;
+        } 
       }
 
       disableStepperDriver(); 
@@ -476,20 +487,22 @@ void stepSignal(){
 
   digitalWrite(doStep, LOW); //this LOW to HIGH change is what creates the
   digitalWrite(doStep, HIGH); //"Rising Edge" so the easydriver knows to when to step
-  delayMicroseconds(stepDelay); //delay time between steps, too fast and motor stalls
+  delayMicroseconds(stepDelay); //delay time between sliceSize, too fast and motor stalls
 
 }
 
 /* SEND SIGNAL TO CAMERA TO TAKE PICTURE WITH DELAYS TO ALLOW SETTLING */
 void takePicture(){
-  for (int i = 1; i <= bracket; i++){
-    screen.clearScreen();
-    if(i > 1){ //if more than one image is being taken, display the current bracket number
+  for (int i = 1; i <= sliceBracket; i++){
+    if(cancelStack()){ //check the button to cancel the stack hasn't been pressed - if yes we'll end this loop early (ie cancel the stack), print a message, then return to the menu section
+      break;
+    } 
+    if(i > 1){ //if more than one image is being taken, display the current sliceBracket number
       screen.print("Bracketed image:");
       screen.setLCDColRow(0, 1);
       screen.print(i);
       screen.print(" of ");
-      screen.print(bracket);
+      screen.print(sliceBracket);
       delay(1000);
     }
     screen.clearScreen();
@@ -507,7 +520,16 @@ void takePicture(){
     digitalWrite(shutter, LOW); //switch off camera trigger signal
     digitalWrite(focus, LOW); //switch off camera focus signal
 
-    delay(pause); //pause to allow for camera to take picture with mirror lockup and to allow flashes to recharge before next shot
+    //A delay is required here for the camera to take an image, taking into account mirror-lockup and flash recharge time
+    //The controller should still respond to a cancel event during this time so a non-blocking delay is required
+    unsigned long currentMillis = millis(); //get the current millis
+    unsigned long endMillis = currentMillis + pause; //the time to finish the delay
+
+    while(endMillis > millis()){
+      if(cancelStack()){ //check the button to cancel the stack hasn't been pressed - if yes we'll end this loop early (ie cancel the stack), print a message, then return to the menu section
+        break;
+      } 
+    }
 
     screen.clearScreen();
   }
@@ -545,7 +567,7 @@ void unitOfMeasure() {
 }
 
 /* FRONT PAD MENU ITEM VARIABLE NUMBERS WITH ZEROES 
- Maintains consistent formatting */
+Maintains consistent formatting */
 
 void frontLoadAndPrint(int menuvar) {
   if (menuvar < 10){
@@ -596,7 +618,7 @@ int rotaryCountRead(){
       encoderCount++;
     }
     if(encoderCount == 2){ //change this number to adjust encoder sensitivity
-      rotaryCount++;
+      encoderPos++;
       updateScreen = true; //flag that a menu has changed so screen updates with new value
       encoderCount = 0;
     }
@@ -604,12 +626,12 @@ int rotaryCountRead(){
       encoderCount--;
     }
     if(encoderCount == -2){ //change this number to adjust encoder sensitivity
-      rotaryCount--;
+      encoderPos--;
       updateScreen = true; //flag that a menu has changed so screen updates with new value
       encoderCount = 0;
     }
   }
-  return rotaryCount;
+  return encoderPos;
 }
 
 /* RETURN CHANGE IN ENCODER STATE */
@@ -631,6 +653,7 @@ int8_t read_encoder(){
 /* PULL CARRIAGE AWAY FROM TRIPPED LIMIT SWITCH */
 void clearLimitSwitch(){
   enableStepperDriver();
+  screen.clearScreen();
   screen.setLCDColRow(0, 0);
   screen.print("End of travel!  ");
   screen.setLCDColRow(0, 1);
@@ -656,6 +679,11 @@ void clearLimitSwitch(){
 
   screen.clearScreen();
   disableStepperDriver();
+  
+  if(buttonState == LOW){ //if a stack was in progress, cancel it as there probably isn't space to continue
+buttonState = HIGH;
+cancelStack();
+  }
 }
 
 /* PROCESS INTERRUPTS FROM THE MCP23017 */
@@ -681,13 +709,28 @@ void handleInterrupt(){
 
 }
 
-/* RUN CLEANUP ON VARIABLES, HANDLE ANY CALLS TO CANCEL STACK EARLY, THEN GO BACK TO MENU SECTION */
+/* RUN CLEANUP ON VARIABLES THEN GO BACK TO MENU SECTION */
 void stackEnd(){
 
-  rotaryCount = 1; //set menu to first option screen
-  sliceCount = 0; //reset pic counter
+  encoderPos = 1; //set menu to first option screen
+  sliceCounter = 0; //reset pic counter
   buttonState = HIGH; //return to menu options section
 
 }
 
+/* CHECK IF THE MAIN BUTTON HAS BEEN PUSHED DURING STACK AND CANCEL IF YES */
+boolean cancelStack(){
 
+  if(buttonState == HIGH){
+    screen.clearScreen();
+    screen.setLCDColRow(0, 0);
+    screen.print("Stack cancelled");
+    delay(1000);
+    screen.clearScreen();
+    
+    return true;
+  } else {
+    return false; 
+  }
+
+}
