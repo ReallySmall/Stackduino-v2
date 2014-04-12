@@ -165,7 +165,13 @@ void setup() {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //CHECK LIMIT SWITCHES
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+  
+  screen.setLCDColRow(0, 0);
+  screen.print("Stackduino");
+  screen.setLCDColRow(0, 0);
+  printPowerSource();
+  delay(2000);
+  screen.clearScreen();
   clearLimitSwitch();
 
 }
@@ -733,4 +739,13 @@ boolean cancelStack(){
     return false; 
   }
 
+}
+
+/* PRINT THE ACTIVE POWER SOURCE */
+void printPowerSource(){
+  if(mcp.digitalRead(stat) == LOW){
+    screen.print("On mains power");
+  } else {
+    screen.print("On battery power");
+  }
 }
