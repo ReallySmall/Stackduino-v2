@@ -1,9 +1,9 @@
 /*
 STACKDUINO 2
-
-A sketch to drive an Arduino compatible MacroPhotography Focus Stacking Controller
-
-*/
+ 
+ A sketch to drive an Arduino compatible MacroPhotography Focus Stacking Controller
+ 
+ */
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //INCLUDE LIBRARIES
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -131,7 +131,7 @@ void setup() {
   //set MSCP23017 bank A pins as inputs and switch on internal pullups
   //lots of pins with the same settings so quicker to loop through with array
   int mcpInputPins[] = {
-    0,1,2,3,4,5,6          };
+    0,1,2,3,4,5,6              };
   for(int i=0; i < 7; i++){
     mcp.pinMode(mcpInputPins[i], INPUT);
     mcp.pullUp(mcpInputPins[i], HIGH);
@@ -145,7 +145,7 @@ void setup() {
   //set MSCP23017 bank B pins as outputs and write HIGH
   //lots of pins with the same settings so quicker to loop through with array
   int mcpOutputPins[] = {
-    8,9,10,11,12,13,14,15          };
+    8,9,10,11,12,13,14,15              };
   for(int i=0; i < 8; i++){
     mcp.pinMode(mcpOutputPins[i], OUTPUT);
     mcp.digitalWrite(mcpOutputPins[i], HIGH);
@@ -157,7 +157,9 @@ void setup() {
   //START SERIAL CONNECTION AND ATTACH INTERRUPTS
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  Serial.begin(9600);  
+  Serial.begin(9600); //start serial
+  screen.displayConfig(0); //disable screen config message
+  screen.displayStartScreen(0); //disable splash screen
 
   attachInterrupt(0,handleInterrupt,FALLING); //mcp23017 on interrupt 0
   attachInterrupt(1, buttonChange, CHANGE); //main pushbutton on interrupt 1
@@ -165,13 +167,7 @@ void setup() {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //CHECK LIMIT SWITCHES
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  
-  screen.setLCDColRow(0, 0);
-  screen.print("Stackduino");
-  screen.setLCDColRow(0, 0);
-  printPowerSource();
-  delay(2000);
-  screen.clearScreen();
+  screen.clearScreen(); //clear the screen
   clearLimitSwitch();
 
 }
@@ -199,7 +195,7 @@ void loop(){
 
     switch (encoderPos) { //the menu options
 
-    case 1: //this menu screen changes the number of increments to move each time
+      case 1: //this menu screen changes the number of increments to move each time
 
       menuChange(sliceSize, 1, 1000, 1);
 
@@ -222,12 +218,11 @@ void loop(){
       menuChange(sliceNum, 10, 5000, 10);
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
-
-        screen.setLCDColRow(0, 0);
-        screen.print("Number of sliceNum: ");
-        screen.setLCDColRow(0, 1);
+        printHeader();
+        screen.setPrintPos(0,2);
+        screen.print("Number of slices");
+        screen.setPrintPos(7,4);
         frontLoadAndPrint(sliceNum); //then use that figure to frontload with correct number of zeroes and print to screen
-        screen.print (sliceNum, DEC);
         updateScreen = false;
 
       } 
@@ -342,22 +337,28 @@ void loop(){
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
 
     disableStepperDriver(); //disable the stepper driver when not in use to save power
+    screen.clearScreen();
+    printPowerSource();
+    screen.drawBox(1,15,128,1);
+    screen.setPrintPos(0,0);
+    screen.print("Stacking");
 
-      for (int i = 0; i < sliceNum; i++){ //loop the following actions for number of times dictated by var sliceNum
+    for (int i = 0; i < sliceNum; i++){ //loop the following actions for number of times dictated by var sliceNum
 
       sliceCounter++; //count of pictures taken so far
       if(cancelStack()){ //check the button to cancel the stack hasn't been pressed - if yes we'll end this loop early (ie cancel the stack), print a message, then return to the menu section
         break;
       } 
-      screen.clearScreen();
-      screen.print("Moving ");
+
+      screen.setPrintPos(0,2);
+      screen.print("Slice ");
+      screen.print (sliceCounter);
+      screen.print ("/");
+      screen.print (sliceNum);
+      screen.setPrintPos(0,4);
+      screen.print("Advance ");
       screen.print (sliceSize);
       unitOfMeasure();
-      screen.setLCDColRow(0, 1);
-      screen.print("Focus slice ");
-      screen.print (sliceCounter);
-      screen.print (" of ");
-      screen.print (sliceNum);
       if(cancelStack()){ //check the button to cancel the stack hasn't been pressed - if yes we'll end this loop early (ie cancel the stack), print a message, then return to the menu section
         break;
       } 
@@ -371,7 +372,7 @@ void loop(){
           break;
         } 
       }
-  
+
       if(cancelStack()){ //check the button to cancel the stack hasn't been pressed - if yes we'll end this loop early (ie cancel the stack), print a message, then return to the menu section
         break;
       } 
@@ -380,7 +381,8 @@ void loop(){
 
     }
 
-    screen.setLCDColRow(0, 0);
+    screen.clearScreen();
+    screen.setPrintPos(0,2);
     screen.print("Stack finished");
     delay(2000);
     screen.clearScreen(); 
@@ -429,8 +431,6 @@ void loop(){
 /* RETURN CURRENT STATE OF MAIN PUSH BUTTON */
 void buttonChange(){ //function to read the current state of the push button
 
-  detachInterrupt(1); //detach the interrupt while the current instance is dealt with
-
   reading = digitalRead(pushButton);
 
   if (reading == LOW && previous == HIGH && millis() - time > debounce) {
@@ -444,7 +444,6 @@ void buttonChange(){ //function to read the current state of the push button
 
   previous = reading;
 
-  attachInterrupt(1, buttonChange, CHANGE); //main pushbutton on interrupt 1
 } 
 
 /* RETURN CURRENT STATE OF ROTARY ENCODER'S PUSH BUTTON */
@@ -500,20 +499,22 @@ void stepSignal(){
 /* SEND SIGNAL TO CAMERA TO TAKE PICTURE WITH DELAYS TO ALLOW SETTLING */
 void takePicture(){
   for (int i = 1; i <= sliceBracket; i++){
+    screen.setPrintPos(0,4);
+    screen.print("                ");
     if(cancelStack()){ //check the button to cancel the stack hasn't been pressed - if yes we'll end this loop early (ie cancel the stack), print a message, then return to the menu section
       break;
     } 
     if(i > 1){ //if more than one image is being taken, display the current sliceBracket number
-      screen.print("Bracketed image:");
-      screen.setLCDColRow(0, 1);
+      screen.setPrintPos(0,4);
+      screen.print("Bracket ");
       screen.print(i);
-      screen.print(" of ");
+      screen.print("");
       screen.print(sliceBracket);
       delay(1000);
     }
-    screen.clearScreen();
-    screen.print("Pause for image");
-    screen.setLCDColRow(0, 1);
+    screen.setPrintPos(0,4);
+    screen.print("Pause for camera");
+    screen.setPrintPos(0,4);
     screen.print("(");
     screen.print ((pause / 1000), DEC);
     screen.print(" seconds)");
@@ -560,20 +561,20 @@ void disableStepperDriver() {
 void unitOfMeasure() {        
   if (measure==1){
     measureMultiplier = 1;
-    screen.print(" mn");
+    screen.print("mn");
   }
   if (measure==2){
     measureMultiplier = 1000;
-    screen.print(" mm");
+    screen.print("mm");
   }
   if (measure==3){
     measureMultiplier = 10000;
-    screen.print(" cm");
+    screen.print("cm");
   }
 }
 
 /* FRONT PAD MENU ITEM VARIABLE NUMBERS WITH ZEROES 
-Maintains consistent formatting */
+ Maintains consistent formatting */
 
 void frontLoadAndPrint(int menuvar) {
   if (menuvar < 10){
@@ -585,7 +586,6 @@ void frontLoadAndPrint(int menuvar) {
   if (menuvar < 1000){
     screen.print (0, DEC); //adds one leading zero to triple digit Step size numbers on the display
   }
-  screen.print(' ');
   screen.print(menuvar);
 }
 
@@ -685,10 +685,10 @@ void clearLimitSwitch(){
 
   screen.clearScreen();
   disableStepperDriver();
-  
+
   if(buttonState == LOW){ //if a stack was in progress, cancel it as there probably isn't space to continue
-buttonState = HIGH;
-cancelStack();
+    buttonState = HIGH;
+    cancelStack();
   }
 }
 
@@ -721,6 +721,7 @@ void stackEnd(){
   encoderPos = 1; //set menu to first option screen
   sliceCounter = 0; //reset pic counter
   buttonState = HIGH; //return to menu options section
+  updateScreen = true; //write the first menu item to the screen
 
 }
 
@@ -729,23 +730,46 @@ boolean cancelStack(){
 
   if(buttonState == HIGH){
     screen.clearScreen();
-    screen.setLCDColRow(0, 0);
+    screen.setPrintPos(0,2);
     screen.print("Stack cancelled");
     delay(1000);
     screen.clearScreen();
-    
+
     return true;
-  } else {
+  } 
+  else {
     return false; 
   }
 
+}
+
+/* PRINT THE SCREEN HEADER */
+void printHeader(){
+  screen.clearScreen(); //clear the screen
+  screen.drawBox(1,15,128,1); //draw a horizontal line to mark out a header section
+  screen.setPrintPos(0,0); //set text position in top left corner
+  if(buttonState == HIGH){ //if the menu section is active, print the current menu item number
+     screen.print("Menu ");
+     screen.print(encoderPos);
+     screen.print("/"); 
+     screen.print("7");
+  } 
+  else { //or if a stack is in progress, print a message to that effect instead
+    screen.print("Stacking");
+  }
+  printPowerSource(); //display the current power source in top right corner
 }
 
 /* PRINT THE ACTIVE POWER SOURCE */
 void printPowerSource(){
   if(mcp.digitalRead(stat) == LOW){
     screen.print("On mains power");
-  } else {
-    screen.print("On battery power");
+  } 
+  else {
+    //draw battery symbol in top right corner
+    screen.drawBox(112,3,2,2);
+    screen.drawBox(114,1,14,6);
   }
 }
+
+
