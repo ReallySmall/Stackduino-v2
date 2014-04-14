@@ -69,16 +69,18 @@ int sleep = 15; //sleep/wake A4988 stepper driver to conserve power
 int sliceSize = 10; //default number of sliceSize which stepper motor should make between sliceNum
 int sliceNum = 10; //default total number of focus sliceNum to make
 int sliceCounter = 0; //count of number of focus sliceNum made so far
-int pause = 5000; //default time in millis to wait for camera to take picture
+int pause = 5; //default time in seconds to wait for camera to take picture
 int encoderPos = 1; //which menu item to display when turning rotary encoder
 int measure = 1; //whether to use microns, mm or cm when making sliceSize
 int measureMultiplier = 1; //multiplier to factor into step signals (1, 1000 or 10,000) depending on unit of measure used
 int stepDelay = 2000; //delay in microseconds between motor steps, governing motor speed in stack
-int sliceBracket = 1; //number of images to bracket per focus slice
+int sliceBracket = 2; //number of images to bracket per focus slice
 int encoderCount = 0; //count pulses from encoder
+int returnToStart = 1; //whether camera/ subject is returned to starting position at end of stack
 boolean disableA4988 = true; //whether to disable easydriver betweem sliceSize to save power and heat
-boolean returnToStart = false; //whether camera/ subject is returned to starting position at end of stack
 boolean updateScreen = true; //flag true on startup and whenever encoder or button functions are called, prompting a screen update
+
+void menuChange(int &menuvar, int constrainLow, int constrainHigh, int multiplier = 1);
 
 //pushButton toggle
 volatile int buttonState = HIGH; //the current state of the output pin
@@ -131,7 +133,7 @@ void setup() {
   //set MSCP23017 bank A pins as inputs and switch on internal pullups
   //lots of pins with the same settings so quicker to loop through with array
   int mcpInputPins[] = {
-    0,1,2,3,4,5,6              };
+    0,1,2,3,4,5,6                  };
   for(int i=0; i < 7; i++){
     mcp.pinMode(mcpInputPins[i], INPUT);
     mcp.pullUp(mcpInputPins[i], HIGH);
@@ -145,7 +147,7 @@ void setup() {
   //set MSCP23017 bank B pins as outputs and write HIGH
   //lots of pins with the same settings so quicker to loop through with array
   int mcpOutputPins[] = {
-    8,9,10,11,12,13,14,15              };
+    8,9,10,11,12,13,14,15                  };
   for(int i=0; i < 8; i++){
     mcp.pinMode(mcpOutputPins[i], OUTPUT);
     mcp.digitalWrite(mcpOutputPins[i], HIGH);
@@ -190,22 +192,22 @@ void loop(){
     manualControl(); //manual motor control to position stage before stack
 
     if (rbbuttonState == HIGH) { //use encoder to scroll through menu options
-      menuChange(encoderPos, 0, 8, 1); 
+      menuChange(encoderPos, 0, 8); 
     } 
 
     switch (encoderPos) { //the menu options
 
       case 1: //this menu screen changes the number of increments to move each time
 
-      menuChange(sliceSize, 1, 1000, 1);
+      menuChange(sliceSize, 1, 1000); //menu variable to change, plus lower and upper bounds
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
-        screen.setLCDColRow(0, 0);
+        printHeader();
+        screen.setPrintPos(0,2);
         screen.print("Set slice size:  ");
-        screen.setLCDColRow(0, 1);
+        screen.setPrintPos(6,4);
         frontLoadAndPrint(sliceSize); //frontload with correct number of zeroes and print to screen
-        screen.print (sliceSize  , DEC);
         unitOfMeasure();
         updateScreen = false;
 
@@ -215,13 +217,14 @@ void loop(){
 
     case 2: //this menu screen changes the number of sliceNum to create in the stack
 
-      menuChange(sliceNum, 10, 5000, 10);
+      menuChange(sliceNum, 10, 5000, 10); //menu variable to change, plus lower and upper bounds, and optional multiplier
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
+
         printHeader();
         screen.setPrintPos(0,2);
         screen.print("Number of slices");
-        screen.setPrintPos(7,4);
+        screen.setPrintPos(6,4);
         frontLoadAndPrint(sliceNum); //then use that figure to frontload with correct number of zeroes and print to screen
         updateScreen = false;
 
@@ -233,17 +236,18 @@ void loop(){
       //you may want longer if using flashes for adequate recharge time or shorter with continuous lighting
       //to reduce overall time taken to complete the stack
 
-      menuChange(pause, 1000, 30000, 1000);
+      menuChange(pause, 1000, 30000, 1000); //menu variable to change, plus lower and upper bounds, and optional multiplier
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
-        screen.setLCDColRow(0, 0);
+        printHeader();
+        screen.setPrintPos(0,2);
         screen.print("Set pause time: ");
-        screen.setLCDColRow(0, 1);
+        screen.setPrintPos(7,4);
         if (pause < 10000){
           screen.print (0, DEC); //adds one leading zero to triple digit pause numbers on the display
         }
-        screen.print ((pause / 1000), DEC); //divide millis by 1000 to display in seconds
+        screen.print ((pause), DEC); //divide millis by 1000 to display in seconds
         screen.print(" seconds");  
         updateScreen = false;
 
@@ -253,17 +257,15 @@ void loop(){
 
     case 4: //toggles whether camera/subject is returned the starting position at the end of the stack
 
-      if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
-        returnToStart = constrain(returnToStart, true, false); //limits choice of returnToStart to specified range
-        returnToStart += read_encoder (); //use encoder reading function to set value of returnToStart variable
-      }
+      menuChange(returnToStart, 1, 2); //menu variable to change, plus lower and upper bounds, and optional multiplier
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
-        screen.setLCDColRow(0, 0);
+        printHeader();
+        screen.setPrintPos(0,2);
         screen.print("Return to start:");
-        screen.setLCDColRow(0, 1);
-        if(returnToStart == true){
+        screen.setPrintPos(4,4);
+        if(returnToStart == 1){
           screen.print ("Enabled");
         }
         else {
@@ -277,15 +279,15 @@ void loop(){
 
     case 5: //this menu screen selects the unit of measure to use for sliceSize: Microns, Millimimeters or Centimeteres
 
-      menuChange(measure, 1, 3, 1);
+      menuChange(measure, 1, 3); //menu variable to change, plus lower and upper bounds
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
-        screen.setLCDColRow(0, 0);
+        printHeader();
+        screen.setPrintPos(0,2);
         screen.print("Unit of measure:");
-        screen.setLCDColRow(0, 1);
+        screen.setPrintPos(8,4);
         unitOfMeasure();
-
         updateScreen = false;
 
       }
@@ -295,14 +297,15 @@ void loop(){
     case 6: //this menu screen adjusts the stepper motor speed (delay in microseconds between sliceSize)
       //setting this to low may cause the motor to begin stalling or failing to move at all
 
-      menuChange(stepDelay, 1000, 9000, 1000);
+      menuChange(stepDelay, 1000, 9000, 1000); //menu variable to change, plus lower and upper bounds, and optional multiplier
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
-        screen.setLCDColRow(0, 0);
+        printHeader();
+        screen.setPrintPos(0,2);
         screen.print("Stepper speed: ");
-        screen.setLCDColRow(0, 1);
-        screen.print (stepDelay, DEC);
+        screen.setPrintPos(2,4);
+        frontLoadAndPrint(stepDelay);
         screen.print (" microsecs");
         updateScreen = false;
 
@@ -312,15 +315,15 @@ void loop(){
 
     case 7: //this menu screen changes the number of images to take per focus slice (exposure bracketing support)
 
-      menuChange(sliceBracket, 1, 10, 1);
+      menuChange(sliceBracket, 1, 10); //menu variable to change, plus lower and upper bounds
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
-        screen.setLCDColRow(0, 0);
+        printHeader();
+        screen.setPrintPos(0,2);
         screen.print("Set bracketing: ");
-        screen.setLCDColRow(0, 1);
-        frontLoadAndPrint(sliceBracket); //then use that figure to frontload with correct number of zeroes and print to screen
-        screen.print (sliceBracket  , DEC);           
+        screen.setPrintPos(2,4);
+        frontLoadAndPrint(sliceBracket); //then use that figure to frontload with correct number of zeroes and print to screen           
         updateScreen = false;
 
       }      
@@ -337,15 +340,13 @@ void loop(){
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
 
     disableStepperDriver(); //disable the stepper driver when not in use to save power
-    screen.clearScreen();
-    printPowerSource();
-    screen.drawBox(1,15,128,1);
-    screen.setPrintPos(0,0);
-    screen.print("Stacking");
 
-    for (int i = 0; i < sliceNum; i++){ //loop the following actions for number of times dictated by var sliceNum
+      for (int i = 0; i < sliceNum; i++){ //loop the following actions for number of times dictated by var sliceNum
 
+      screen.clearScreen();
+      printHeader(); 
       sliceCounter++; //count of pictures taken so far
+
       if(cancelStack()){ //check the button to cancel the stack hasn't been pressed - if yes we'll end this loop early (ie cancel the stack), print a message, then return to the menu section
         break;
       } 
@@ -391,12 +392,12 @@ void loop(){
     //THE FOCUS STACK HAS FINISHED. IF THE OPTION IS ENABLED THE CAMERA STAGE IS RETURNED TO ITS START POSITION.
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    if (returnToStart){   
+    if (returnToStart == 1){   
       digitalWrite(dir, HIGH); //set the stepper direction for backward travel (if your motor is wired the other way around this you may need to reverse this)
-      screen.setLCDColRow(0, 0);
-      screen.print("<< Returning"); 
+      screen.setPrintPos(0,2);
+      screen.print("Returning"); 
       int returnSteps = sliceSize * sliceCounter;
-      screen.setLCDColRow(0, 1);
+      screen.setPrintPos(0, 4);
       screen.print (returnSteps);
       unitOfMeasure();
 
@@ -499,47 +500,51 @@ void stepSignal(){
 /* SEND SIGNAL TO CAMERA TO TAKE PICTURE WITH DELAYS TO ALLOW SETTLING */
 void takePicture(){
   for (int i = 1; i <= sliceBracket; i++){
-    screen.setPrintPos(0,4);
-    screen.print("                ");
+    emptyTextRow(4); //wipe the last row of the screen ready for new content
     if(cancelStack()){ //check the button to cancel the stack hasn't been pressed - if yes we'll end this loop early (ie cancel the stack), print a message, then return to the menu section
       break;
     } 
-    if(i > 1){ //if more than one image is being taken, display the current sliceBracket number
-      screen.setPrintPos(0,4);
+    if(sliceBracket > 1){ //if more than one image is being taken, display the current sliceBracket number
+      emptyTextRow(4); //wipe the last row of the screen ready for new content
       screen.print("Bracket ");
       screen.print(i);
-      screen.print("");
+      screen.print("/");
       screen.print(sliceBracket);
-      delay(1000);
+      delay(600);
     }
-    screen.setPrintPos(0,4);
+    emptyTextRow(4); //wipe the last row of the screen ready for new content
     screen.print("Pause for camera");
-    screen.setPrintPos(0,4);
-    screen.print("(");
-    screen.print ((pause / 1000), DEC);
-    screen.print(" seconds)");
-
+    
     digitalWrite(focus, HIGH); //trigger camera autofocus - camera may not take picture in some modes if this is not triggered first
     digitalWrite(shutter, HIGH); //trigger camera shutter
 
-    delay(200); //small delay needed for camera to process above signals
+    delay(100); //small delay needed for camera to process above signals
 
     digitalWrite(shutter, LOW); //switch off camera trigger signal
     digitalWrite(focus, LOW); //switch off camera focus signal
 
     //A delay is required here for the camera to take an image, taking into account mirror-lockup and flash recharge time
     //The controller should still respond to a cancel event during this time so a non-blocking delay is required
-    unsigned long currentMillis = millis(); //get the current millis
-    unsigned long endMillis = currentMillis + pause; //the time to finish the delay
+    unsigned long initialMillis = millis(); //get the current millis
+    unsigned long endMillis = initialMillis + (pause * 1000); //the time to finish the delay
+    int countDown = 1; //slightly counter-intuitively counts upwards until equal to the pause time set
 
-    while(endMillis > millis()){
+    while(endMillis > millis()){ //if the end of the pause time hasn't yet been reached
       if(cancelStack()){ //check the button to cancel the stack hasn't been pressed - if yes we'll end this loop early (ie cancel the stack), print a message, then return to the menu section
         break;
-      } 
+      }
+      if(millis() > (initialMillis + (countDown * 1000)) && pause > countDown){ //if a second has elapsed since the last countdown statement, update it
+        emptyTextRow(4); //wipe the last row of the screen ready for new content
+        screen.print("Resume in ");
+        screen.print(pause - countDown); //print number of seconds remaining
+        screen.print("s");
+        countDown++;
+      }
     }
-
-    screen.clearScreen();
+    countDown = 1; //reset the variable
   }
+
+
 }
 
 /* ENABLE THE STEPPER DRIVER */
@@ -734,7 +739,6 @@ boolean cancelStack(){
     screen.print("Stack cancelled");
     delay(1000);
     screen.clearScreen();
-
     return true;
   } 
   else {
@@ -747,29 +751,42 @@ boolean cancelStack(){
 void printHeader(){
   screen.clearScreen(); //clear the screen
   screen.drawBox(1,15,128,1); //draw a horizontal line to mark out a header section
+  printPowerSource(); //display the current power source in top right corner
   screen.setPrintPos(0,0); //set text position in top left corner
   if(buttonState == HIGH){ //if the menu section is active, print the current menu item number
-     screen.print("Menu ");
-     screen.print(encoderPos);
-     screen.print("/"); 
-     screen.print("7");
+    screen.print("Menu ");
+    screen.print(encoderPos);
+    screen.print("/"); 
+    screen.print("7");
   } 
   else { //or if a stack is in progress, print a message to that effect instead
     screen.print("Stacking");
   }
-  printPowerSource(); //display the current power source in top right corner
 }
 
 /* PRINT THE ACTIVE POWER SOURCE */
 void printPowerSource(){
   if(mcp.digitalRead(stat) == LOW){
-    screen.print("On mains power");
+    //TODO - GRAPHIC FOR DC ADAPTER CONNECTION
   } 
   else {
     //draw battery symbol in top right corner
     screen.drawBox(112,3,2,2);
     screen.drawBox(114,1,14,6);
   }
+}
+
+/* OVERWRITE SELECTED TEXT LINE WITH BLANKS AND RESET CURSOR TO BEGINNING OF LINE */
+//avoids having to wipe the whole screen and re-output everything from scratch
+//lineNum(Required) - the text row, between 1-5, to target
+//charNum(Optional) - the character column, between 1-16, to start on
+//endChar(Optional) - the character column, between 1-16, to end on 
+void emptyTextRow(int lineNum) {
+  screen.setPrintPos(0,lineNum);
+  for(int i = 0; i <= 16; i++){
+    screen.print(" ");//overwrite a single character slot with a blank string
+  }
+  screen.setPrintPos(0,lineNum);
 }
 
 
