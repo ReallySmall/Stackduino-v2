@@ -83,18 +83,18 @@ boolean updateScreen = true; //flag true on startup and whenever encoder or butt
 void menuChange(int &menuvar, int constrainLow, int constrainHigh, int multiplier = 1);
 
 //pushButton toggle
-volatile int buttonState = HIGH; //the current state of the output pin
+volatile int startStack = false; //the current state of the output pin
 volatile int reading; //the current reading from the input pin
 volatile int previous = LOW; //the previous reading from the input pin
 volatile long time = 0; //the last time the output pin was toggled
-volatile long debounce = 400; //the debounce time, increase if the output flickers
+volatile long debounce = 100; //the debounce time, increase if the output flickers
 
 //rotary pushButton toggle
 volatile int rbbuttonState = HIGH; //the current state of the output pin
 volatile int rbreading; //the current reading from the input pin
 volatile int rbprevious = LOW; //the previous reading from the input pin
 volatile long rbtime = 0; //the last time the output pin was toggled
-volatile long rbdebounce = 400; //the debounce time, increase if the output flickers
+volatile long rbdebounce = 100; //the debounce time, increase if the output flickers
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -133,7 +133,7 @@ void setup() {
   //set MSCP23017 bank A pins as inputs and switch on internal pullups
   //lots of pins with the same settings so quicker to loop through with array
   int mcpInputPins[] = {
-    0,1,2,3,4,5,6                  };
+    0,1,2,3,4,5,6                      };
   for(int i=0; i < 7; i++){
     mcp.pinMode(mcpInputPins[i], INPUT);
     mcp.pullUp(mcpInputPins[i], HIGH);
@@ -147,7 +147,7 @@ void setup() {
   //set MSCP23017 bank B pins as outputs and write HIGH
   //lots of pins with the same settings so quicker to loop through with array
   int mcpOutputPins[] = {
-    8,9,10,11,12,13,14,15                  };
+    8,9,10,11,12,13,14,15                      };
   for(int i=0; i < 8; i++){
     mcp.pinMode(mcpOutputPins[i], OUTPUT);
     mcp.digitalWrite(mcpOutputPins[i], HIGH);
@@ -186,20 +186,52 @@ void loop(){
   //SETTINGS CONFIGURATION AND MANUAL STAGE CONTROL
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  if (buttonState == HIGH){ //this section allows manual control and configures settings using a simple screen menu system
+  if (startStack == false){ //this section allows manual control and configures settings using a simple screen menu system
 
     disableStepperDriver(); //switch off stepper motor power if option enabled
     manualControl(); //manual motor control to position stage before stack
 
     if (rbbuttonState == HIGH) { //use encoder to scroll through menu options
-      menuChange(encoderPos, 0, 8); 
+      int8_t tmpdata = read_encoder(); //counts encoder pulses and registers only every nth pulse to adjust feedback sensitivity
+      if(tmpdata){
+        if(tmpdata == 1){
+          encoderCount++;
+        }
+
+        if(encoderCount == 2){ //change this number to adjust encoder sensitivity
+          encoderPos++;
+          encoderCount = 0;
+        }
+
+        if(tmpdata == -1){
+          encoderCount--;
+        }
+        if(encoderCount == -2){ //change this number to adjust encoder sensitivity
+          encoderPos--;
+          encoderCount = 0;
+        }
+      }
+
+      encoderPos = constrain(encoderPos, 0, 8); //limits choice to specified range
+
+      if (encoderPos == 8){ //when counter value exceeds number of menu items
+        encoderPos = 1; //reset it to 1 again to create a looping navigation
+      }
+
+      if (encoderPos == 0){ //when counter value goes below minimum number of menu items
+        encoderPos = 7; //reset it to 7 again to create a looping navigation
+      }     
     } 
+
 
     switch (encoderPos) { //the menu options
 
       case 1: //this menu screen changes the number of increments to move each time
 
-      menuChange(sliceSize, 1, 1000); //menu variable to change, plus lower and upper bounds
+      if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
+        sliceSize = constrain(sliceSize, 1, 1000); //limits choice of input step size to specified range
+        sliceSize += read_encoder ();  //use encoder reading function to set value of steps variable
+      }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
@@ -217,7 +249,10 @@ void loop(){
 
     case 2: //this menu screen changes the number of sliceNum to create in the stack
 
-      menuChange(sliceNum, 10, 5000, 10); //menu variable to change, plus lower and upper bounds, and optional multiplier
+      if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
+        sliceNum = constrain(sliceNum, 1, 1000); //limits choice of input step size to specified range
+        sliceNum += read_encoder ();  //use encoder reading function to set value of steps variable
+      }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
@@ -236,7 +271,10 @@ void loop(){
       //you may want longer if using flashes for adequate recharge time or shorter with continuous lighting
       //to reduce overall time taken to complete the stack
 
-      menuChange(pause, 1000, 30000, 1000); //menu variable to change, plus lower and upper bounds, and optional multiplier
+      if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
+        pause = constrain(pause, 1, 60); //limits choice of input step size to specified range
+        pause += read_encoder ();  //use encoder reading function to set value of steps variable
+      }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
@@ -257,7 +295,10 @@ void loop(){
 
     case 4: //toggles whether camera/subject is returned the starting position at the end of the stack
 
-      menuChange(returnToStart, 1, 2); //menu variable to change, plus lower and upper bounds, and optional multiplier
+      if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
+        returnToStart = constrain(returnToStart, 1, 2); //limits choice of input step size to specified range
+        returnToStart += read_encoder ();  //use encoder reading function to set value of steps variable
+      }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
@@ -279,7 +320,10 @@ void loop(){
 
     case 5: //this menu screen selects the unit of measure to use for sliceSize: Microns, Millimimeters or Centimeteres
 
-      menuChange(measure, 1, 3); //menu variable to change, plus lower and upper bounds
+      if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
+        measure = constrain(measure, 1, 2); //limits choice of input step size to specified range
+        measure += read_encoder ();  //use encoder reading function to set value of steps variable
+      }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
@@ -297,7 +341,10 @@ void loop(){
     case 6: //this menu screen adjusts the stepper motor speed (delay in microseconds between sliceSize)
       //setting this to low may cause the motor to begin stalling or failing to move at all
 
-      menuChange(stepDelay, 1000, 9000, 1000); //menu variable to change, plus lower and upper bounds, and optional multiplier
+      if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
+        stepDelay = constrain(stepDelay, 1000, 8000); //limits choice of input step size to specified range
+        stepDelay += read_encoder ();  //use encoder reading function to set value of steps variable
+      }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
@@ -315,7 +362,10 @@ void loop(){
 
     case 7: //this menu screen changes the number of images to take per focus slice (exposure bracketing support)
 
-      menuChange(sliceBracket, 1, 10); //menu variable to change, plus lower and upper bounds
+      if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
+        sliceBracket = constrain(sliceBracket, 1, 10); //limits choice of input step size to specified range
+        sliceBracket += read_encoder ();  //use encoder reading function to set value of steps variable
+      }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
@@ -364,7 +414,8 @@ void loop(){
         break;
       } 
       enableStepperDriver();
-      digitalWrite(dir, LOW); //set the stepper direction for forward travel
+      stepperDirection("forwards");
+      ; //set the stepper direction for forward travel
       delay(100);
 
       for (int i = 0; i < sliceSize * 16 * measureMultiplier; i++){ ////adjust the number in this statement to tune distance travelled on your setup. In this case 16 is a product of 8x microstepping and a 2:1 gearing ratio
@@ -386,18 +437,17 @@ void loop(){
     screen.setPrintPos(0,2);
     screen.print("Stack finished");
     delay(2000);
-    screen.clearScreen(); 
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //THE FOCUS STACK HAS FINISHED. IF THE OPTION IS ENABLED THE CAMERA STAGE IS RETURNED TO ITS START POSITION.
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     if (returnToStart == 1){   
-      digitalWrite(dir, HIGH); //set the stepper direction for backward travel (if your motor is wired the other way around this you may need to reverse this)
-      screen.setPrintPos(0,2);
+      stepperDirection("backwards"); //set the stepper direction for backward travel
+      emptyTextRow(2);
       screen.print("Returning"); 
       int returnSteps = sliceSize * sliceCounter;
-      screen.setPrintPos(0, 4);
+      emptyTextRow(4);
       screen.print (returnSteps);
       unitOfMeasure();
 
@@ -435,11 +485,12 @@ void buttonChange(){ //function to read the current state of the push button
   reading = digitalRead(pushButton);
 
   if (reading == LOW && previous == HIGH && millis() - time > debounce) {
-    if (buttonState == HIGH)
-      buttonState = LOW;
-    else
-      buttonState = HIGH;
-
+    if (startStack == true) {
+      startStack = false;
+    } 
+    else {
+      startStack = true;
+    }
     time = millis();    
   }
 
@@ -468,7 +519,7 @@ void manualControl(){
 
   while (mcp.digitalRead(forwardControl) == LOW) {
     enableStepperDriver();
-    digitalWrite(dir, HIGH);
+    stepperDirection("forwards");
     for (int i = 0; i<1; i++)
     {
       stepSignal(); //move forward
@@ -478,7 +529,7 @@ void manualControl(){
 
   while (mcp.digitalRead(backwardControl) == LOW) {
     enableStepperDriver();
-    digitalWrite(dir, LOW);
+    stepperDirection("backwards");
     for (int i = 0; i<1; i++)
     {
       stepSignal(); //move backward
@@ -514,7 +565,7 @@ void takePicture(){
     }
     emptyTextRow(4); //wipe the last row of the screen ready for new content
     screen.print("Pause for camera");
-    
+
     digitalWrite(focus, HIGH); //trigger camera autofocus - camera may not take picture in some modes if this is not triggered first
     digitalWrite(shutter, HIGH); //trigger camera shutter
 
@@ -544,7 +595,6 @@ void takePicture(){
     countDown = 1; //reset the variable
   }
 
-
 }
 
 /* ENABLE THE STEPPER DRIVER */
@@ -560,6 +610,16 @@ void disableStepperDriver() {
   else {
     mcp.digitalWrite(enable, LOW);
   } 
+}
+
+/* SET STEPPER MOTOR DIRECTION */
+void stepperDirection(String direction){
+  if(direction == "backwards"){
+    digitalWrite(dir, LOW);
+  } 
+  else {
+    digitalWrite(dir, HIGH);
+  }
 }
 
 /* PRINT SELECTED UNIT OF MEASURE TO SCREEN */
@@ -594,57 +654,6 @@ void frontLoadAndPrint(int menuvar) {
   screen.print(menuvar);
 }
 
-/* MONITOR THE ROTARY ENCODER AND PROCESS ANY MENU SCREEN OR ITEM CHANGES */
-
-void menuChange(int &menuvar, int constrainLow, int constrainHigh, int multiplier) {
-
-  //If the encoder is in menu screen changing mode
-  if (rbbuttonState == HIGH) { //pressing rotary encoder button enables editing of selected menu item's variable
-    menuvar = constrain(menuvar, constrainLow, constrainHigh); //limits choice of input step size to specified range
-    menuvar += rotaryCountRead();  //use encoder reading function to set value of variable
-    if (menuvar == 8){ //when counter value exceeds number of menu items
-      menuvar = 1; //reset it to 1 again to create a looping navigation
-    }
-    if (menuvar == 0){ //when counter value goes below minimum number of menu items
-      menuvar = 7; //reset it to 7 again to create a looping navigation
-    } 
-  }
-
-  //If the encoder is in menu item changing mode within a menu screen
-  if (rbbuttonState == LOW) { //pressing rotary encoder button enables editing of selected menu item's variable
-    menuvar = constrain(menuvar, constrainLow, constrainHigh); //limits choice of input step size to specified range
-    menuvar += rotaryCountRead() * multiplier;  //use encoder reading function to set value of variable
-  }
-
-}
-
-/* FILTER OUTPUT FROM THE ROTARY ENCODER FUNCTION AND RETURN CURRENT VALUE */
-
-int rotaryCountRead(){
-
-  int8_t tmpdata = read_encoder(); //counts encoder pulses and registers only every nth pulse to adjust feedback sensitivity
-
-  if(tmpdata){
-    if(tmpdata == 1){
-      encoderCount++;
-    }
-    if(encoderCount == 2){ //change this number to adjust encoder sensitivity
-      encoderPos++;
-      updateScreen = true; //flag that a menu has changed so screen updates with new value
-      encoderCount = 0;
-    }
-    if(tmpdata == -1){
-      encoderCount--;
-    }
-    if(encoderCount == -2){ //change this number to adjust encoder sensitivity
-      encoderPos--;
-      updateScreen = true; //flag that a menu has changed so screen updates with new value
-      encoderCount = 0;
-    }
-  }
-  return encoderPos;
-}
-
 /* RETURN CHANGE IN ENCODER STATE */
 int8_t read_encoder(){
 
@@ -671,28 +680,28 @@ void clearLimitSwitch(){
   screen.print("Returning...    ");
 
   if (mcp.digitalRead(limitSwitchFront) == LOW){
-    digitalWrite(dir, LOW); //reverse stepper motor direction
+    stepperDirection("backwards"); //reverse stepper motor direction
     while (mcp.digitalRead(limitSwitchFront) == LOW) //iterate doStep signal for as long as  the limit switch remains pressed 
     {  
       stepSignal();
     }
-    digitalWrite(dir, HIGH); //restore normal stepper motor direction
+    stepperDirection("forwards"); //restore normal stepper motor direction
   }
 
   if (mcp.digitalRead(limitSwitchBack) == LOW){
-    digitalWrite(dir, HIGH); //reverse stepper motor direction
+    stepperDirection("forwards");
+    ; //reverse stepper motor direction
     while (mcp.digitalRead(limitSwitchBack) == LOW) //iterate doStep signal for as long as  the limit switch remains pressed 
     {  
       stepSignal();
     }
-    digitalWrite(dir, LOW); //restore normal stepper motor direction
   }
 
   screen.clearScreen();
   disableStepperDriver();
 
-  if(buttonState == LOW){ //if a stack was in progress, cancel it as there probably isn't space to continue
-    buttonState = HIGH;
+  if(startStack == true){ //if a stack was in progress, cancel it as there probably isn't space to continue
+    startStack = false;
     cancelStack();
   }
 }
@@ -725,7 +734,7 @@ void stackEnd(){
 
   encoderPos = 1; //set menu to first option screen
   sliceCounter = 0; //reset pic counter
-  buttonState = HIGH; //return to menu options section
+  startStack = false; //return to menu options section
   updateScreen = true; //write the first menu item to the screen
 
 }
@@ -733,7 +742,7 @@ void stackEnd(){
 /* CHECK IF THE MAIN BUTTON HAS BEEN PUSHED DURING STACK AND CANCEL IF YES */
 boolean cancelStack(){
 
-  if(buttonState == HIGH){
+  if(startStack == false){
     screen.clearScreen();
     screen.setPrintPos(0,2);
     screen.print("Stack cancelled");
@@ -753,7 +762,7 @@ void printHeader(){
   screen.drawBox(1,15,128,1); //draw a horizontal line to mark out a header section
   printPowerSource(); //display the current power source in top right corner
   screen.setPrintPos(0,0); //set text position in top left corner
-  if(buttonState == HIGH){ //if the menu section is active, print the current menu item number
+  if(startStack == false){ //if the menu section is active, print the current menu item number
     screen.print("Menu ");
     screen.print(encoderPos);
     screen.print("/"); 
@@ -788,5 +797,7 @@ void emptyTextRow(int lineNum) {
   }
   screen.setPrintPos(0,lineNum);
 }
+
+
 
 
