@@ -80,21 +80,19 @@ int returnToStart = 1; //whether camera/ subject is returned to starting positio
 boolean disableA4988 = true; //whether to disable easydriver betweem sliceSize to save power and heat
 boolean updateScreen = true; //flag true on startup and whenever encoder or button functions are called, prompting a screen update
 
-void menuChange(int &menuvar, int constrainLow, int constrainHigh, int multiplier = 1);
-
 //pushButton toggle
 volatile int startStack = false; //the current state of the output pin
 volatile int reading; //the current reading from the input pin
 volatile int previous = LOW; //the previous reading from the input pin
 volatile long time = 0; //the last time the output pin was toggled
-volatile long debounce = 100; //the debounce time, increase if the output flickers
+volatile long debounce = 300; //the debounce time, increase if the output flickers
 
 //rotary pushButton toggle
 volatile int rbbuttonState = HIGH; //the current state of the output pin
 volatile int rbreading; //the current reading from the input pin
 volatile int rbprevious = LOW; //the previous reading from the input pin
 volatile long rbtime = 0; //the last time the output pin was toggled
-volatile long rbdebounce = 100; //the debounce time, increase if the output flickers
+volatile long rbdebounce = 300; //the debounce time, increase if the output flickers
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -108,6 +106,8 @@ void setup() {
   //SET ATMEGA PINMODES AND PULLUPS
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+  pinMode(mcpInt, INPUT);
+  digitalWrite(mcpInt, HIGH);
   pinMode(pushButton, INPUT); 
   digitalWrite(pushButton, HIGH);
   pinMode(ENC_A, INPUT); 
@@ -433,8 +433,8 @@ void loop(){
 
     }
 
-    screen.clearScreen();
-    screen.setPrintPos(0,2);
+    emptyTextRow(4);
+    emptyTextRow(2);
     screen.print("Stack finished");
     delay(2000);
 
@@ -744,6 +744,8 @@ boolean cancelStack(){
 
   if(startStack == false){
     screen.clearScreen();
+    printHeader();
+    printPowerSource();
     screen.setPrintPos(0,2);
     screen.print("Stack cancelled");
     delay(1000);
