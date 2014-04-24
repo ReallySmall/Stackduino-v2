@@ -1,7 +1,7 @@
 /*
 STACKDUINO 2
  
- A sketch to drive an Arduino compatible MacroPhotography Focus Stacking Controller
+ An Arduino compatible MacroPhotography Focus Stacking Controller.
  
  */
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -152,7 +152,7 @@ mcp.setupInterruptPin(rotarypushButton,FALLING);
   //set MSCP23017 bank B pins as outputs and write HIGH
   //lots of pins with the same settings so quicker to loop through with array
   int mcpOutputPins[] = {
-    8,9,10,11,12,13,14,15                      };
+    8,9,10,11,12,13,14,15};
     for(int i=0; i < 8; i++){
       mcp.pinMode(mcpOutputPins[i], OUTPUT);
       if(i == 14){
@@ -176,7 +176,6 @@ mcp.setupInterruptPin(rotarypushButton,FALLING);
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //CHECK LIMIT SWITCHES
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  screen.clearScreen(); //clear the screen
   clearLimitSwitch();
 
 }
@@ -234,13 +233,15 @@ void loop(){
       }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
-
+        screen.clearScreen();
+        screen.setFont(6);
         printHeader();
         screen.setPrintPos(0,2);
-        screen.print("Set slice size:  ");
+        screen.print("Set slice size:");
         screen.setPrintPos(6,4);
         frontLoadAndPrint(sliceSize); //frontload with correct number of zeroes and print to screen
         unitOfMeasure();
+        printMenuArrows();
         updateScreen = false;
 
       }      
@@ -260,11 +261,13 @@ void loop(){
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
+        screen.clearScreen();
         printHeader();
         screen.setPrintPos(0,2);
         screen.print("Number of slices");
         screen.setPrintPos(6,4);
         frontLoadAndPrint(sliceNum); //then use that figure to frontload with correct number of zeroes and print to screen
+        printMenuArrows();
         updateScreen = false;
 
       } 
@@ -286,15 +289,14 @@ void loop(){
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
+        screen.clearScreen();
         printHeader();
         screen.setPrintPos(0,2);
-        screen.print("Set pause time: ");
-        screen.setPrintPos(7,4);
-        if (pause < 10000){
-          screen.print (0, DEC); //adds one leading zero to triple digit pause numbers on the display
-        }
-        screen.print ((pause), DEC); //divide millis by 1000 to display in seconds
-        screen.print(" seconds");  
+        screen.print("Set pause time:");
+        screen.setPrintPos(6,4);
+        screen.print(pause); //divide millis by 1000 to display in seconds
+        screen.print(" secs");
+        printMenuArrows(); 
         updateScreen = false;
 
       }
@@ -314,16 +316,18 @@ void loop(){
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
+        screen.clearScreen();
         printHeader();
         screen.setPrintPos(0,2);
         screen.print("Return to start:");
-        screen.setPrintPos(4,4);
+        screen.setPrintPos(3,4);
         if(returnToStart == 1){
           screen.print ("Enabled");
         }
         else {
           screen.print ("Disabled");
         }
+        printMenuArrows();
         updateScreen = false;
 
       }
@@ -333,17 +337,23 @@ void loop(){
     case 5: //this menu screen selects the unit of measure to use for sliceSize: Microns, Millimimeters or Centimeteres
 
       if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
+        lastEncoderPos = measure; //store the current encoder position to compare with results of encoder_state()
         measure = constrain(measure, 1, 2); //limits choice of input step size to specified range
-        measure += encoder_state ();  //use encoder reading function to set value of steps variable
+        measure += read_encoder(measure);  //use encoder reading function to set value
+        if(measure != lastEncoderPos){
+          updateScreen = true;
+        }
       }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
+        screen.clearScreen();
         printHeader();
         screen.setPrintPos(0,2);
         screen.print("Unit of measure:");
-        screen.setPrintPos(8,4);
+        screen.setPrintPos(6,4);
         unitOfMeasure();
+        printMenuArrows();
         updateScreen = false;
 
       }
@@ -354,18 +364,24 @@ void loop(){
       //setting this to low may cause the motor to begin stalling or failing to move at all
 
       if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
+        lastEncoderPos = stepDelay; //store the current encoder position to compare with results of encoder_state()
         stepDelay = constrain(stepDelay, 1000, 8000); //limits choice of input step size to specified range
-        stepDelay += encoder_state ();  //use encoder reading function to set value of steps variable
+        stepDelay += read_encoder(stepDelay);  //use encoder reading function to set value
+        if(stepDelay != lastEncoderPos){
+          updateScreen = true;
+        }
       }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
+        screen.clearScreen();
         printHeader();
         screen.setPrintPos(0,2);
         screen.print("Stepper speed: ");
-        screen.setPrintPos(2,4);
+        screen.setPrintPos(3,4);
         frontLoadAndPrint(stepDelay);
-        screen.print (" microsecs");
+        screen.print (" uSecs");
+        printMenuArrows();
         updateScreen = false;
 
       }
@@ -375,17 +391,23 @@ void loop(){
     case 7: //this menu screen changes the number of images to take per focus slice (exposure bracketing support)
 
       if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
+        lastEncoderPos = sliceBracket; //store the current encoder position to compare with results of encoder_state()
         sliceBracket = constrain(sliceBracket, 1, 10); //limits choice of input step size to specified range
-        sliceBracket += encoder_state ();  //use encoder reading function to set value of steps variable
+        sliceBracket += read_encoder(sliceBracket);  //use encoder reading function to set value
+        if(sliceBracket != lastEncoderPos){
+          updateScreen = true;
+        }
       }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
 
+        screen.clearScreen();
         printHeader();
         screen.setPrintPos(0,2);
         screen.print("Set bracketing: ");
         screen.setPrintPos(2,4);
-        frontLoadAndPrint(sliceBracket); //then use that figure to frontload with correct number of zeroes and print to screen           
+        frontLoadAndPrint(sliceBracket); //then use that figure to frontload with correct number of zeroes and print to screen
+        printMenuArrows();           
         updateScreen = false;
 
       }      
@@ -452,7 +474,6 @@ void loop(){
     emptyTextRow(2);
     screen.print("Stack finished");
     delay(2000);
-    mcp.digitalWrite(kill, LOW);
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //THE FOCUS STACK HAS FINISHED. IF THE OPTION IS ENABLED THE CAMERA STAGE IS RETURNED TO ITS START POSITION.
@@ -687,14 +708,14 @@ void frontLoadAndPrint(int menuvar) {
 
 /* READ THE ROTARY ENCODER
 counts encoder pulses and registers only every nth pulse to adjust feedback sensitivity */
-void read_encoder(int &encoderMenuVar){
+int read_encoder(int &encoderMenuVar){
   int8_t tmpdata = encoder_state(); 
   if(tmpdata){
     if(tmpdata == 1){
       encoderCount++;
     }
 
-    if(encoderCount == 2){ //change this number to adjust encoder sensitivity
+    if(encoderCount == 4){ //change this number to adjust encoder sensitivity
       encoderMenuVar++;
       encoderCount = 0;
     }
@@ -703,7 +724,7 @@ void read_encoder(int &encoderMenuVar){
       encoderCount--;
     }
     
-    if(encoderCount == -2){ //change this number to adjust encoder sensitivity
+    if(encoderCount == -4){ //change this number to adjust encoder sensitivity
       encoderMenuVar--;
       encoderCount = 0;
     }
@@ -836,14 +857,51 @@ void printHeader(){
 
 /* PRINT THE ACTIVE POWER SOURCE */
 void printPowerSource(){
-  Serial.print(mcp.digitalRead(stat));
   if(mcp.digitalRead(stat) == LOW){
-    screen.drawBox(114,1,14,6);
+    //draw plug symbol (dc adapter connected)
+    screen.drawBox(115,1,3,1);
+    screen.drawBox(112,2,7,1);
+    screen.drawBox(115,3,13,2);
+    screen.drawBox(112,5,7,1);
+    screen.drawBox(115,6,3,1);
   } 
   else {
-    //draw battery symbol in top right corner
+    //draw battery symbol
     screen.drawBox(112,3,2,2);
     screen.drawBox(114,1,14,6);
+  }
+}
+
+/* PRINT MENU NAVIGATION ARROWS
+outward pointing arrows on either side of the menu
+indicate turning the encoder will move to the next menu item */
+void printMenuArrows(){
+  if (rbbuttonState == HIGH) {
+    //right outward arrow
+    screen.drawBox(122,54,1,9);
+    screen.drawBox(123,55,1,7);
+    screen.drawBox(124,56,1,5);
+    screen.drawBox(125,57,1,3);
+    screen.drawBox(126,58,1,1);
+    //left outward arrow
+    screen.drawBox(5,54,1,9);
+    screen.drawBox(4,55,1,7);
+    screen.drawBox(3,56,1,5);
+    screen.drawBox(2,57,1,3);
+    screen.drawBox(1,58,1,1);
+  } else {
+    //right inward arrow
+    screen.drawBox(122,58,1,1);
+    screen.drawBox(123,57,1,3);
+    screen.drawBox(124,56,1,5);
+    screen.drawBox(125,55,1,7);
+    screen.drawBox(126,54,1,9);
+    //left inward arrow
+    screen.drawBox(1,54,1,9);
+    screen.drawBox(2,55,1,7);
+    screen.drawBox(3,56,1,5);
+    screen.drawBox(4,57,1,3);
+    screen.drawBox(5,58,1,1);
   }
 }
 
@@ -859,7 +917,3 @@ void emptyTextRow(int lineNum) {
   }
   screen.setPrintPos(0,lineNum);
 }
-
-
-
-
