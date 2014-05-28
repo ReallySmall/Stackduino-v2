@@ -69,17 +69,18 @@ const int sleep = 15; //sleep/wake A4988 stepper driver to conserve power
 int sliceSize = 10; //default number of sliceSize which stepper motor should make between sliceNum
 int sliceNum = 10; //default total number of focus sliceNum to make
 int sliceCounter = 0; //count of number of focus sliceNum made so far
-int pause = 1; //default time in seconds to wait for camera to take picture
+int pause = 5; //default time in seconds to wait for camera to take picture
 int encoderPos = 1; //which menu item to display when turning rotary encoder
 int lastEncoderPos; //used to check whether the encoder position has changed
 int measure = 1; //whether to use microns, mm or cm when making sliceSize
 int measureMultiplier = 1; //multiplier to factor into step signals (1, 1000 or 10,000) depending on unit of measure used
 int stepDelay = 2000; //delay in microseconds between motor steps, governing motor speed in stack
-int sliceBracket = 1; //number of images to bracket per focus slice
+int sliceBracket = 3; //number of images to bracket per focus slice
 int encoderCount = 0; //count pulses from encoder
 int returnToStart = 1; //whether camera/ subject is returned to starting position at end of stack
 boolean disableA4988 = true; //whether to disable easydriver betweem sliceSize to save power and heat
 boolean updateScreen = true; //flag true on startup and whenever encoder or button functions are called, prompting a screen update
+boolean updateVar = true;
 
 //pushButton toggle
 volatile int startStack = false; //the current state of the output pin
@@ -130,6 +131,7 @@ void setup() {
 
   mcp.begin();// using default address 0
   mcp.setupInterrupts(true,false,LOW);
+  Serial.begin(9600); //start serial
 
   //set MSCP23017 bank A pins as inputs and switch on internal pullups
   //lots of pins with the same settings so quicker to loop through with array
@@ -137,11 +139,11 @@ void setup() {
     0,1,2,3,4,5,6                      };
     for(int i=0; i < 7; i++){
       mcp.pinMode(mcpInputPins[i], INPUT);
-    if(i == 4 || i == 6){ //stat and pbInterrupt have external pullups so don't need setting HIGH
-    continue;
+      if(i == 4 || i == 6){ //stat and pbInterrupt have external pullups so don't need setting HIGH
+        continue;
+      }
+      mcp.pullUp(mcpInputPins[i], HIGH);
   }
-  mcp.pullUp(mcpInputPins[i], HIGH);
-}
 
 mcp.setupInterrupts(true,false,LOW);
 mcp.setupInterruptPin(limitSwitchFront,FALLING);
@@ -166,11 +168,11 @@ mcp.setupInterruptPin(rotarypushButton,FALLING);
   //START SERIAL CONNECTION AND ATTACH INTERRUPTS
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  Serial.begin(9600); //start serial
+  
   screen.displayConfig(0); //disable screen config message
   screen.displayStartScreen(0); //disable splash screen
 
-  attachInterrupt(0,handleInterrupt,FALLING); //mcp23017 on interrupt 0
+  attachInterrupt(0, handleInterrupt,FALLING); //mcp23017 on interrupt 0
   attachInterrupt(1, buttonChange, CHANGE); //main pushbutton on interrupt 1
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -194,8 +196,8 @@ void loop(){
 
   if (startStack == false){ //this section allows manual control and configures settings using a simple screen menu system
 
-    disableStepperDriver(); //switch off stepper motor power if option enabled
-    manualControl(); //manual motor control to position stage before stack
+    //disableStepperDriver(); //switch off stepper motor power if option enabled
+    //manualControl(); //manual motor control to position stage before stack
 
     if (rbbuttonState == HIGH) { //use encoder to scroll through menu options
 
@@ -211,13 +213,14 @@ void loop(){
 
       if (encoderPos == 0){ //when counter value goes below minimum number of menu items
         encoderPos = 7; //reset it to 7 again to create a looping navigation
-      }     
-    } 
+      }  
 
-    if(lastEncoderPos != encoderPos){ //if the encoder position has changed
-      updateScreen = true; //flag the screen as updatable
-      //writing to the screen is relatively slow, so to keep the loop running quickly it should only be updated when the presented data has changed
-    }
+      if(lastEncoderPos != encoderPos){ //if the encoder position has changed
+        updateScreen = true; //flag the screen as updatable
+        //writing to the screen is relatively slow, so to keep the loop running quickly it should only be updated when the presented data has changed
+      }
+
+    } 
 
     switch (encoderPos) { //the menu options
 
@@ -225,8 +228,8 @@ void loop(){
 
       if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
         lastEncoderPos = sliceSize; //store the current encoder position to compare with results of encoder_state()
+        read_encoder(sliceSize);  //use encoder reading function to set value
         sliceSize = constrain(sliceSize, 1, 1000); //limits choice of input step size to specified range
-        sliceSize += read_encoder(sliceSize);  //use encoder reading function to set value
         if(sliceSize != lastEncoderPos){
           updateScreen = true;
         }
@@ -234,17 +237,15 @@ void loop(){
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
         screen.clearScreen();
-        screen.setFont(6);
         printHeader();
         screen.setPrintPos(0,2);
         screen.print("Set slice size:");
-        screen.setPrintPos(6,4);
+        printMenuArrows();
+        screen.setPrintPos(5,4);
         frontLoadAndPrint(sliceSize); //frontload with correct number of zeroes and print to screen
         unitOfMeasure();
-        printMenuArrows();
         updateScreen = false;
-
-      }      
+      }    
 
       break;
 
@@ -295,7 +296,7 @@ void loop(){
         screen.print("Set pause time:");
         screen.setPrintPos(6,4);
         screen.print(pause); //divide millis by 1000 to display in seconds
-        screen.print(" secs");
+        screen.print("secs");
         printMenuArrows(); 
         updateScreen = false;
 
@@ -320,7 +321,7 @@ void loop(){
         printHeader();
         screen.setPrintPos(0,2);
         screen.print("Return to start:");
-        screen.setPrintPos(3,4);
+        screen.setPrintPos(5,4);
         if(returnToStart == 1){
           screen.print ("Enabled");
         }
@@ -351,7 +352,7 @@ void loop(){
         printHeader();
         screen.setPrintPos(0,2);
         screen.print("Unit of measure:");
-        screen.setPrintPos(6,4);
+        screen.setPrintPos(7,4);
         unitOfMeasure();
         printMenuArrows();
         updateScreen = false;
@@ -405,7 +406,7 @@ void loop(){
         printHeader();
         screen.setPrintPos(0,2);
         screen.print("Set bracketing: ");
-        screen.setPrintPos(2,4);
+        screen.setPrintPos(6,4);
         frontLoadAndPrint(sliceBracket); //then use that figure to frontload with correct number of zeroes and print to screen
         printMenuArrows();           
         updateScreen = false;
@@ -555,26 +556,40 @@ void rotarybuttonChange(){
 /* MOVE CARRIAGE BACKWARD AND FORWARD USING PUSH BUTTONS */
 void manualControl(){
 
-  while (mcp.digitalRead(forwardControl) == LOW && inBounds()) {
-    Serial.print("forwards");
-    enableStepperDriver();
-    stepperDirection("forwards");
-    for (int i = 0; i<1; i++)
-    {
-      stepSignal(); //move forward
+  if (mcp.digitalRead(forwardControl) == LOW && inBounds()) {
+    screen.clearScreen();
+    printHeader();
+    screen.setPrintPos(0,2);
+    screen.print("Moving forwards");
+    screen.setPrintPos(0,4);
+    screen.print(">-->>-->>-->>-->");
+    while (mcp.digitalRead(forwardControl) == LOW && inBounds()) {
+      enableStepperDriver();
+      stepperDirection("forwards");
+      for (int i = 0; i<1; i++) {
+        stepSignal(); //move forward
+      }
+      disableStepperDriver();
     }
-    disableStepperDriver();
+    updateScreen = true;
   }
 
-  while (mcp.digitalRead(backwardControl) == LOW && inBounds()) {
-    Serial.print("backwards");
-    enableStepperDriver();
-    stepperDirection("backwards");
-    for (int i = 0; i<1; i++)
-    {
-      stepSignal(); //move backward
+  if (mcp.digitalRead(backwardControl) == LOW && inBounds()) {
+    screen.clearScreen();
+    printHeader();
+    screen.setPrintPos(0,2);
+    screen.print("Moving backwards");
+    screen.setPrintPos(0,4);
+    screen.print("<--<<--<<--<<--<");
+    while (mcp.digitalRead(backwardControl) == LOW && inBounds()) {
+      enableStepperDriver();
+      stepperDirection("backwards");
+      for (int i = 0; i<1; i++) {
+        stepSignal(); //move forward
+      }
+      disableStepperDriver();
     }
-    disableStepperDriver();
+    updateScreen = true;
   }
 
 }
@@ -889,7 +904,7 @@ void printMenuArrows(){
     screen.drawBox(3,56,1,5);
     screen.drawBox(2,57,1,3);
     screen.drawBox(1,58,1,1);
-  } else {
+    } else {
     //right inward arrow
     screen.drawBox(122,58,1,1);
     screen.drawBox(123,57,1,3);

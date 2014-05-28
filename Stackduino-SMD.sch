@@ -6,7 +6,7 @@
 <setting alwaysvectorfont="no"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
+<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="yes" altdistance="0.01" altunitdist="inch" altunit="inch"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="no" active="no"/>
 <layer number="16" name="Bottom" color="1" fill="1" visible="no" active="no"/>
@@ -5987,7 +5987,6 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <part name="SUPPLY24" library="supply2" deviceset="GND" device=""/>
 <part name="SUPPLY26" library="supply2" deviceset="GND" device=""/>
 <part name="SUPPLY27" library="supply2" deviceset="GND" device=""/>
-<part name="SUPPLY28" library="supply2" deviceset="GND" device=""/>
 <part name="SUPPLY29" library="supply2" deviceset="GND" device=""/>
 <part name="SUPPLY30" library="supply2" deviceset="GND" device=""/>
 <part name="SUPPLY33" library="supply2" deviceset="GND" device=""/>
@@ -6054,6 +6053,19 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <part name="ON/OFF" library="SRG" deviceset="JST-PH_2-PIN_HEADER" device=""/>
 <part name="R1" library="eagle-ltspice" deviceset="R" device="" value="100K"/>
 <part name="P+3" library="supply1" deviceset="+5V" device="" value="VCC"/>
+<part name="R11" library="eagle-ltspice" deviceset="R" device="" value="10K"/>
+<part name="R12" library="eagle-ltspice" deviceset="R" device="" value="10K"/>
+<part name="ENCODER1" library="SRG" deviceset="JST-PH_3-PIN_HEADER" device=""/>
+<part name="MP2" library="sym" deviceset="PMOS" device="" value="NOT SURE YET"/>
+<part name="P+5" library="supply1" deviceset="+5V" device="" value="VCC"/>
+<part name="MP3" library="sym" deviceset="PMOS" device="" value="NOT SURE YET"/>
+<part name="R13" library="eagle-ltspice" deviceset="R" device="" value="150 Ohm"/>
+<part name="R14" library="eagle-ltspice" deviceset="R" device="" value="10K"/>
+<part name="R15" library="eagle-ltspice" deviceset="R" device="" value="4.7K"/>
+<part name="SUPPLY16" library="supply2" deviceset="GND" device=""/>
+<part name="SUPPLY17" library="supply2" deviceset="GND" device=""/>
+<part name="MENU_SEL1" library="SRG" deviceset="JST-PH_2-PIN_HEADER" device=""/>
+<part name="SUPPLY18" library="supply2" deviceset="GND" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -6092,10 +6104,9 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <instance part="SUPPLY24" gate="GND" x="99.06" y="-20.32"/>
 <instance part="SUPPLY26" gate="GND" x="76.2" y="-20.32"/>
 <instance part="SUPPLY27" gate="GND" x="15.24" y="25.4"/>
-<instance part="SUPPLY28" gate="GND" x="-40.64" y="27.94"/>
 <instance part="SUPPLY29" gate="GND" x="58.42" y="12.7"/>
 <instance part="SUPPLY30" gate="GND" x="58.42" y="33.02"/>
-<instance part="SUPPLY33" gate="GND" x="-226.06" y="-99.06"/>
+<instance part="SUPPLY33" gate="GND" x="-200.66" y="-96.52"/>
 <instance part="SUPPLY35" gate="GND" x="-185.42" y="22.86"/>
 <instance part="SUPPLY36" gate="GND" x="-172.72" y="27.94"/>
 <instance part="R2" gate="G$1" x="5.08" y="68.58" rot="R180"/>
@@ -6119,8 +6130,8 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <instance part="P+15" gate="1" x="76.2" y="-71.12" smashed="yes">
 <attribute name="VALUE" x="78.486" y="-72.898" size="1.778" layer="96"/>
 </instance>
-<instance part="P+16" gate="1" x="-71.12" y="-73.66" smashed="yes">
-<attribute name="VALUE" x="-68.834" y="-75.438" size="1.778" layer="96"/>
+<instance part="P+16" gate="1" x="-66.04" y="-73.66" smashed="yes">
+<attribute name="VALUE" x="-63.754" y="-75.438" size="1.778" layer="96"/>
 </instance>
 <instance part="12VDC" gate="G$1" x="-154.94" y="132.08"/>
 <instance part="SUPPLY10" gate="GND" x="-149.86" y="124.46"/>
@@ -6153,8 +6164,8 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <instance part="SUPPLY39" gate="GND" x="-68.58" y="-10.16"/>
 <instance part="C9" gate="G$1" x="-104.14" y="40.64" rot="R270"/>
 <instance part="GND2" gate="GND" x="-96.52" y="38.1"/>
-<instance part="C5" gate="G$1" x="-63.5" y="-81.28" rot="R270"/>
-<instance part="GND3" gate="GND" x="-50.8" y="-83.82"/>
+<instance part="C5" gate="G$1" x="-53.34" y="-81.28" rot="R270"/>
+<instance part="GND3" gate="GND" x="-40.64" y="-83.82"/>
 <instance part="A4988_CARRIER" gate="G$1" x="111.76" y="76.2"/>
 <instance part="SUPPLY40" gate="GND" x="127" y="53.34"/>
 <instance part="P+20" gate="1" x="157.48" y="68.58" smashed="yes">
@@ -6181,12 +6192,27 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <instance part="START/STOP" gate="G$1" x="68.58" y="-2.54" rot="R180"/>
 <instance part="ENCODER" gate="G$1" x="-2.54" y="27.94" rot="R180"/>
 <instance part="MENU_SEL" gate="G$1" x="-27.94" y="27.94"/>
-<instance part="FWD/BWD" gate="G$1" x="-233.68" y="-86.36" rot="R180"/>
+<instance part="FWD/BWD" gate="G$1" x="-208.28" y="-86.36" rot="R180"/>
 <instance part="ON/OFF" gate="G$1" x="-68.58" y="66.04" rot="R270"/>
 <instance part="R1" gate="G$1" x="-66.04" y="88.9" rot="R180"/>
 <instance part="P+3" gate="1" x="-71.12" y="96.52" smashed="yes">
 <attribute name="VALUE" x="-68.834" y="94.742" size="1.778" layer="96"/>
 </instance>
+<instance part="R11" gate="G$1" x="-50.8" y="96.52" rot="R90"/>
+<instance part="R12" gate="G$1" x="-73.66" y="-76.2"/>
+<instance part="ENCODER1" gate="G$1" x="-165.1" y="106.68" rot="R180"/>
+<instance part="MP2" gate="G$1" x="132.08" y="96.52" rot="R90"/>
+<instance part="P+5" gate="1" x="91.44" y="104.14" smashed="yes">
+<attribute name="VALUE" x="93.726" y="102.362" size="1.778" layer="96"/>
+</instance>
+<instance part="MP3" gate="G$1" x="-256.54" y="-27.94" rot="MR0"/>
+<instance part="R13" gate="G$1" x="-246.38" y="-40.64" rot="R180"/>
+<instance part="R14" gate="G$1" x="-264.16" y="-53.34" rot="R90"/>
+<instance part="R15" gate="G$1" x="-264.16" y="-73.66" rot="R90"/>
+<instance part="SUPPLY16" gate="GND" x="-264.16" y="-88.9"/>
+<instance part="SUPPLY17" gate="GND" x="-35.56" y="22.86"/>
+<instance part="MENU_SEL1" gate="G$1" x="142.24" y="22.86"/>
+<instance part="SUPPLY18" gate="GND" x="134.62" y="12.7"/>
 </instances>
 <busses>
 </busses>
@@ -6386,7 +6412,7 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 </segment>
 <segment>
 <pinref part="C5" gate="G$1" pin="1"/>
-<wire x1="-60.96" y1="-81.28" x2="-50.8" y2="-81.28" width="0.1524" layer="91"/>
+<wire x1="-50.8" y1="-81.28" x2="-40.64" y2="-81.28" width="0.1524" layer="91"/>
 <pinref part="GND3" gate="GND" pin="GND"/>
 </segment>
 <segment>
@@ -6425,11 +6451,6 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <pinref part="GND4" gate="GND" pin="GND"/>
 </segment>
 <segment>
-<pinref part="MENU_SEL" gate="G$1" pin="1"/>
-<pinref part="SUPPLY28" gate="GND" pin="GND"/>
-<wire x1="-35.56" y1="30.48" x2="-40.64" y2="30.48" width="0.1524" layer="91"/>
-</segment>
-<segment>
 <pinref part="START/STOP" gate="G$1" pin="1"/>
 <pinref part="SUPPLY26" gate="GND" pin="GND"/>
 <wire x1="76.2" y1="-5.08" x2="76.2" y2="-17.78" width="0.1524" layer="91"/>
@@ -6437,12 +6458,12 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <segment>
 <pinref part="SUPPLY33" gate="GND" pin="GND"/>
 <pinref part="FWD/BWD" gate="G$1" pin="1"/>
-<wire x1="-226.06" y1="-96.52" x2="-226.06" y2="-88.9" width="0.1524" layer="91"/>
+<wire x1="-200.66" y1="-93.98" x2="-200.66" y2="-88.9" width="0.1524" layer="91"/>
 <pinref part="FWD/BWD" gate="G$1" pin="3"/>
-<wire x1="-226.06" y1="-83.82" x2="-218.44" y2="-83.82" width="0.1524" layer="91"/>
-<wire x1="-218.44" y1="-83.82" x2="-218.44" y2="-88.9" width="0.1524" layer="91"/>
-<wire x1="-218.44" y1="-88.9" x2="-226.06" y2="-88.9" width="0.1524" layer="91"/>
-<junction x="-226.06" y="-88.9"/>
+<wire x1="-200.66" y1="-83.82" x2="-198.12" y2="-83.82" width="0.1524" layer="91"/>
+<wire x1="-198.12" y1="-83.82" x2="-198.12" y2="-88.9" width="0.1524" layer="91"/>
+<wire x1="-198.12" y1="-88.9" x2="-200.66" y2="-88.9" width="0.1524" layer="91"/>
+<junction x="-200.66" y="-88.9"/>
 </segment>
 <segment>
 <wire x1="-187.96" y1="48.26" x2="-172.72" y2="48.26" width="0.1524" layer="91"/>
@@ -6451,16 +6472,35 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <wire x1="-187.96" y1="48.26" x2="-187.96" y2="43.434" width="0.1524" layer="91"/>
 <pinref part="DB15" gate="G$1" pin="10"/>
 </segment>
+<segment>
+<pinref part="SUPPLY16" gate="GND" pin="GND"/>
+<pinref part="R15" gate="G$1" pin="1"/>
+<wire x1="-264.16" y1="-86.36" x2="-264.16" y2="-78.74" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="MENU_SEL" gate="G$1" pin="2"/>
+<wire x1="-35.56" y1="27.94" x2="-35.56" y2="25.4" width="0.1524" layer="91"/>
+<pinref part="SUPPLY17" gate="GND" pin="GND"/>
+</segment>
+<segment>
+<pinref part="SUPPLY18" gate="GND" pin="GND"/>
+<pinref part="MENU_SEL1" gate="G$1" pin="2"/>
+<wire x1="134.62" y1="15.24" x2="134.62" y2="22.86" width="0.1524" layer="91"/>
+</segment>
 </net>
 <net name="PBUTTON" class="0">
 <segment>
 <pinref part="LTC2950" gate="A" pin="~PB"/>
 <wire x1="-66.04" y1="73.66" x2="-66.04" y2="83.82" width="0.1524" layer="91"/>
-<wire x1="-66.04" y1="83.82" x2="-45.72" y2="83.82" width="0.1524" layer="91"/>
+<wire x1="-66.04" y1="83.82" x2="-50.8" y2="83.82" width="0.1524" layer="91"/>
 <pinref part="ON/OFF" gate="G$1" pin="1"/>
+<wire x1="-50.8" y1="83.82" x2="-45.72" y2="83.82" width="0.1524" layer="91"/>
+<wire x1="-50.8" y1="91.44" x2="-50.8" y2="83.82" width="0.1524" layer="91"/>
+<junction x="-50.8" y="83.82"/>
+<pinref part="R11" gate="G$1" pin="1"/>
 </segment>
 </net>
-<net name="VDD" class="0">
+<net name="BATTVIN" class="0">
 <segment>
 <wire x1="-116.84" y1="114.3" x2="-99.06" y2="114.3" width="0.1524" layer="91"/>
 <pinref part="LTC4412" gate="A" pin="VIN"/>
@@ -6474,7 +6514,7 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <junction x="-116.84" y="114.3"/>
 </segment>
 </net>
-<net name="N$10" class="0">
+<net name="GATE" class="0">
 <segment>
 <pinref part="LTC4412" gate="A" pin="GATE"/>
 <wire x1="-109.22" y1="81.28" x2="-86.36" y2="81.28" width="0.1524" layer="91"/>
@@ -6777,28 +6817,16 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <wire x1="-193.04" y1="43.434" x2="-193.04" y2="60.96" width="0.1524" layer="91"/>
 </segment>
 </net>
-<net name="ALOG1" class="0">
-<segment>
-<pinref part="ATMEGA328P" gate="G$1" pin="PC2(ADC2)"/>
-<wire x1="0" y1="5.08" x2="5.08" y2="5.08" width="0.1524" layer="91"/>
-<label x="7.62" y="5.08" size="1.778" layer="95"/>
-</segment>
-<segment>
-<label x="-208.28" y="83.82" size="1.778" layer="95"/>
-<pinref part="DB15" gate="G$1" pin="6"/>
-<wire x1="-208.28" y1="43.434" x2="-208.28" y2="81.28" width="0.1524" layer="91"/>
-</segment>
-</net>
 <net name="ALOG2" class="0">
-<segment>
-<pinref part="ATMEGA328P" gate="G$1" pin="PC3(ADC3)"/>
-<wire x1="0" y1="2.54" x2="5.08" y2="2.54" width="0.1524" layer="91"/>
-<label x="7.62" y="2.54" size="1.778" layer="95"/>
-</segment>
 <segment>
 <label x="-200.66" y="71.12" size="1.778" layer="95"/>
 <pinref part="DB15" gate="G$1" pin="7"/>
 <wire x1="-203.2" y1="43.434" x2="-203.2" y2="73.66" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="ATMEGA328P" gate="G$1" pin="ADC7"/>
+<wire x1="0" y1="-7.62" x2="7.62" y2="-7.62" width="0.1524" layer="91"/>
+<label x="10.16" y="-7.62" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="LIM1" class="0">
@@ -6836,19 +6864,19 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <net name="N$33" class="0">
 <segment>
 <pinref part="MCP23017" gate="G$1" pin="GPA0"/>
-<wire x1="-203.2" y1="-91.44" x2="-106.68" y2="-91.44" width="0.1524" layer="91"/>
+<wire x1="-190.5" y1="-91.44" x2="-106.68" y2="-91.44" width="0.1524" layer="91"/>
 <wire x1="-106.68" y1="-91.44" x2="-106.68" y2="-81.28" width="0.1524" layer="91"/>
 <pinref part="FWD/BWD" gate="G$1" pin="2"/>
-<wire x1="-226.06" y1="-86.36" x2="-203.2" y2="-86.36" width="0.1524" layer="91"/>
-<wire x1="-203.2" y1="-86.36" x2="-203.2" y2="-91.44" width="0.1524" layer="91"/>
+<wire x1="-200.66" y1="-86.36" x2="-190.5" y2="-86.36" width="0.1524" layer="91"/>
+<wire x1="-190.5" y1="-86.36" x2="-190.5" y2="-91.44" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$35" class="0">
 <segment>
 <pinref part="MCP23017" gate="G$1" pin="GPA1"/>
-<wire x1="-106.68" y1="-78.74" x2="-226.06" y2="-78.74" width="0.1524" layer="91"/>
+<wire x1="-106.68" y1="-78.74" x2="-200.66" y2="-78.74" width="0.1524" layer="91"/>
 <pinref part="FWD/BWD" gate="G$1" pin="4"/>
-<wire x1="-226.06" y1="-81.28" x2="-226.06" y2="-78.74" width="0.1524" layer="91"/>
+<wire x1="-200.66" y1="-81.28" x2="-200.66" y2="-78.74" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="DIG1" class="0">
@@ -6890,9 +6918,9 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <label x="-215.9" y="-53.34" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="MENU_SEL" gate="G$1" pin="2"/>
-<wire x1="-35.56" y1="20.32" x2="-35.56" y2="27.94" width="0.1524" layer="91"/>
-<label x="-33.02" y="20.32" size="1.778" layer="95"/>
+<pinref part="MENU_SEL" gate="G$1" pin="1"/>
+<wire x1="-35.56" y1="30.48" x2="-35.56" y2="38.1" width="0.1524" layer="91"/>
+<label x="-35.56" y="40.64" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="INT" class="0">
@@ -6941,9 +6969,9 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <segment>
 <pinref part="MCP23017" gate="G$1" pin="GPB2"/>
 <wire x1="-106.68" y1="-53.34" x2="-132.08" y2="-53.34" width="0.1524" layer="91"/>
-<wire x1="-132.08" y1="-53.34" x2="-132.08" y2="-40.64" width="0.1524" layer="91"/>
-<wire x1="-132.08" y1="-40.64" x2="-198.12" y2="-40.64" width="0.1524" layer="91"/>
-<label x="-205.74" y="-40.64" size="1.778" layer="95"/>
+<wire x1="-132.08" y1="-53.34" x2="-132.08" y2="-38.1" width="0.1524" layer="91"/>
+<wire x1="-132.08" y1="-38.1" x2="-198.12" y2="-38.1" width="0.1524" layer="91"/>
+<label x="-205.74" y="-38.1" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="MS1" class="0">
@@ -7011,16 +7039,16 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <wire x1="-48.26" y1="30.48" x2="-48.26" y2="35.56" width="0.1524" layer="91"/>
 </segment>
 <segment>
-<pinref part="MCP23017" gate="G$1" pin="!RESET"/>
 <pinref part="MCP23017" gate="G$1" pin="VDD"/>
-<wire x1="-81.28" y1="-76.2" x2="-81.28" y2="-81.28" width="0.1524" layer="91"/>
 <pinref part="P+16" gate="1" pin="+5V"/>
-<wire x1="-81.28" y1="-81.28" x2="-71.12" y2="-81.28" width="0.1524" layer="91"/>
-<wire x1="-71.12" y1="-81.28" x2="-71.12" y2="-76.2" width="0.1524" layer="91"/>
-<junction x="-81.28" y="-81.28"/>
+<wire x1="-81.28" y1="-81.28" x2="-66.04" y2="-81.28" width="0.1524" layer="91"/>
+<wire x1="-66.04" y1="-81.28" x2="-66.04" y2="-76.2" width="0.1524" layer="91"/>
 <pinref part="C5" gate="G$1" pin="2"/>
-<wire x1="-71.12" y1="-81.28" x2="-68.58" y2="-81.28" width="0.1524" layer="91"/>
-<junction x="-71.12" y="-81.28"/>
+<wire x1="-66.04" y1="-81.28" x2="-58.42" y2="-81.28" width="0.1524" layer="91"/>
+<junction x="-66.04" y="-81.28"/>
+<pinref part="R12" gate="G$1" pin="2"/>
+<junction x="-66.04" y="-76.2"/>
+<wire x1="-66.04" y1="-76.2" x2="-68.58" y2="-76.2" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <pinref part="P+1" gate="1" pin="+5V"/>
@@ -7087,6 +7115,13 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <wire x1="-71.12" y1="88.9" x2="-71.12" y2="93.98" width="0.1524" layer="91"/>
 <pinref part="P+3" gate="1" pin="+5V"/>
 </segment>
+<segment>
+<pinref part="MP2" gate="G$1" pin="G"/>
+<wire x1="144.78" y1="96.52" x2="144.78" y2="91.44" width="0.1524" layer="91"/>
+<wire x1="144.78" y1="91.44" x2="91.44" y2="91.44" width="0.1524" layer="91"/>
+<wire x1="91.44" y1="91.44" x2="91.44" y2="101.6" width="0.1524" layer="91"/>
+<pinref part="P+5" gate="1" pin="+5V"/>
+</segment>
 </net>
 <net name="V+" class="0">
 <segment>
@@ -7095,7 +7130,8 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <wire x1="-78.74" y1="83.82" x2="-78.74" y2="114.3" width="0.1524" layer="91"/>
 <wire x1="-78.74" y1="114.3" x2="-68.58" y2="114.3" width="0.1524" layer="91"/>
 <wire x1="-68.58" y1="114.3" x2="-60.96" y2="114.3" width="0.1524" layer="91"/>
-<wire x1="-60.96" y1="114.3" x2="-45.72" y2="114.3" width="0.1524" layer="91"/>
+<wire x1="-60.96" y1="114.3" x2="-50.8" y2="114.3" width="0.1524" layer="91"/>
+<wire x1="-50.8" y1="114.3" x2="-45.72" y2="114.3" width="0.1524" layer="91"/>
 <wire x1="-45.72" y1="114.3" x2="-25.4" y2="114.3" width="0.1524" layer="91"/>
 <pinref part="LTC2950" gate="A" pin="VIN"/>
 <wire x1="-45.72" y1="88.9" x2="-45.72" y2="114.3" width="0.1524" layer="91"/>
@@ -7111,9 +7147,7 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <wire x1="-25.4" y1="127" x2="109.22" y2="127" width="0.1524" layer="91"/>
 <wire x1="109.22" y1="127" x2="109.22" y2="121.92" width="0.1524" layer="91"/>
 <pinref part="C6" gate="G$1" pin="+"/>
-<pinref part="A4988_CARRIER" gate="G$1" pin="VMOT"/>
 <wire x1="109.22" y1="127" x2="127" y2="127" width="0.1524" layer="91"/>
-<wire x1="127" y1="127" x2="127" y2="78.74" width="0.1524" layer="91"/>
 <junction x="109.22" y="127"/>
 <wire x1="-25.4" y1="114.3" x2="-7.62" y2="114.3" width="0.1524" layer="91"/>
 <junction x="-25.4" y="114.3"/>
@@ -7125,6 +7159,12 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <pinref part="C1" gate="G$1" pin="1"/>
 <wire x1="-60.96" y1="111.76" x2="-60.96" y2="114.3" width="0.1524" layer="91"/>
 <junction x="-60.96" y="114.3"/>
+<wire x1="-50.8" y1="101.6" x2="-50.8" y2="114.3" width="0.1524" layer="91"/>
+<junction x="-50.8" y="114.3"/>
+<pinref part="R11" gate="G$1" pin="2"/>
+<wire x1="127" y1="127" x2="127" y2="104.14" width="0.1524" layer="91"/>
+<pinref part="MP2" gate="G$1" pin="D"/>
+<wire x1="127" y1="104.14" x2="132.08" y2="104.14" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="DIR" class="0">
@@ -7271,6 +7311,97 @@ Mating cable assembly: Sparkfun &lt;a href="http://www.sparkfun.com/products/991
 <wire x1="-185.42" y1="45.72" x2="-185.42" y2="43.434" width="0.1524" layer="91"/>
 <pinref part="DB15" gate="G$1" pin="15"/>
 <label x="-160.02" y="27.94" size="1.778" layer="95"/>
+</segment>
+</net>
+<net name="N$8" class="0">
+<segment>
+<pinref part="MCP23017" gate="G$1" pin="!RESET"/>
+<pinref part="R12" gate="G$1" pin="1"/>
+<wire x1="-78.74" y1="-76.2" x2="-81.28" y2="-76.2" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$9" class="0">
+<segment>
+<pinref part="MP2" gate="G$1" pin="S"/>
+<wire x1="147.32" y1="104.14" x2="149.86" y2="104.14" width="0.1524" layer="91"/>
+<wire x1="149.86" y1="104.14" x2="149.86" y2="78.74" width="0.1524" layer="91"/>
+<pinref part="A4988_CARRIER" gate="G$1" pin="VMOT"/>
+<wire x1="149.86" y1="78.74" x2="127" y2="78.74" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="EXTRA_INPUT" class="0">
+<segment>
+<pinref part="MCP23017" gate="G$1" pin="GPA7"/>
+<wire x1="-106.68" y1="-63.5" x2="-152.4" y2="-63.5" width="0.1524" layer="91"/>
+<wire x1="-152.4" y1="-63.5" x2="-152.4" y2="-40.64" width="0.1524" layer="91"/>
+<label x="-170.18" y="-43.18" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="MENU_SEL1" gate="G$1" pin="1"/>
+<wire x1="134.62" y1="25.4" x2="134.62" y2="35.56" width="0.1524" layer="91"/>
+<label x="134.62" y="38.1" size="1.778" layer="95"/>
+</segment>
+</net>
+<net name="N$12" class="0">
+<segment>
+<pinref part="MP3" gate="G$1" pin="G"/>
+<pinref part="R13" gate="G$1" pin="2"/>
+<wire x1="-256.54" y1="-40.64" x2="-251.46" y2="-40.64" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="BATT_VOLT" class="0">
+<segment>
+<pinref part="MP3" gate="G$1" pin="D"/>
+<wire x1="-264.16" y1="-27.94" x2="-264.16" y2="-12.7" width="0.1524" layer="91"/>
+<label x="-266.7" y="-10.16" size="1.778" layer="95"/>
+</segment>
+</net>
+<net name="BATT_SENSE" class="0">
+<segment>
+<pinref part="R14" gate="G$1" pin="1"/>
+<wire x1="-264.16" y1="-68.58" x2="-264.16" y2="-63.5" width="0.1524" layer="91"/>
+<pinref part="R15" gate="G$1" pin="2"/>
+<wire x1="-264.16" y1="-63.5" x2="-264.16" y2="-58.42" width="0.1524" layer="91"/>
+<wire x1="-254" y1="-63.5" x2="-264.16" y2="-63.5" width="0.1524" layer="91"/>
+<junction x="-264.16" y="-63.5"/>
+<label x="-251.46" y="-63.5" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="ATMEGA328P" gate="G$1" pin="PC2(ADC2)"/>
+<wire x1="0" y1="5.08" x2="10.16" y2="5.08" width="0.1524" layer="91"/>
+<wire x1="10.16" y1="5.08" x2="10.16" y2="10.16" width="0.1524" layer="91"/>
+<label x="7.62" y="12.7" size="1.778" layer="95"/>
+</segment>
+</net>
+<net name="N$16" class="0">
+<segment>
+<pinref part="MP3" gate="G$1" pin="S"/>
+<pinref part="R14" gate="G$1" pin="2"/>
+<wire x1="-264.16" y1="-43.18" x2="-264.16" y2="-48.26" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="ALOG1" class="0">
+<segment>
+<pinref part="ATMEGA328P" gate="G$1" pin="ADC6"/>
+<wire x1="0" y1="-5.08" x2="7.62" y2="-5.08" width="0.1524" layer="91"/>
+<label x="10.16" y="-5.08" size="1.778" layer="95"/>
+</segment>
+<segment>
+<wire x1="-208.28" y1="43.434" x2="-208.28" y2="73.66" width="0.1524" layer="91"/>
+<label x="-208.28" y="76.2" size="1.778" layer="95"/>
+<pinref part="DB15" gate="G$1" pin="6"/>
+</segment>
+</net>
+<net name="BATT_FET" class="0">
+<segment>
+<pinref part="ATMEGA328P" gate="G$1" pin="PC3(ADC3)"/>
+<wire x1="0" y1="2.54" x2="10.16" y2="2.54" width="0.1524" layer="91"/>
+<label x="12.7" y="2.54" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="R13" gate="G$1" pin="1"/>
+<wire x1="-241.3" y1="-40.64" x2="-236.22" y2="-40.64" width="0.1524" layer="91"/>
+<label x="-236.22" y="-40.64" size="1.778" layer="95"/>
 </segment>
 </net>
 </nets>
