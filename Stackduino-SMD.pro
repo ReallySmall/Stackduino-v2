@@ -2,24 +2,24 @@ EAGLE AutoRouter Statistics:
 
 Job           : D:/stackduino-v2/Stackduino-2/Stackduino-SMD.brd
 
-Start at      : 12:35:23 (22/02/2014)
-End at        : 12:35:27 (22/02/2014)
-Elapsed time  : 00:00:04
+Start at      : 16:01:41 (29/06/2014)
+End at        : 16:01:43 (29/06/2014)
+Elapsed time  : 00:00:01
 
-Signals       :    63   RoutingGrid: 50 mil  Layers: 2
-Connections   :   150   predefined:  49 ( 31 Vias )
+Signals       :    77   RoutingGrid: 50 mil  Layers: 2
+Connections   :   185   predefined:  147 ( 0 Vias )
 
-Router memory :   15984
+Router memory :   14820
 
 Passname          :    Busses     Route Optimize1 Optimize2 Optimize3 Optimize4
 
-Time per pass     :  00:00:00  00:00:03  00:00:00  00:00:01  00:00:00  00:00:00
-Number of Ripups  :         0         1         0         0         0         0
-max. Level        :         0         7         0         0         0         0
-max. Total        :         0        28         0         0         0         0
+Time per pass     :  00:00:00  00:00:00  00:00:00  00:00:01  00:00:00  00:00:00
+Number of Ripups  :         0         2         0         0         0         0
+max. Level        :         0         2         0         0         0         0
+max. Total        :         0         2         0         0         0         0
 
-Routed            :         3        35        35        36        36        36
-Vias              :         0        33        13        18        15        14
-Resolution        :    34.7 %    56.0 %    56.0 %    56.7 %    56.7 %    56.7 %
+Routed            :         0        14        14        14        14        14
+Vias              :         0        29        19        18        19        18
+Resolution        :    79.5 %    87.0 %    87.0 %    87.0 %    87.0 %    87.0 %
 
-Final             : 56.7% finished
+Final             : 86.5% finished. Polygons may have fallen apart.
