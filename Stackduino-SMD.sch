@@ -6715,12 +6715,6 @@ Package: B2B-ZR</description>
 <wire x1="-71.12" y1="53.34" x2="-78.74" y2="53.34" width="0.1524" layer="91"/>
 <junction x="-71.12" y="53.34"/>
 </segment>
-<segment>
-<pinref part="BLUETOOTH" gate="G$1" pin="2"/>
-<wire x1="-200.66" y1="-170.18" x2="-185.42" y2="-170.18" width="0.1524" layer="91"/>
-<wire x1="-185.42" y1="-170.18" x2="-185.42" y2="-185.42" width="0.1524" layer="91"/>
-<label x="-185.42" y="-190.5" size="1.778" layer="95"/>
-</segment>
 </net>
 <net name="MCU_RX" class="0">
 <segment>
@@ -6896,24 +6890,6 @@ Package: B2B-ZR</description>
 <label x="35.56" y="-139.7" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="PD6" class="0">
-<segment>
-<pinref part="ATMEGA328P" gate="G$1" pin="PD6(AIN0)"/>
-<wire x1="10.16" y1="-30.48" x2="58.42" y2="-30.48" width="0.1524" layer="91"/>
-<wire x1="58.42" y1="-30.48" x2="58.42" y2="38.1" width="0.1524" layer="91"/>
-<pinref part="R2" gate="G$1" pin="2"/>
-<wire x1="76.2" y1="38.1" x2="58.42" y2="38.1" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="PD7" class="0">
-<segment>
-<pinref part="ATMEGA328P" gate="G$1" pin="PD7(AIN1)"/>
-<wire x1="10.16" y1="-33.02" x2="60.96" y2="-33.02" width="0.1524" layer="91"/>
-<wire x1="60.96" y1="-33.02" x2="60.96" y2="17.78" width="0.1524" layer="91"/>
-<pinref part="R1" gate="G$1" pin="2"/>
-<wire x1="76.2" y1="17.78" x2="60.96" y2="17.78" width="0.1524" layer="91"/>
-</segment>
-</net>
 <net name="OUT1A" class="0">
 <segment>
 <pinref part="DB1" gate="G$1" pin="1"/>
@@ -7012,26 +6988,26 @@ Package: B2B-ZR</description>
 </net>
 <net name="LIM1" class="0">
 <segment>
-<wire x1="-274.32" y1="-157.226" x2="-274.32" y2="-139.7" width="0.1524" layer="91"/>
-<label x="-274.32" y="-137.16" size="1.778" layer="95" rot="R90"/>
-<pinref part="DB1" gate="G$1" pin="11"/>
+<wire x1="-264.16" y1="-157.226" x2="-264.16" y2="-139.7" width="0.1524" layer="91"/>
+<label x="-264.16" y="-137.16" size="1.778" layer="95" rot="R90"/>
+<pinref part="DB1" gate="G$1" pin="13"/>
 </segment>
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPA2"/>
-<wire x1="-218.44" y1="-86.36" x2="-226.06" y2="-86.36" width="0.1524" layer="91"/>
-<label x="-233.68" y="-86.36" size="1.778" layer="95"/>
+<pinref part="MCP1" gate="G$1" pin="GPA5"/>
+<wire x1="-218.44" y1="-78.74" x2="-241.3" y2="-78.74" width="0.1524" layer="91"/>
+<label x="-247.904" y="-78.994" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="LIM2" class="0">
 <segment>
-<wire x1="-269.24" y1="-157.226" x2="-269.24" y2="-139.7" width="0.1524" layer="91"/>
-<label x="-269.24" y="-137.16" size="1.778" layer="95" rot="R90"/>
-<pinref part="DB1" gate="G$1" pin="12"/>
+<wire x1="-259.08" y1="-157.226" x2="-259.08" y2="-139.7" width="0.1524" layer="91"/>
+<label x="-259.08" y="-137.16" size="1.778" layer="95" rot="R90"/>
+<pinref part="DB1" gate="G$1" pin="14"/>
 </segment>
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPA3"/>
-<wire x1="-218.44" y1="-83.82" x2="-241.3" y2="-83.82" width="0.1524" layer="91"/>
-<label x="-248.92" y="-83.82" size="1.778" layer="95"/>
+<pinref part="MCP1" gate="G$1" pin="GPA6"/>
+<wire x1="-218.44" y1="-76.2" x2="-226.06" y2="-76.2" width="0.1524" layer="91"/>
+<label x="-233.68" y="-76.2" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="FWD" class="0">
@@ -7066,9 +7042,9 @@ Package: B2B-ZR</description>
 <label x="-233.68" y="-68.58" size="1.778" layer="95"/>
 </segment>
 <segment>
-<wire x1="-259.08" y1="-157.226" x2="-259.08" y2="-139.7" width="0.1524" layer="91"/>
-<label x="-259.08" y="-137.16" size="1.778" layer="95" rot="R90"/>
-<pinref part="DB1" gate="G$1" pin="14"/>
+<wire x1="-269.24" y1="-157.226" x2="-269.24" y2="-139.7" width="0.1524" layer="91"/>
+<label x="-269.24" y="-137.16" size="1.778" layer="95" rot="R90"/>
+<pinref part="DB1" gate="G$1" pin="12"/>
 </segment>
 </net>
 <net name="DIG2" class="0">
@@ -7078,22 +7054,22 @@ Package: B2B-ZR</description>
 <label x="-248.92" y="-66.04" size="1.778" layer="95"/>
 </segment>
 <segment>
-<wire x1="-264.16" y1="-157.226" x2="-264.16" y2="-139.7" width="0.1524" layer="91"/>
-<label x="-264.16" y="-137.16" size="1.778" layer="95" rot="R90"/>
-<pinref part="DB1" gate="G$1" pin="13"/>
+<wire x1="-274.32" y1="-157.226" x2="-274.32" y2="-139.7" width="0.1524" layer="91"/>
+<label x="-274.32" y="-137.16" size="1.778" layer="95" rot="R90"/>
+<pinref part="DB1" gate="G$1" pin="11"/>
 </segment>
 </net>
 <net name="ENCSWITCH" class="0">
-<segment>
-<pinref part="MCP1" gate="G$1" pin="GPA5"/>
-<wire x1="-218.44" y1="-78.74" x2="-241.3" y2="-78.74" width="0.1524" layer="91"/>
-<label x="-258.064" y="-78.994" size="1.778" layer="95"/>
-</segment>
 <segment>
 <label x="55.88" y="-170.18" size="1.778" layer="95"/>
 <wire x1="45.72" y1="-170.18" x2="53.34" y2="-170.18" width="0.1524" layer="91"/>
 <pinref part="ENCODER" gate="G$1" pin="5"/>
 <wire x1="45.72" y1="-162.56" x2="45.72" y2="-170.18" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="MCP1" gate="G$1" pin="GPB2"/>
+<wire x1="-218.44" y1="-63.5" x2="-226.06" y2="-63.5" width="0.1524" layer="91"/>
+<label x="-243.84" y="-63.5" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="INT" class="0">
@@ -7107,9 +7083,9 @@ Package: B2B-ZR</description>
 <label x="33.02" y="68.58" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPA6"/>
-<wire x1="-218.44" y1="-76.2" x2="-226.06" y2="-76.2" width="0.1524" layer="91"/>
-<label x="-233.68" y="-76.2" size="1.778" layer="95"/>
+<pinref part="MCP1" gate="G$1" pin="GPA3"/>
+<wire x1="-218.44" y1="-83.82" x2="-241.3" y2="-83.82" width="0.1524" layer="91"/>
+<label x="-248.92" y="-83.82" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="N$34" class="0">
@@ -7137,9 +7113,9 @@ Package: B2B-ZR</description>
 <pinref part="R21" gate="G$1" pin="1"/>
 </segment>
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPB2"/>
-<wire x1="-218.44" y1="-63.5" x2="-226.06" y2="-63.5" width="0.1524" layer="91"/>
-<label x="-233.68" y="-63.5" size="1.778" layer="95"/>
+<pinref part="MCP1" gate="G$1" pin="GPA4"/>
+<wire x1="-218.44" y1="-81.28" x2="-226.06" y2="-81.28" width="0.1524" layer="91"/>
+<label x="-233.68" y="-81.28" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="MS1" class="0">
@@ -7394,9 +7370,9 @@ Package: B2B-ZR</description>
 <label x="-165.1" y="71.12" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPA4"/>
-<wire x1="-218.44" y1="-81.28" x2="-226.06" y2="-81.28" width="0.1524" layer="91"/>
-<label x="-233.68" y="-81.28" size="1.778" layer="95"/>
+<pinref part="MCP1" gate="G$1" pin="GPA2"/>
+<wire x1="-218.44" y1="-86.36" x2="-226.06" y2="-86.36" width="0.1524" layer="91"/>
+<label x="-233.68" y="-86.36" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="MS3" class="0">
@@ -7572,12 +7548,18 @@ Package: B2B-ZR</description>
 <wire x1="137.16" y1="-63.5" x2="137.16" y2="-53.34" width="0.1524" layer="91"/>
 </segment>
 </net>
-<net name="N$11" class="0">
+<net name="MCU_TX_3_3V" class="0">
 <segment>
 <pinref part="FT232RL" gate="G$1" pin="RXD"/>
 <wire x1="-71.12" y1="17.78" x2="-109.22" y2="17.78" width="0.1524" layer="91"/>
 <pinref part="R11" gate="G$1" pin="1"/>
 <wire x1="-71.12" y1="17.78" x2="-71.12" y2="38.1" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="BLUETOOTH" gate="G$1" pin="2"/>
+<wire x1="-200.66" y1="-170.18" x2="-185.42" y2="-170.18" width="0.1524" layer="91"/>
+<wire x1="-185.42" y1="-170.18" x2="-185.42" y2="-185.42" width="0.1524" layer="91"/>
+<label x="-185.42" y="-190.5" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="N$13" class="0">
@@ -7591,11 +7573,29 @@ Package: B2B-ZR</description>
 <wire x1="-160.02" y1="-152.4" x2="-160.02" y2="-160.02" width="0.1524" layer="91"/>
 </segment>
 </net>
-<net name="N$14" class="0">
+<net name="BLUETOOTH_VCC" class="0">
 <segment>
 <pinref part="MP1" gate="G$1" pin="S"/>
 <pinref part="BLUETOOTH" gate="G$1" pin="4"/>
 <wire x1="-200.66" y1="-154.94" x2="-200.66" y2="-165.1" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="PD7" class="0">
+<segment>
+<pinref part="ATMEGA328P" gate="G$1" pin="PD6(AIN0)"/>
+<wire x1="10.16" y1="-30.48" x2="58.42" y2="-30.48" width="0.1524" layer="91"/>
+<wire x1="58.42" y1="-30.48" x2="58.42" y2="17.78" width="0.1524" layer="91"/>
+<pinref part="R1" gate="G$1" pin="2"/>
+<wire x1="58.42" y1="17.78" x2="76.2" y2="17.78" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="PD6" class="0">
+<segment>
+<pinref part="ATMEGA328P" gate="G$1" pin="PD7(AIN1)"/>
+<wire x1="10.16" y1="-33.02" x2="60.96" y2="-33.02" width="0.1524" layer="91"/>
+<wire x1="60.96" y1="-33.02" x2="60.96" y2="38.1" width="0.1524" layer="91"/>
+<pinref part="R2" gate="G$1" pin="2"/>
+<wire x1="60.96" y1="38.1" x2="76.2" y2="38.1" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>

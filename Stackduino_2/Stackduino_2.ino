@@ -201,8 +201,6 @@ void loop(){
 
     if (rbbuttonState == HIGH) { //use encoder to scroll through menu options
 
-      lastEncoderPos = encoderPos; //store the current encoder position to compare with results of encoder_state()
-
       read_encoder(encoderPos); //check if the encoder has changed position and increment/decrement encoderPos accordingly
 
       encoderPos = constrain(encoderPos, 0, 8); //limits choice to specified range
@@ -215,11 +213,6 @@ void loop(){
         encoderPos = 7; //reset it to 7 again to create a looping navigation
       }  
 
-      if(lastEncoderPos != encoderPos){ //if the encoder position has changed
-        updateScreen = true; //flag the screen as updatable
-        //writing to the screen is relatively slow, so to keep the loop running quickly it should only be updated when the presented data has changed
-      }
-
     } 
 
     switch (encoderPos) { //the menu options
@@ -227,12 +220,8 @@ void loop(){
       case 1: //this menu screen changes the number of increments to move each time
 
       if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
-        lastEncoderPos = sliceSize; //store the current encoder position to compare with results of encoder_state()
         read_encoder(sliceSize);  //use encoder reading function to set value
         sliceSize = constrain(sliceSize, 1, 1000); //limits choice of input step size to specified range
-        if(sliceSize != lastEncoderPos){
-          updateScreen = true;
-        }
       }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
@@ -242,7 +231,7 @@ void loop(){
         screen.print("Set slice size:");
         printMenuArrows();
         screen.setPrintPos(5,4);
-        frontLoadAndPrint(sliceSize); //frontload with correct number of zeroes and print to screen
+        frontLoadAndPrint(sliceSize);
         unitOfMeasure();
         updateScreen = false;
       }    
@@ -252,12 +241,8 @@ void loop(){
     case 2: //this menu screen changes the number of sliceNum to create in the stack
 
       if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
-        lastEncoderPos = sliceNum; //store the current encoder position to compare with results of encoder_state()
         sliceNum = constrain(sliceNum, 1, 1000); //limits choice of input step size to specified range
         sliceNum += read_encoder(sliceNum);  //use encoder reading function to set value
-        if(sliceNum != lastEncoderPos){
-          updateScreen = true;
-        }
       }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
@@ -267,7 +252,7 @@ void loop(){
         screen.setPrintPos(0,2);
         screen.print("Number of slices");
         screen.setPrintPos(6,4);
-        frontLoadAndPrint(sliceNum); //then use that figure to frontload with correct number of zeroes and print to screen
+        frontLoadAndPrint(sliceNum);
         printMenuArrows();
         updateScreen = false;
 
@@ -280,12 +265,8 @@ void loop(){
       //to reduce overall time taken to complete the stack
 
       if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
-        lastEncoderPos = pause; //store the current encoder position to compare with results of encoder_state()
         pause = constrain(pause, 1, 60); //limits choice of input step size to specified range
         pause += read_encoder(pause);  //use encoder reading function to set value
-        if(pause != lastEncoderPos){
-          updateScreen = true;
-        }
       }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
@@ -307,12 +288,8 @@ void loop(){
     case 4: //toggles whether camera/subject is returned the starting position at the end of the stack
 
       if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
-        lastEncoderPos = returnToStart; //store the current encoder position to compare with results of encoder_state()
         returnToStart = constrain(returnToStart, 1, 2); //limits choice of input step size to specified range
         returnToStart += read_encoder(returnToStart);  //use encoder reading function to set value
-        if(pause != lastEncoderPos){
-          updateScreen = true;
-        }
       }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
@@ -338,12 +315,8 @@ void loop(){
     case 5: //this menu screen selects the unit of measure to use for sliceSize: Microns, Millimimeters or Centimeteres
 
       if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
-        lastEncoderPos = measure; //store the current encoder position to compare with results of encoder_state()
         measure = constrain(measure, 1, 2); //limits choice of input step size to specified range
         measure += read_encoder(measure);  //use encoder reading function to set value
-        if(measure != lastEncoderPos){
-          updateScreen = true;
-        }
       }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
@@ -365,12 +338,8 @@ void loop(){
       //setting this to low may cause the motor to begin stalling or failing to move at all
 
       if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
-        lastEncoderPos = stepDelay; //store the current encoder position to compare with results of encoder_state()
         stepDelay = constrain(stepDelay, 1000, 8000); //limits choice of input step size to specified range
         stepDelay += read_encoder(stepDelay);  //use encoder reading function to set value
-        if(stepDelay != lastEncoderPos){
-          updateScreen = true;
-        }
       }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
@@ -392,12 +361,8 @@ void loop(){
     case 7: //this menu screen changes the number of images to take per focus slice (exposure bracketing support)
 
       if (rbbuttonState == LOW) { //press rotary encoder button within this menu item to edit variable
-        lastEncoderPos = sliceBracket; //store the current encoder position to compare with results of encoder_state()
         sliceBracket = constrain(sliceBracket, 1, 10); //limits choice of input step size to specified range
         sliceBracket += read_encoder(sliceBracket);  //use encoder reading function to set value
-        if(sliceBracket != lastEncoderPos){
-          updateScreen = true;
-        }
       }
 
       if (updateScreen){ //only write to the screen when a change to the variables has been flagged
@@ -407,7 +372,7 @@ void loop(){
         screen.setPrintPos(0,2);
         screen.print("Set bracketing: ");
         screen.setPrintPos(6,4);
-        frontLoadAndPrint(sliceBracket); //then use that figure to frontload with correct number of zeroes and print to screen
+        frontLoadAndPrint(sliceBracket);
         printMenuArrows();           
         updateScreen = false;
 
@@ -732,6 +697,7 @@ int read_encoder(int &encoderMenuVar){
 
     if(encoderCount == 4){ //change this number to adjust encoder sensitivity
       encoderMenuVar++;
+      updateScreen = true; //as the menu variable currently attached to the encoder has changed, flag the screen as updatable
       encoderCount = 0;
     }
 
@@ -741,6 +707,7 @@ int read_encoder(int &encoderMenuVar){
     
     if(encoderCount == -4){ //change this number to adjust encoder sensitivity
       encoderMenuVar--;
+      updateScreen = true; //as the menu variable currently attached to the encoder has changed, flag the screen as updatable
       encoderCount = 0;
     }
   }
