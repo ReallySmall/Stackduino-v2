@@ -6202,7 +6202,7 @@ Package: B2B-ZR</description>
 <instance part="SUPPLY1" gate="GND" x="12.7" y="109.22"/>
 <instance part="D1" gate="G$1" x="53.34" y="121.92" rot="R90"/>
 <instance part="SUPPLY4" gate="GND" x="53.34" y="109.22"/>
-<instance part="GND" gate="GND" x="-93.98" y="-167.64"/>
+<instance part="GND" gate="GND" x="-81.28" y="-167.64"/>
 <instance part="SUPPLY7" gate="GND" x="-35.56" y="83.82"/>
 <instance part="SUPPLY8" gate="GND" x="-111.76" y="91.44"/>
 <instance part="SUPPLY9" gate="GND" x="-254" y="119.38"/>
@@ -6292,7 +6292,7 @@ Package: B2B-ZR</description>
 <instance part="C13" gate="G$1" x="-78.74" y="134.62"/>
 <instance part="GND4" gate="GND" x="-78.74" y="91.44"/>
 <instance part="START/STOP" gate="G$1" x="-43.18" y="-154.94"/>
-<instance part="ON/OFF" gate="G$1" x="-86.36" y="-154.94"/>
+<instance part="ON/OFF" gate="G$1" x="-88.9" y="-152.4" rot="R180"/>
 <instance part="R21" gate="G$1" x="-53.34" y="121.92" rot="R90"/>
 <instance part="P+3" gate="1" x="-53.34" y="134.62" smashed="yes">
 <attribute name="VALUE" x="-51.054" y="132.842" size="1.778" layer="96"/>
@@ -6408,9 +6408,9 @@ Package: B2B-ZR</description>
 <wire x1="53.34" y1="119.38" x2="53.34" y2="111.76" width="0.1524" layer="91"/>
 </segment>
 <segment>
-<wire x1="-93.98" y1="-154.94" x2="-93.98" y2="-165.1" width="0.1524" layer="91"/>
+<wire x1="-81.28" y1="-154.94" x2="-81.28" y2="-165.1" width="0.1524" layer="91"/>
 <pinref part="GND" gate="GND" pin="GND"/>
-<pinref part="ON/OFF" gate="G$1" pin="2"/>
+<pinref part="ON/OFF" gate="G$1" pin="1"/>
 </segment>
 <segment>
 <pinref part="SUPPLY7" gate="GND" pin="GND"/>
@@ -6675,9 +6675,9 @@ Package: B2B-ZR</description>
 <label x="-68.58" y="68.58" size="1.778" layer="95"/>
 </segment>
 <segment>
-<wire x1="-93.98" y1="-152.4" x2="-93.98" y2="-142.24" width="0.1524" layer="91"/>
-<pinref part="ON/OFF" gate="G$1" pin="1"/>
-<label x="-93.98" y="-139.7" size="1.778" layer="95"/>
+<wire x1="-81.28" y1="-152.4" x2="-81.28" y2="-142.24" width="0.1524" layer="91"/>
+<label x="-81.28" y="-139.7" size="1.778" layer="95"/>
+<pinref part="ON/OFF" gate="G$1" pin="2"/>
 </segment>
 </net>
 <net name="BATTVIN" class="0">
