@@ -6052,13 +6052,13 @@ Package: B2B-ZR</description>
 </classes>
 <parts>
 <part name="ATMEGA328P" library="SparkFun-DigitalIC" deviceset="ATMEGA328_SMT" device="" value="ATMEGA328P"/>
-<part name="DB1" library="SparkFun-Connectors" deviceset="DB15" device=""/>
+<part name="DB15" library="SparkFun-Connectors" deviceset="DB15" device=""/>
 <part name="FT232RL" library="SparkFun-DigitalIC" deviceset="FT232RL" device="SSOP"/>
-<part name="MCP1" library="adafruit" deviceset="MCP23017" device="SS"/>
+<part name="MCP23017" library="adafruit" deviceset="MCP23017" device="SS"/>
 <part name="USB" library="SparkFun-Connectors" deviceset="USB" device="SMD"/>
-<part name="LTC1" library="LTC_By_element14_Batch_1" deviceset="LTC2950CTS8-1TRPBF" device=""/>
-<part name="LM1" library="v-reg-3" deviceset="LM2675" device="M"/>
-<part name="LTC2" library="LTC_By_element14_Batch_1" deviceset="LTC4412ES6PBF" device=""/>
+<part name="LTC2950" library="LTC_By_element14_Batch_1" deviceset="LTC2950CTS8-1TRPBF" device=""/>
+<part name="LM2675" library="v-reg-3" deviceset="LM2675" device="M"/>
+<part name="LTC4412" library="LTC_By_element14_Batch_1" deviceset="LTC4412ES6PBF" device=""/>
 <part name="C4" library="eagle-ltspice" deviceset="C" device="" value="10nF"/>
 <part name="L1" library="inductor-coilcraft" deviceset="DO3316P" device="" value="47uH"/>
 <part name="SUPPLY1" library="supply2" deviceset="GND" device=""/>
@@ -6151,7 +6151,7 @@ Package: B2B-ZR</description>
 <part name="CAM_GND2" library="supply1" deviceset="GND" device="" value="CAM_GND"/>
 <part name="FRAME1" library="frames" deviceset="FRAME_C_L" device=""/>
 <part name="R16" library="eagle-ltspice" deviceset="R" device="" value="150 Ohm"/>
-<part name="CAM" library="jst-connectors" deviceset="B3B-ZR" device=""/>
+<part name="CAMERA" library="jst-connectors" deviceset="B3B-ZR" device=""/>
 <part name="CAM_GND3" library="supply1" deviceset="GND" device="" value="CAM_GND"/>
 <part name="H2" library="holes" deviceset="MOUNT-PAD-ROUND" device="2.8"/>
 <part name="H1" library="holes" deviceset="MOUNT-PAD-ROUND" device="2.8"/>
@@ -6181,22 +6181,23 @@ Package: B2B-ZR</description>
 <part name="P+6" library="supply1" deviceset="+5V" device="" value="VCC"/>
 <part name="BLUETOOTH" library="jst-connectors" deviceset="B4B-ZR" device=""/>
 <part name="SUPPLY18" library="supply2" deviceset="GND" device=""/>
+<part name="J1" library="eagle-ltspice" deviceset="R" device="" value="JUMPER"/>
 </parts>
 <sheets>
 <sheet>
 <plain>
 <text x="129.54" y="-182.88" size="2.54" layer="94">https://github.com/ReallySmall/Stackduino-2</text>
-<text x="219.202" y="-203.962" size="2.54" layer="94">1.1</text>
+<text x="219.202" y="-203.962" size="2.54" layer="94">2.1</text>
 </plain>
 <instances>
 <instance part="ATMEGA328P" gate="G$1" x="-15.24" y="-17.78"/>
-<instance part="DB1" gate="G$1" x="-266.7" y="-165.1" rot="R90"/>
+<instance part="DB15" gate="G$1" x="-266.7" y="-165.1" rot="R90"/>
 <instance part="FT232RL" gate="G$1" x="-124.46" y="2.54"/>
-<instance part="MCP1" gate="G$1" x="-205.74" y="-71.12" rot="R180"/>
+<instance part="MCP23017" gate="G$1" x="-205.74" y="-71.12" rot="R180"/>
 <instance part="USB" gate="G$1" x="-160.02" y="25.4" rot="R180"/>
-<instance part="LTC1" gate="A" x="-17.78" y="111.76"/>
-<instance part="LM1" gate="A" x="22.86" y="137.16"/>
-<instance part="LTC2" gate="A" x="-139.7" y="106.68" rot="R180"/>
+<instance part="LTC2950" gate="A" x="-17.78" y="111.76"/>
+<instance part="LM2675" gate="A" x="22.86" y="137.16"/>
+<instance part="LTC4412" gate="A" x="-139.7" y="106.68" rot="R180"/>
 <instance part="C4" gate="G$1" x="48.26" y="137.16" rot="R90"/>
 <instance part="L1" gate="G$1" x="58.42" y="132.08"/>
 <instance part="SUPPLY1" gate="GND" x="12.7" y="109.22"/>
@@ -6316,7 +6317,7 @@ Package: B2B-ZR</description>
 <instance part="FRAME1" gate="G$1" x="-325.12" y="-210.82"/>
 <instance part="FRAME1" gate="G$2" x="127" y="-210.82"/>
 <instance part="R16" gate="G$1" x="129.54" y="111.76" rot="R180"/>
-<instance part="CAM" gate="G$1" x="101.6" y="-154.94"/>
+<instance part="CAMERA" gate="G$1" x="101.6" y="-154.94"/>
 <instance part="CAM_GND3" gate="1" x="86.36" y="-170.18"/>
 <instance part="H2" gate="G$1" x="190.5" y="-104.14"/>
 <instance part="H1" gate="G$1" x="144.78" y="-104.14"/>
@@ -6350,6 +6351,7 @@ Package: B2B-ZR</description>
 </instance>
 <instance part="BLUETOOTH" gate="G$1" x="-208.28" y="-170.18" rot="R180"/>
 <instance part="SUPPLY18" gate="GND" x="-170.18" y="-187.96"/>
+<instance part="J1" gate="G$1" x="-198.12" y="132.08" rot="R90"/>
 </instances>
 <busses>
 </busses>
@@ -6370,23 +6372,23 @@ Package: B2B-ZR</description>
 </net>
 <net name="N$1" class="0">
 <segment>
-<pinref part="LTC1" gate="A" pin="EN/~EN"/>
+<pinref part="LTC2950" gate="A" pin="EN/~EN"/>
 <wire x1="0" y1="116.84" x2="10.16" y2="116.84" width="0.1524" layer="91"/>
-<pinref part="LM1" gate="A" pin="ON"/>
+<pinref part="LM2675" gate="A" pin="ON"/>
 <wire x1="12.7" y1="137.16" x2="10.16" y2="137.16" width="0.1524" layer="91"/>
 <wire x1="10.16" y1="137.16" x2="10.16" y2="116.84" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$4" class="0">
 <segment>
-<pinref part="LM1" gate="A" pin="CB"/>
+<pinref part="LM2675" gate="A" pin="CB"/>
 <pinref part="C4" gate="G$1" pin="1"/>
 <wire x1="35.56" y1="137.16" x2="45.72" y2="137.16" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$7" class="0">
 <segment>
-<pinref part="LM1" gate="A" pin="VSW"/>
+<pinref part="LM2675" gate="A" pin="VSW"/>
 <wire x1="35.56" y1="132.08" x2="53.34" y2="132.08" width="0.1524" layer="91"/>
 <pinref part="C4" gate="G$1" pin="2"/>
 <wire x1="53.34" y1="132.08" x2="53.34" y2="137.16" width="0.1524" layer="91"/>
@@ -6399,7 +6401,7 @@ Package: B2B-ZR</description>
 <net name="GND" class="0">
 <segment>
 <pinref part="SUPPLY1" gate="GND" pin="GND"/>
-<pinref part="LM1" gate="A" pin="GND"/>
+<pinref part="LM2675" gate="A" pin="GND"/>
 <wire x1="12.7" y1="111.76" x2="12.7" y2="132.08" width="0.1524" layer="91"/>
 </segment>
 <segment>
@@ -6414,14 +6416,14 @@ Package: B2B-ZR</description>
 </segment>
 <segment>
 <pinref part="SUPPLY7" gate="GND" pin="GND"/>
-<pinref part="LTC1" gate="A" pin="GND"/>
+<pinref part="LTC2950" gate="A" pin="GND"/>
 <wire x1="-35.56" y1="86.36" x2="-35.56" y2="99.06" width="0.1524" layer="91"/>
 </segment>
 <segment>
-<pinref part="LTC2" gate="A" pin="GND"/>
+<pinref part="LTC4412" gate="A" pin="GND"/>
 <wire x1="-121.92" y1="116.84" x2="-111.76" y2="116.84" width="0.1524" layer="91"/>
 <wire x1="-111.76" y1="116.84" x2="-111.76" y2="106.68" width="0.1524" layer="91"/>
-<pinref part="LTC2" gate="A" pin="CTL"/>
+<pinref part="LTC4412" gate="A" pin="CTL"/>
 <wire x1="-111.76" y1="106.68" x2="-121.92" y2="106.68" width="0.1524" layer="91"/>
 <pinref part="SUPPLY8" gate="GND" pin="GND"/>
 <wire x1="-111.76" y1="93.98" x2="-111.76" y2="106.68" width="0.1524" layer="91"/>
@@ -6479,7 +6481,7 @@ Package: B2B-ZR</description>
 <pinref part="OPT1" gate="G$1" pin="C"/>
 </segment>
 <segment>
-<pinref part="DB1" gate="G$1" pin="5"/>
+<pinref part="DB15" gate="G$1" pin="5"/>
 <pinref part="SUPPLY35" gate="GND" pin="GND"/>
 <wire x1="-254" y1="-177.8" x2="-254" y2="-172.72" width="0.1524" layer="91"/>
 </segment>
@@ -6492,16 +6494,16 @@ Package: B2B-ZR</description>
 <junction x="-261.62" y="157.48"/>
 </segment>
 <segment>
-<pinref part="MCP1" gate="G$1" pin="A0"/>
-<pinref part="MCP1" gate="G$1" pin="A1"/>
+<pinref part="MCP23017" gate="G$1" pin="A0"/>
+<pinref part="MCP23017" gate="G$1" pin="A1"/>
 <wire x1="-193.04" y1="-60.96" x2="-193.04" y2="-58.42" width="0.1524" layer="91"/>
-<pinref part="MCP1" gate="G$1" pin="A2"/>
+<pinref part="MCP23017" gate="G$1" pin="A2"/>
 <wire x1="-193.04" y1="-58.42" x2="-193.04" y2="-55.88" width="0.1524" layer="91"/>
 <junction x="-193.04" y="-58.42"/>
 <wire x1="-193.04" y1="-58.42" x2="-165.1" y2="-58.42" width="0.1524" layer="91"/>
 <wire x1="-165.1" y1="-58.42" x2="-165.1" y2="-106.68" width="0.1524" layer="91"/>
 <pinref part="SUPPLY22" gate="GND" pin="GND"/>
-<pinref part="MCP1" gate="G$1" pin="VSS"/>
+<pinref part="MCP23017" gate="G$1" pin="VSS"/>
 <wire x1="-193.04" y1="-55.88" x2="-193.04" y2="-50.8" width="0.1524" layer="91"/>
 <junction x="-193.04" y="-55.88"/>
 </segment>
@@ -6587,7 +6589,7 @@ Package: B2B-ZR</description>
 <pinref part="SUPPLY36" gate="GND" pin="GND"/>
 <wire x1="-238.76" y1="-152.4" x2="-238.76" y2="-177.8" width="0.1524" layer="91"/>
 <wire x1="-256.54" y1="-152.4" x2="-256.54" y2="-157.226" width="0.1524" layer="91"/>
-<pinref part="DB1" gate="G$1" pin="10"/>
+<pinref part="DB15" gate="G$1" pin="10"/>
 </segment>
 <segment>
 <pinref part="SUPPLY16" gate="GND" pin="GND"/>
@@ -6669,7 +6671,7 @@ Package: B2B-ZR</description>
 </net>
 <net name="PBUTTON" class="0">
 <segment>
-<pinref part="LTC1" gate="A" pin="~PB"/>
+<pinref part="LTC2950" gate="A" pin="~PB"/>
 <wire x1="-68.58" y1="111.76" x2="-35.56" y2="111.76" width="0.1524" layer="91"/>
 <wire x1="-68.58" y1="111.76" x2="-68.58" y2="73.66" width="0.1524" layer="91"/>
 <label x="-68.58" y="68.58" size="1.778" layer="95"/>
@@ -6683,7 +6685,7 @@ Package: B2B-ZR</description>
 <net name="BATTVIN" class="0">
 <segment>
 <wire x1="-129.54" y1="142.24" x2="-111.76" y2="142.24" width="0.1524" layer="91"/>
-<pinref part="LTC2" gate="A" pin="VIN"/>
+<pinref part="LTC4412" gate="A" pin="VIN"/>
 <wire x1="-121.92" y1="101.6" x2="-106.68" y2="101.6" width="0.1524" layer="91"/>
 <wire x1="-106.68" y1="101.6" x2="-106.68" y2="129.54" width="0.1524" layer="91"/>
 <wire x1="-106.68" y1="129.54" x2="-129.54" y2="129.54" width="0.1524" layer="91"/>
@@ -6691,13 +6693,17 @@ Package: B2B-ZR</description>
 <pinref part="MP4" gate="G$1" pin="D"/>
 <junction x="-129.54" y="142.24"/>
 <pinref part="BATT_IN" gate="G$1" pin="2"/>
-<wire x1="-233.68" y1="142.24" x2="-129.54" y2="142.24" width="0.1524" layer="91"/>
+<wire x1="-233.68" y1="142.24" x2="-198.12" y2="142.24" width="0.1524" layer="91"/>
 <label x="-182.88" y="144.78" size="1.778" layer="95"/>
+<wire x1="-198.12" y1="142.24" x2="-129.54" y2="142.24" width="0.1524" layer="91"/>
+<junction x="-198.12" y="142.24"/>
+<pinref part="J1" gate="G$1" pin="2"/>
+<wire x1="-198.12" y1="142.24" x2="-198.12" y2="137.16" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="GATE" class="0">
 <segment>
-<pinref part="LTC2" gate="A" pin="GATE"/>
+<pinref part="LTC4412" gate="A" pin="GATE"/>
 <wire x1="-121.92" y1="109.22" x2="-99.06" y2="109.22" width="0.1524" layer="91"/>
 <wire x1="-99.06" y1="109.22" x2="-99.06" y2="134.62" width="0.1524" layer="91"/>
 <pinref part="MP4" gate="G$1" pin="G"/>
@@ -6779,7 +6785,7 @@ Package: B2B-ZR</description>
 </net>
 <net name="N$17" class="0">
 <segment>
-<pinref part="MCP1" gate="G$1" pin="INTB"/>
+<pinref part="MCP23017" gate="G$1" pin="INTB"/>
 <wire x1="-193.04" y1="-78.74" x2="73.66" y2="-78.74" width="0.1524" layer="91"/>
 <wire x1="73.66" y1="-78.74" x2="73.66" y2="-20.32" width="0.1524" layer="91"/>
 <pinref part="ATMEGA328P" gate="G$1" pin="PD2(INT0)"/>
@@ -6788,7 +6794,7 @@ Package: B2B-ZR</description>
 </net>
 <net name="N$18" class="0">
 <segment>
-<pinref part="MCP1" gate="G$1" pin="SCL"/>
+<pinref part="MCP23017" gate="G$1" pin="SCL"/>
 <wire x1="-193.04" y1="-68.58" x2="-144.78" y2="-68.58" width="0.1524" layer="91"/>
 <wire x1="-144.78" y1="-68.58" x2="68.58" y2="-68.58" width="0.1524" layer="91"/>
 <wire x1="68.58" y1="-68.58" x2="68.58" y2="-5.08" width="0.1524" layer="91"/>
@@ -6806,7 +6812,7 @@ Package: B2B-ZR</description>
 <wire x1="66.04" y1="-2.54" x2="66.04" y2="-66.04" width="0.1524" layer="91"/>
 <wire x1="66.04" y1="-66.04" x2="-157.48" y2="-66.04" width="0.1524" layer="91"/>
 <wire x1="-157.48" y1="-66.04" x2="-193.04" y2="-66.04" width="0.1524" layer="91"/>
-<pinref part="MCP1" gate="G$1" pin="SDA"/>
+<pinref part="MCP23017" gate="G$1" pin="SDA"/>
 <pinref part="R5" gate="G$1" pin="2"/>
 <junction x="-157.48" y="-66.04"/>
 </segment>
@@ -6892,7 +6898,7 @@ Package: B2B-ZR</description>
 </net>
 <net name="OUT1A" class="0">
 <segment>
-<pinref part="DB1" gate="G$1" pin="1"/>
+<pinref part="DB15" gate="G$1" pin="1"/>
 <wire x1="-274.32" y1="-172.72" x2="-274.32" y2="-180.34" width="0.1524" layer="91"/>
 <label x="-274.32" y="-190.5" size="1.778" layer="95" rot="R90"/>
 </segment>
@@ -6904,7 +6910,7 @@ Package: B2B-ZR</description>
 </net>
 <net name="OUT1B" class="0">
 <segment>
-<pinref part="DB1" gate="G$1" pin="2"/>
+<pinref part="DB15" gate="G$1" pin="2"/>
 <wire x1="-269.24" y1="-172.72" x2="-269.24" y2="-185.42" width="0.1524" layer="91"/>
 <label x="-269.24" y="-195.58" size="1.778" layer="95" rot="R90"/>
 </segment>
@@ -6916,7 +6922,7 @@ Package: B2B-ZR</description>
 </net>
 <net name="OUT2A" class="0">
 <segment>
-<pinref part="DB1" gate="G$1" pin="3"/>
+<pinref part="DB15" gate="G$1" pin="3"/>
 <wire x1="-264.16" y1="-172.72" x2="-264.16" y2="-180.34" width="0.1524" layer="91"/>
 <label x="-264.16" y="-190.5" size="1.778" layer="95" rot="R90"/>
 </segment>
@@ -6928,7 +6934,7 @@ Package: B2B-ZR</description>
 </net>
 <net name="OUT2B" class="0">
 <segment>
-<pinref part="DB1" gate="G$1" pin="4"/>
+<pinref part="DB15" gate="G$1" pin="4"/>
 <wire x1="-259.08" y1="-172.72" x2="-259.08" y2="-185.42" width="0.1524" layer="91"/>
 <label x="-259.08" y="-195.58" size="1.778" layer="95" rot="R90"/>
 </segment>
@@ -6946,13 +6952,13 @@ Package: B2B-ZR</description>
 </segment>
 <segment>
 <label x="-266.7" y="-147.32" size="1.778" layer="95" rot="R90"/>
-<pinref part="DB1" gate="G$1" pin="8"/>
+<pinref part="DB15" gate="G$1" pin="8"/>
 <wire x1="-266.7" y1="-157.226" x2="-266.7" y2="-149.86" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <wire x1="91.44" y1="-152.4" x2="91.44" y2="-142.24" width="0.1524" layer="91"/>
 <label x="91.44" y="-139.7" size="1.778" layer="95"/>
-<pinref part="CAM" gate="G$1" pin="1"/>
+<pinref part="CAMERA" gate="G$1" pin="1"/>
 <wire x1="93.98" y1="-152.4" x2="91.44" y2="-152.4" width="0.1524" layer="91"/>
 </segment>
 </net>
@@ -6964,20 +6970,20 @@ Package: B2B-ZR</description>
 </segment>
 <segment>
 <label x="-261.62" y="-147.32" size="1.778" layer="95" rot="R90"/>
-<pinref part="DB1" gate="G$1" pin="9"/>
+<pinref part="DB15" gate="G$1" pin="9"/>
 <wire x1="-261.62" y1="-157.226" x2="-261.62" y2="-149.86" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <wire x1="81.28" y1="-157.48" x2="81.28" y2="-142.24" width="0.1524" layer="91"/>
 <label x="81.28" y="-139.7" size="1.778" layer="95"/>
-<pinref part="CAM" gate="G$1" pin="3"/>
+<pinref part="CAMERA" gate="G$1" pin="3"/>
 <wire x1="81.28" y1="-157.48" x2="93.98" y2="-157.48" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="ALOG2" class="0">
 <segment>
 <label x="-271.78" y="-147.32" size="1.778" layer="95" rot="R90"/>
-<pinref part="DB1" gate="G$1" pin="7"/>
+<pinref part="DB15" gate="G$1" pin="7"/>
 <wire x1="-271.78" y1="-157.226" x2="-271.78" y2="-149.86" width="0.1524" layer="91"/>
 </segment>
 <segment>
@@ -6990,10 +6996,10 @@ Package: B2B-ZR</description>
 <segment>
 <wire x1="-264.16" y1="-157.226" x2="-264.16" y2="-139.7" width="0.1524" layer="91"/>
 <label x="-264.16" y="-137.16" size="1.778" layer="95" rot="R90"/>
-<pinref part="DB1" gate="G$1" pin="13"/>
+<pinref part="DB15" gate="G$1" pin="13"/>
 </segment>
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPA5"/>
+<pinref part="MCP23017" gate="G$1" pin="GPA5"/>
 <wire x1="-218.44" y1="-78.74" x2="-241.3" y2="-78.74" width="0.1524" layer="91"/>
 <label x="-247.904" y="-78.994" size="1.778" layer="95"/>
 </segment>
@@ -7002,17 +7008,17 @@ Package: B2B-ZR</description>
 <segment>
 <wire x1="-259.08" y1="-157.226" x2="-259.08" y2="-139.7" width="0.1524" layer="91"/>
 <label x="-259.08" y="-137.16" size="1.778" layer="95" rot="R90"/>
-<pinref part="DB1" gate="G$1" pin="14"/>
+<pinref part="DB15" gate="G$1" pin="14"/>
 </segment>
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPA6"/>
+<pinref part="MCP23017" gate="G$1" pin="GPA6"/>
 <wire x1="-218.44" y1="-76.2" x2="-226.06" y2="-76.2" width="0.1524" layer="91"/>
 <label x="-233.68" y="-76.2" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="FWD" class="0">
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPA0"/>
+<pinref part="MCP23017" gate="G$1" pin="GPA0"/>
 <wire x1="-226.06" y1="-91.44" x2="-218.44" y2="-91.44" width="0.1524" layer="91"/>
 <label x="-233.68" y="-91.44" size="1.778" layer="95"/>
 </segment>
@@ -7025,7 +7031,7 @@ Package: B2B-ZR</description>
 </net>
 <net name="BWD" class="0">
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPA1"/>
+<pinref part="MCP23017" gate="G$1" pin="GPA1"/>
 <wire x1="-218.44" y1="-88.9" x2="-241.3" y2="-88.9" width="0.1524" layer="91"/>
 <label x="-248.92" y="-88.9" size="1.778" layer="95"/>
 </segment>
@@ -7037,26 +7043,26 @@ Package: B2B-ZR</description>
 </net>
 <net name="DIG1" class="0">
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPB0"/>
+<pinref part="MCP23017" gate="G$1" pin="GPB0"/>
 <wire x1="-218.44" y1="-68.58" x2="-226.06" y2="-68.58" width="0.1524" layer="91"/>
 <label x="-233.68" y="-68.58" size="1.778" layer="95"/>
 </segment>
 <segment>
 <wire x1="-269.24" y1="-157.226" x2="-269.24" y2="-139.7" width="0.1524" layer="91"/>
 <label x="-269.24" y="-137.16" size="1.778" layer="95" rot="R90"/>
-<pinref part="DB1" gate="G$1" pin="12"/>
+<pinref part="DB15" gate="G$1" pin="12"/>
 </segment>
 </net>
 <net name="DIG2" class="0">
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPB1"/>
+<pinref part="MCP23017" gate="G$1" pin="GPB1"/>
 <wire x1="-218.44" y1="-66.04" x2="-241.3" y2="-66.04" width="0.1524" layer="91"/>
 <label x="-248.92" y="-66.04" size="1.778" layer="95"/>
 </segment>
 <segment>
 <wire x1="-274.32" y1="-157.226" x2="-274.32" y2="-139.7" width="0.1524" layer="91"/>
 <label x="-274.32" y="-137.16" size="1.778" layer="95" rot="R90"/>
-<pinref part="DB1" gate="G$1" pin="11"/>
+<pinref part="DB15" gate="G$1" pin="11"/>
 </segment>
 </net>
 <net name="ENCSWITCH" class="0">
@@ -7067,14 +7073,14 @@ Package: B2B-ZR</description>
 <wire x1="45.72" y1="-162.56" x2="45.72" y2="-170.18" width="0.1524" layer="91"/>
 </segment>
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPB2"/>
+<pinref part="MCP23017" gate="G$1" pin="GPB2"/>
 <wire x1="-218.44" y1="-63.5" x2="-226.06" y2="-63.5" width="0.1524" layer="91"/>
 <label x="-243.84" y="-63.5" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="INT" class="0">
 <segment>
-<pinref part="LTC1" gate="A" pin="~INT"/>
+<pinref part="LTC2950" gate="A" pin="~INT"/>
 <wire x1="0" y1="114.3" x2="0" y2="96.52" width="0.1524" layer="91"/>
 <pinref part="R18" gate="G$1" pin="2"/>
 <wire x1="0" y1="96.52" x2="33.02" y2="96.52" width="0.1524" layer="91"/>
@@ -7083,7 +7089,7 @@ Package: B2B-ZR</description>
 <label x="33.02" y="68.58" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPA3"/>
+<pinref part="MCP23017" gate="G$1" pin="GPA3"/>
 <wire x1="-218.44" y1="-83.82" x2="-241.3" y2="-83.82" width="0.1524" layer="91"/>
 <label x="-248.92" y="-83.82" size="1.778" layer="95"/>
 </segment>
@@ -7104,7 +7110,7 @@ Package: B2B-ZR</description>
 </net>
 <net name="KILL" class="0">
 <segment>
-<pinref part="LTC1" gate="A" pin="~KILL"/>
+<pinref part="LTC2950" gate="A" pin="~KILL"/>
 <wire x1="-35.56" y1="106.68" x2="-53.34" y2="106.68" width="0.1524" layer="91"/>
 <wire x1="-53.34" y1="106.68" x2="-53.34" y2="73.66" width="0.1524" layer="91"/>
 <label x="-53.34" y="68.58" size="1.778" layer="95"/>
@@ -7113,14 +7119,14 @@ Package: B2B-ZR</description>
 <pinref part="R21" gate="G$1" pin="1"/>
 </segment>
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPA4"/>
+<pinref part="MCP23017" gate="G$1" pin="GPA4"/>
 <wire x1="-218.44" y1="-81.28" x2="-226.06" y2="-81.28" width="0.1524" layer="91"/>
 <label x="-233.68" y="-81.28" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="MS1" class="0">
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPB3"/>
+<pinref part="MCP23017" gate="G$1" pin="GPB3"/>
 <wire x1="-218.44" y1="-60.96" x2="-241.3" y2="-60.96" width="0.1524" layer="91"/>
 <label x="-248.92" y="-60.96" size="1.778" layer="95"/>
 </segment>
@@ -7132,7 +7138,7 @@ Package: B2B-ZR</description>
 </net>
 <net name="MS2" class="0">
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPB4"/>
+<pinref part="MCP23017" gate="G$1" pin="GPB4"/>
 <label x="-233.68" y="-58.42" size="1.778" layer="95"/>
 <wire x1="-218.44" y1="-58.42" x2="-226.06" y2="-58.42" width="0.1524" layer="91"/>
 </segment>
@@ -7172,7 +7178,7 @@ Package: B2B-ZR</description>
 <wire x1="-38.1" y1="27.94" x2="-38.1" y2="33.02" width="0.1524" layer="91"/>
 </segment>
 <segment>
-<pinref part="MCP1" gate="G$1" pin="VDD"/>
+<pinref part="MCP23017" gate="G$1" pin="VDD"/>
 <pinref part="P+16" gate="1" pin="+5V"/>
 <wire x1="-193.04" y1="-91.44" x2="-177.8" y2="-91.44" width="0.1524" layer="91"/>
 <wire x1="-177.8" y1="-91.44" x2="-177.8" y2="-86.36" width="0.1524" layer="91"/>
@@ -7230,7 +7236,7 @@ Package: B2B-ZR</description>
 <segment>
 <pinref part="L1" gate="G$1" pin="2"/>
 <wire x1="63.5" y1="124.46" x2="63.5" y2="132.08" width="0.1524" layer="91"/>
-<pinref part="LM1" gate="A" pin="FB"/>
+<pinref part="LM2675" gate="A" pin="FB"/>
 <wire x1="35.56" y1="142.24" x2="35.56" y2="147.32" width="0.1524" layer="91"/>
 <wire x1="35.56" y1="147.32" x2="63.5" y2="147.32" width="0.1524" layer="91"/>
 <wire x1="63.5" y1="147.32" x2="63.5" y2="132.08" width="0.1524" layer="91"/>
@@ -7256,17 +7262,24 @@ Package: B2B-ZR</description>
 <wire x1="-200.66" y1="-139.7" x2="-200.66" y2="-134.62" width="0.1524" layer="91"/>
 <pinref part="P+6" gate="1" pin="+5V"/>
 </segment>
+<segment>
+<pinref part="ICSP/SPI/OLED" gate="G$1" pin="9"/>
+<wire x1="119.38" y1="-55.88" x2="119.38" y2="-63.5" width="0.1524" layer="91"/>
+<pinref part="VCC1" gate="1" pin="+5V"/>
+<wire x1="119.38" y1="-63.5" x2="137.16" y2="-63.5" width="0.1524" layer="91"/>
+<wire x1="137.16" y1="-63.5" x2="137.16" y2="-53.34" width="0.1524" layer="91"/>
+</segment>
 </net>
 <net name="V+" class="0">
 <segment>
-<pinref part="LTC2" gate="A" pin="SENSE"/>
+<pinref part="LTC4412" gate="A" pin="SENSE"/>
 <wire x1="-121.92" y1="111.76" x2="-91.44" y2="111.76" width="0.1524" layer="91"/>
 <wire x1="-91.44" y1="111.76" x2="-91.44" y2="142.24" width="0.1524" layer="91"/>
 <wire x1="-91.44" y1="142.24" x2="-86.36" y2="142.24" width="0.1524" layer="91"/>
 <wire x1="-86.36" y1="142.24" x2="-78.74" y2="142.24" width="0.1524" layer="91"/>
 <wire x1="-78.74" y1="142.24" x2="-35.56" y2="142.24" width="0.1524" layer="91"/>
 <wire x1="-35.56" y1="142.24" x2="-15.24" y2="142.24" width="0.1524" layer="91"/>
-<pinref part="LTC1" gate="A" pin="VIN"/>
+<pinref part="LTC2950" gate="A" pin="VIN"/>
 <wire x1="-35.56" y1="116.84" x2="-35.56" y2="142.24" width="0.1524" layer="91"/>
 <junction x="-35.56" y="142.24"/>
 <pinref part="D2" gate="G$1" pin="C"/>
@@ -7280,7 +7293,7 @@ Package: B2B-ZR</description>
 <wire x1="-15.24" y1="154.94" x2="137.16" y2="154.94" width="0.1524" layer="91"/>
 <wire x1="-15.24" y1="142.24" x2="0" y2="142.24" width="0.1524" layer="91"/>
 <junction x="-15.24" y="142.24"/>
-<pinref part="LM1" gate="A" pin="VIN"/>
+<pinref part="LM2675" gate="A" pin="VIN"/>
 <pinref part="C7" gate="G$1" pin="+"/>
 <wire x1="0" y1="142.24" x2="12.7" y2="142.24" width="0.1524" layer="91"/>
 <wire x1="0" y1="137.16" x2="0" y2="142.24" width="0.1524" layer="91"/>
@@ -7306,7 +7319,7 @@ Package: B2B-ZR</description>
 <segment>
 <label x="-237.998" y="-53.34" size="1.778" layer="95"/>
 <wire x1="-226.06" y1="-53.34" x2="-218.44" y2="-53.34" width="0.1524" layer="91"/>
-<pinref part="MCP1" gate="G$1" pin="GPB6"/>
+<pinref part="MCP23017" gate="G$1" pin="GPB6"/>
 </segment>
 <segment>
 <pinref part="A4988_CARRIER" gate="G$1" pin="EN"/>
@@ -7327,7 +7340,7 @@ Package: B2B-ZR</description>
 <segment>
 <wire x1="-218.44" y1="-50.8" x2="-241.3" y2="-50.8" width="0.1524" layer="91"/>
 <label x="-251.46" y="-50.8" size="1.778" layer="95"/>
-<pinref part="MCP1" gate="G$1" pin="GPB7"/>
+<pinref part="MCP23017" gate="G$1" pin="GPB7"/>
 </segment>
 <segment>
 <pinref part="A4988_CARRIER" gate="G$1" pin="SLEEP"/>
@@ -7363,14 +7376,14 @@ Package: B2B-ZR</description>
 <net name="STAT" class="0">
 <segment>
 <pinref part="R14" gate="G$1" pin="1"/>
-<pinref part="LTC2" gate="A" pin="STAT"/>
+<pinref part="LTC4412" gate="A" pin="STAT"/>
 <wire x1="-165.1" y1="101.6" x2="-157.48" y2="101.6" width="0.1524" layer="91"/>
 <wire x1="-165.1" y1="101.6" x2="-165.1" y2="76.2" width="0.1524" layer="91"/>
 <junction x="-165.1" y="101.6"/>
 <label x="-165.1" y="71.12" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPA2"/>
+<pinref part="MCP23017" gate="G$1" pin="GPA2"/>
 <wire x1="-218.44" y1="-86.36" x2="-226.06" y2="-86.36" width="0.1524" layer="91"/>
 <label x="-233.68" y="-86.36" size="1.778" layer="95"/>
 </segment>
@@ -7382,7 +7395,7 @@ Package: B2B-ZR</description>
 <label x="81.28" y="66.04" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPB5"/>
+<pinref part="MCP23017" gate="G$1" pin="GPB5"/>
 <wire x1="-218.44" y1="-55.88" x2="-241.3" y2="-55.88" width="0.1524" layer="91"/>
 <label x="-248.92" y="-55.88" size="1.778" layer="95"/>
 </segment>
@@ -7419,11 +7432,11 @@ Package: B2B-ZR</description>
 <wire x1="-246.38" y1="-154.94" x2="-246.38" y2="-182.88" width="0.1524" layer="91"/>
 <wire x1="-254" y1="-154.94" x2="-246.38" y2="-154.94" width="0.1524" layer="91"/>
 <wire x1="-254" y1="-154.94" x2="-254" y2="-157.226" width="0.1524" layer="91"/>
-<pinref part="DB1" gate="G$1" pin="15"/>
+<pinref part="DB15" gate="G$1" pin="15"/>
 <pinref part="CAM_GND" gate="1" pin="GND"/>
 </segment>
 <segment>
-<pinref part="CAM" gate="G$1" pin="2"/>
+<pinref part="CAMERA" gate="G$1" pin="2"/>
 <pinref part="CAM_GND3" gate="1" pin="GND"/>
 <wire x1="93.98" y1="-154.94" x2="86.36" y2="-154.94" width="0.1524" layer="91"/>
 <wire x1="86.36" y1="-154.94" x2="86.36" y2="-167.64" width="0.1524" layer="91"/>
@@ -7431,7 +7444,7 @@ Package: B2B-ZR</description>
 </net>
 <net name="N$8" class="0">
 <segment>
-<pinref part="MCP1" gate="G$1" pin="!RESET"/>
+<pinref part="MCP23017" gate="G$1" pin="!RESET"/>
 <pinref part="R13" gate="G$1" pin="1"/>
 <wire x1="-190.5" y1="-86.36" x2="-193.04" y2="-86.36" width="0.1524" layer="91"/>
 </segment>
@@ -7452,7 +7465,7 @@ Package: B2B-ZR</description>
 </net>
 <net name="BLUETOOTH_ENABLE" class="0">
 <segment>
-<pinref part="MCP1" gate="G$1" pin="GPA7"/>
+<pinref part="MCP23017" gate="G$1" pin="GPA7"/>
 <wire x1="-218.44" y1="-73.66" x2="-241.3" y2="-73.66" width="0.1524" layer="91"/>
 <label x="-266.7" y="-73.66" size="1.778" layer="95"/>
 </segment>
@@ -7482,6 +7495,11 @@ Package: B2B-ZR</description>
 <pinref part="BATT_IN" gate="G$1" pin="1"/>
 <wire x1="-233.68" y1="139.7" x2="-223.52" y2="139.7" width="0.1524" layer="91"/>
 <wire x1="-223.52" y1="139.7" x2="-223.52" y2="132.08" width="0.1524" layer="91"/>
+<wire x1="-223.52" y1="139.7" x2="-208.28" y2="139.7" width="0.1524" layer="91"/>
+<wire x1="-208.28" y1="139.7" x2="-208.28" y2="127" width="0.1524" layer="91"/>
+<junction x="-223.52" y="139.7"/>
+<pinref part="J1" gate="G$1" pin="1"/>
+<wire x1="-208.28" y1="127" x2="-198.12" y2="127" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="BATT_SENSE" class="0">
@@ -7516,7 +7534,7 @@ Package: B2B-ZR</description>
 <segment>
 <wire x1="-276.86" y1="-157.226" x2="-276.86" y2="-149.86" width="0.1524" layer="91"/>
 <label x="-276.86" y="-147.32" size="1.778" layer="95" rot="R90"/>
-<pinref part="DB1" gate="G$1" pin="6"/>
+<pinref part="DB15" gate="G$1" pin="6"/>
 </segment>
 </net>
 <net name="BATT_FET" class="0">
@@ -7537,15 +7555,6 @@ Package: B2B-ZR</description>
 <pinref part="R16" gate="G$1" pin="1"/>
 <wire x1="134.62" y1="111.76" x2="154.94" y2="111.76" width="0.1524" layer="91"/>
 <wire x1="154.94" y1="111.76" x2="154.94" y2="124.46" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="+5V" class="0">
-<segment>
-<pinref part="ICSP/SPI/OLED" gate="G$1" pin="9"/>
-<wire x1="119.38" y1="-55.88" x2="119.38" y2="-63.5" width="0.1524" layer="91"/>
-<pinref part="VCC1" gate="1" pin="+5V"/>
-<wire x1="119.38" y1="-63.5" x2="137.16" y2="-63.5" width="0.1524" layer="91"/>
-<wire x1="137.16" y1="-63.5" x2="137.16" y2="-53.34" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="MCU_TX_3_3V" class="0">
