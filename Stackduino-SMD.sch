@@ -7479,27 +7479,25 @@ Package: B2B-ZR</description>
 <segment>
 <pinref part="MP2" gate="G$1" pin="G"/>
 <pinref part="R10" gate="G$1" pin="2"/>
-<wire x1="-208.28" y1="114.3" x2="-203.2" y2="114.3" width="0.1524" layer="91"/>
 <wire x1="-215.9" y1="114.3" x2="-208.28" y2="114.3" width="0.1524" layer="91"/>
 <junction x="-215.9" y="114.3"/>
 <pinref part="R7" gate="G$1" pin="2"/>
-<wire x1="-208.28" y1="114.3" x2="-208.28" y2="106.68" width="0.1524" layer="91"/>
+<wire x1="-208.28" y1="114.3" x2="-203.2" y2="114.3" width="0.1524" layer="91"/>
+<wire x1="-208.28" y1="106.68" x2="-208.28" y2="114.3" width="0.1524" layer="91"/>
+<junction x="-208.28" y="114.3"/>
 </segment>
 </net>
 <net name="BATT_VOLT" class="0">
 <segment>
-<pinref part="MP2" gate="G$1" pin="D"/>
-<wire x1="-223.52" y1="127" x2="-223.52" y2="132.08" width="0.1524" layer="91"/>
-</segment>
-<segment>
 <pinref part="BATT_IN" gate="G$1" pin="1"/>
 <wire x1="-233.68" y1="139.7" x2="-223.52" y2="139.7" width="0.1524" layer="91"/>
-<wire x1="-223.52" y1="139.7" x2="-223.52" y2="132.08" width="0.1524" layer="91"/>
 <wire x1="-223.52" y1="139.7" x2="-208.28" y2="139.7" width="0.1524" layer="91"/>
 <wire x1="-208.28" y1="139.7" x2="-208.28" y2="127" width="0.1524" layer="91"/>
-<junction x="-223.52" y="139.7"/>
 <pinref part="J1" gate="G$1" pin="1"/>
 <wire x1="-208.28" y1="127" x2="-198.12" y2="127" width="0.1524" layer="91"/>
+<pinref part="MP2" gate="G$1" pin="D"/>
+<wire x1="-223.52" y1="127" x2="-223.52" y2="139.7" width="0.1524" layer="91"/>
+<junction x="-223.52" y="139.7"/>
 </segment>
 </net>
 <net name="BATT_SENSE" class="0">
@@ -7575,11 +7573,12 @@ Package: B2B-ZR</description>
 <segment>
 <pinref part="MP1" gate="G$1" pin="G"/>
 <pinref part="R4" gate="G$1" pin="2"/>
-<wire x1="-160.02" y1="-152.4" x2="-154.94" y2="-152.4" width="0.1524" layer="91"/>
 <wire x1="-193.04" y1="-152.4" x2="-160.02" y2="-152.4" width="0.1524" layer="91"/>
 <junction x="-193.04" y="-152.4"/>
 <pinref part="R3" gate="G$1" pin="2"/>
-<wire x1="-160.02" y1="-152.4" x2="-160.02" y2="-160.02" width="0.1524" layer="91"/>
+<wire x1="-160.02" y1="-152.4" x2="-154.94" y2="-152.4" width="0.1524" layer="91"/>
+<wire x1="-160.02" y1="-160.02" x2="-160.02" y2="-152.4" width="0.1524" layer="91"/>
+<junction x="-160.02" y="-152.4"/>
 </segment>
 </net>
 <net name="BLUETOOTH_VCC" class="0">
@@ -7611,43 +7610,54 @@ Package: B2B-ZR</description>
 </sheet>
 </sheets>
 <errors>
-<approved hash="102,1,68.58,106.68,+5V,VCC,,,,"/>
-<approved hash="102,1,17.78,71.12,+5V,VCC,,,,"/>
-<approved hash="102,1,-48.26,35.56,+5V,VCC,,,,"/>
-<approved hash="102,1,99.06,-12.7,+5V,VCC,,,,"/>
-<approved hash="102,1,76.2,-73.66,+5V,VCC,,,,"/>
-<approved hash="102,1,-71.12,-76.2,+5V,VCC,,,,"/>
-<approved hash="102,1,17.78,-53.34,+5V,VCC,,,,"/>
-<approved hash="102,1,-111.76,50.8,+5V,VCC,,,,"/>
-<approved hash="102,1,-152.4,86.36,+5V,VCC,,,,"/>
-<approved hash="102,1,35.56,-76.2,+5V,VCC,,,,"/>
-<approved hash="102,1,157.48,66.04,+5V,VCC,,,,"/>
-<approved hash="102,1,45.72,68.58,+5V,VCC,,,,"/>
-<approved hash="102,1,-71.12,93.98,+5V,VCC,,,,"/>
-<approved hash="202,1,-109.22,5.08,FT232RL,OSCI,,,,"/>
-<approved hash="202,1,-78.74,7.62,FT232RL,DSR,,,,"/>
-<approved hash="202,1,-78.74,5.08,FT232RL,DCD,,,,"/>
-<approved hash="202,1,-78.74,2.54,FT232RL,RI,,,,"/>
-<approved hash="104,1,-109.22,-7.62,FT232RL,GND7,GND,,,"/>
-<approved hash="104,1,-109.22,-10.16,FT232RL,GND18,GND,,,"/>
-<approved hash="104,1,-109.22,-12.7,FT232RL,GND21,GND,,,"/>
-<approved hash="104,1,-109.22,10.16,FT232RL,VCCIO,VCC,,,"/>
-<approved hash="104,1,-109.22,-5.08,FT232RL,AGND,GND,,,"/>
-<approved hash="202,1,-78.74,-2.54,FT232RL,TXLED,,,,"/>
-<approved hash="202,1,-78.74,-5.08,FT232RL,RXLED,,,,"/>
-<approved hash="202,1,-78.74,15.24,FT232RL,CTS,,,,"/>
-<approved hash="202,1,-78.74,-7.62,FT232RL,PWREN,,,,"/>
-<approved hash="202,1,-78.74,-10.16,FT232RL,TXDEN,,,,"/>
-<approved hash="202,1,-78.74,-12.7,FT232RL,SLEEP,,,,"/>
-<approved hash="104,1,-81.28,-81.28,MCP23017,VDD,VCC,,,"/>
-<approved hash="104,1,-81.28,-40.64,MCP23017,VSS,GND,,,"/>
-<approved hash="104,1,-45.72,88.9,LTC2950,VIN,V+,,,"/>
-<approved hash="202,1,-45.72,81.28,LTC2950,ONT,,,,"/>
-<approved hash="202,1,-45.72,76.2,LTC2950,OFFT,,,,"/>
-<approved hash="104,1,2.54,114.3,LM2675,VIN,V+,,,"/>
-<approved hash="104,1,-109.22,73.66,LTC4412,VIN,VDD,,,"/>
-<approved hash="104,1,127,63.5,A4988_CARRIER,VDD,VCC,,,"/>
-<approved hash="104,1,127,78.74,A4988_CARRIER,VMOT,V+,,,"/>
+<approved hash="102,1,78.74,134.62,+5V,VCC,,,,"/>
+<approved hash="102,1,33.02,111.76,+5V,VCC,,,,"/>
+<approved hash="102,1,-38.1,33.02,+5V,VCC,,,,"/>
+<approved hash="102,1,-48.26,33.02,+5V,VCC,,,,"/>
+<approved hash="102,1,-177.8,-40.64,+5V,VCC,,,,"/>
+<approved hash="102,1,-157.48,-40.64,+5V,VCC,,,,"/>
+<approved hash="102,1,-142.24,50.8,+5V,VCC,,,,"/>
+<approved hash="102,1,-165.1,114.3,+5V,VCC,,,,"/>
+<approved hash="102,1,-144.78,-40.64,+5V,VCC,,,,"/>
+<approved hash="102,1,167.64,60.96,+5V,VCC,,,,"/>
+<approved hash="102,1,53.34,66.04,+5V,VCC,,,,"/>
+<approved hash="102,1,-53.34,132.08,+5V,VCC,,,,"/>
+<approved hash="102,1,101.6,134.62,+5V,VCC,,,,"/>
+<approved hash="102,1,-246.38,-182.88,GND,CAM_GND,,,,"/>
+<approved hash="102,1,149.86,5.08,GND,CAM_GND,,,,"/>
+<approved hash="102,1,127,5.08,GND,CAM_GND,,,,"/>
+<approved hash="102,1,86.36,-167.64,GND,CAM_GND,,,,"/>
+<approved hash="102,1,137.16,-53.34,+5V,VCC,,,,"/>
+<approved hash="102,1,-200.66,-134.62,+5V,VCC,,,,"/>
+<approved hash="201,1,86.36,-167.64,GND,GND\, CAM_GND,,,,"/>
+<approved hash="201,1,127,5.08,GND,GND\, CAM_GND,,,,"/>
+<approved hash="201,1,149.86,5.08,GND,GND\, CAM_GND,,,,"/>
+<approved hash="201,1,-246.38,-182.88,GND,GND\, CAM_GND,,,,"/>
+<approved hash="202,1,-139.7,2.54,FT232RL,OSCI,,,,"/>
+<approved hash="202,1,-109.22,5.08,FT232RL,DSR,,,,"/>
+<approved hash="202,1,-109.22,2.54,FT232RL,DCD,,,,"/>
+<approved hash="202,1,-109.22,0,FT232RL,RI,,,,"/>
+<approved hash="104,1,-139.7,-10.16,FT232RL,GND7,GND,,,"/>
+<approved hash="104,1,-139.7,-12.7,FT232RL,GND18,GND,,,"/>
+<approved hash="104,1,-139.7,-15.24,FT232RL,GND21,GND,,,"/>
+<approved hash="104,1,-139.7,7.62,FT232RL,VCCIO,VCC,,,"/>
+<approved hash="104,1,-139.7,-7.62,FT232RL,AGND,GND,,,"/>
+<approved hash="202,1,-109.22,-5.08,FT232RL,TXLED,,,,"/>
+<approved hash="202,1,-109.22,-7.62,FT232RL,RXLED,,,,"/>
+<approved hash="202,1,-109.22,12.7,FT232RL,CTS,,,,"/>
+<approved hash="202,1,-109.22,-10.16,FT232RL,PWREN,,,,"/>
+<approved hash="202,1,-109.22,-12.7,FT232RL,TXDEN,,,,"/>
+<approved hash="202,1,-109.22,-15.24,FT232RL,SLEEP,,,,"/>
+<approved hash="104,1,-193.04,-91.44,MCP23017,VDD,VCC,,,"/>
+<approved hash="104,1,-193.04,-50.8,MCP23017,VSS,GND,,,"/>
+<approved hash="104,1,-35.56,116.84,LTC2950,VIN,V+,,,"/>
+<approved hash="202,1,-35.56,109.22,LTC2950,ONT,,,,"/>
+<approved hash="202,1,-35.56,104.14,LTC2950,OFFT,,,,"/>
+<approved hash="104,1,12.7,142.24,LM2675,VIN,V+,,,"/>
+<approved hash="104,1,-121.92,101.6,LTC4412,VIN,BATTVIN,,,"/>
+<approved hash="104,1,137.16,58.42,A4988_CARRIER,VDD,VCC,,,"/>
+<approved hash="104,1,137.16,73.66,A4988_CARRIER,VMOT,N$9,,,"/>
+<approved hash="113,1,-45.824,4.976,FRAME1,,,,,"/>
 </errors>
 </schematic>
 </drawing>
