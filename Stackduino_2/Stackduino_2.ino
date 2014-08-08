@@ -186,12 +186,7 @@ void buttonMainToggle(){ /* RETURN CURRENT TOGGLE STATE OF MAIN PUSH BUTTON */
   button_main_reading = digitalRead(button_main);
 
   if (button_main_reading == LOW && button_main_previous == HIGH && millis() - button_main_time > button_main_debounce) {
-    if (start_stack == true) {
-      start_stack = false;
-    } 
-    else {
-      start_stack = true;
-    }
+    start_stack ? !start_stack : start_stack;
     button_main_time = millis();    
   }
 
