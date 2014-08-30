@@ -5773,11 +5773,11 @@ Mating connector PHR-3 &lt;br&gt;</description>
 <wire x1="-4.5" y1="-2.1175" x2="-4.5" y2="1.3825" width="0.127" layer="21"/>
 <text x="-5.25" y="1.5825" size="1.27" layer="25">&gt;NAME</text>
 <text x="-5.25" y="-4.0525" size="1.27" layer="27">&gt;VALUE</text>
-<pad name="5" x="-3" y="0.0125" drill="0.7"/>
-<pad name="4" x="-1.5" y="0.0125" drill="0.7"/>
-<pad name="3" x="0" y="0.0125" drill="0.7"/>
-<pad name="2" x="1.5" y="0.0125" drill="0.7"/>
-<pad name="1" x="3" y="0.0125" drill="0.7"/>
+<pad name="5" x="-3" y="0.0125" drill="0.7" shape="long" rot="R90"/>
+<pad name="4" x="-1.5" y="0.0125" drill="0.7" shape="long" rot="R90"/>
+<pad name="3" x="0" y="0.0125" drill="0.7" shape="long" rot="R90"/>
+<pad name="2" x="1.5" y="0.0125" drill="0.7" shape="long" rot="R90"/>
+<pad name="1" x="3" y="0.0125" drill="0.7" shape="long" rot="R90"/>
 </package>
 <package name="B3B-ZR">
 <description>&lt;b&gt;JST ZH Connector&lt;/b&gt;
@@ -5788,9 +5788,9 @@ Source: &lt;a href="http://www.jst-mfg.com/product/pdf/eng/eZH.pdf"&gt;http://ww
 <wire x1="3" y1="1.3" x2="3" y2="-2.2" width="0.127" layer="21"/>
 <wire x1="3" y1="-2.2" x2="-3" y2="-2.2" width="0.127" layer="21"/>
 <wire x1="-3" y1="-2.2" x2="-3" y2="1.3" width="0.127" layer="21"/>
-<pad name="1" x="-1.5" y="0" drill="0.7" diameter="1.1"/>
-<pad name="2" x="0" y="0" drill="0.7" diameter="1.1"/>
-<pad name="3" x="1.5" y="0" drill="0.7" diameter="1.1"/>
+<pad name="1" x="-1.5" y="0" drill="0.7" diameter="1.1" shape="long" rot="R90"/>
+<pad name="2" x="0" y="0" drill="0.7" diameter="1.1" shape="long" rot="R90"/>
+<pad name="3" x="1.5" y="0" drill="0.7" diameter="1.1" shape="long" rot="R90"/>
 <text x="-3.75" y="1.5" size="1.27" layer="25">&gt;NAME</text>
 <text x="-3.75" y="-3.5" size="1.27" layer="27">&gt;VALUE</text>
 </package>
@@ -5801,15 +5801,15 @@ Source: &lt;a href="http://www.jst-mfg.com/product/pdf/eng/eZH.pdf"&gt;http://ww
 <wire x1="-7.475" y1="-2.16" x2="-7.475" y2="1.34" width="0.127" layer="21"/>
 <text x="-7.475" y="2.02" size="1.27" layer="25">&gt;NAME</text>
 <text x="-7.475" y="-3.98" size="1.27" layer="27">&gt;VALUE</text>
-<pad name="6" x="-1.475" y="-0.03" drill="0.7"/>
-<pad name="5" x="0.025" y="-0.03" drill="0.7"/>
-<pad name="4" x="1.525" y="-0.03" drill="0.7"/>
-<pad name="3" x="3.025" y="-0.03" drill="0.7"/>
-<pad name="2" x="4.525" y="-0.03" drill="0.7"/>
-<pad name="1" x="6.025" y="-0.03" drill="0.7"/>
-<pad name="7" x="-2.975" y="-0.03" drill="0.7"/>
-<pad name="8" x="-4.475" y="-0.03" drill="0.7"/>
-<pad name="9" x="-5.975" y="-0.03" drill="0.7"/>
+<pad name="6" x="-1.475" y="-0.03" drill="0.7" shape="long" rot="R90"/>
+<pad name="5" x="0.025" y="-0.03" drill="0.7" shape="long" rot="R270"/>
+<pad name="4" x="1.525" y="-0.03" drill="0.7" shape="long" rot="R270"/>
+<pad name="3" x="3.025" y="-0.03" drill="0.7" shape="long" rot="R90"/>
+<pad name="2" x="4.525" y="-0.03" drill="0.7" shape="long" rot="R90"/>
+<pad name="1" x="6.025" y="-0.03" drill="0.7" shape="long" rot="R90"/>
+<pad name="7" x="-2.975" y="-0.03" drill="0.7" shape="long" rot="R90"/>
+<pad name="8" x="-4.475" y="-0.03" drill="0.7" shape="long" rot="R90"/>
+<pad name="9" x="-5.975" y="-0.03" drill="0.7" shape="long" rot="R90"/>
 </package>
 <package name="B4B-ZR">
 <description>&lt;b&gt;ZH CONNECTOR&lt;/b&gt;  Top entry type, 1.5 mm, 4 pin 1 row&lt;p&gt;
@@ -5820,18 +5820,18 @@ Source: http://www.jst.com .. eZH.pdf</description>
 <wire x1="0" y1="-3.43" x2="0" y2="0.07" width="0.127" layer="21"/>
 <text x="-0.75" y="0.27" size="1.27" layer="25">&gt;NAME</text>
 <text x="-0.75" y="-5.365" size="1.27" layer="27">&gt;VALUE</text>
-<pad name="4" x="1.5" y="-1.3" drill="0.7"/>
-<pad name="3" x="3" y="-1.3" drill="0.7"/>
-<pad name="2" x="4.5" y="-1.3" drill="0.7"/>
-<pad name="1" x="6" y="-1.3" drill="0.7"/>
+<pad name="4" x="1.5" y="-1.3" drill="0.7" shape="long" rot="R90"/>
+<pad name="3" x="3" y="-1.3" drill="0.7" shape="long" rot="R90"/>
+<pad name="2" x="4.5" y="-1.3" drill="0.7" shape="long" rot="R90"/>
+<pad name="1" x="6" y="-1.3" drill="0.7" shape="long" rot="R90"/>
 </package>
 <package name="B2B-ZR">
 <wire x1="-0.58" y1="0.55" x2="3.92" y2="0.55" width="0.127" layer="21"/>
 <wire x1="3.92" y1="0.55" x2="3.92" y2="-2.95" width="0.127" layer="21"/>
 <wire x1="3.92" y1="-2.95" x2="-0.58" y2="-2.95" width="0.127" layer="21"/>
 <wire x1="-0.58" y1="-2.95" x2="-0.58" y2="0.55" width="0.127" layer="21"/>
-<pad name="1" x="0.92" y="-0.75" drill="0.7" diameter="1.1"/>
-<pad name="2" x="2.42" y="-0.75" drill="0.7" diameter="1.1"/>
+<pad name="1" x="0.92" y="-0.75" drill="0.7" diameter="1.1" shape="long" rot="R90"/>
+<pad name="2" x="2.42" y="-0.75" drill="0.7" diameter="1.1" shape="long" rot="R90"/>
 <text x="-1.33" y="0.75" size="1.27" layer="25">&gt;NAME</text>
 <text x="-1.33" y="-4.25" size="1.27" layer="27">&gt;VALUE</text>
 </package>
@@ -6232,7 +6232,7 @@ www.irf.com&lt;p&gt;
 <part name="LM2675-3.3" library="v-reg-3" deviceset="LM2675" device="M"/>
 <part name="LTC4412" library="LTC_By_element14_Batch_1" deviceset="LTC4412ES6PBF" device=""/>
 <part name="C4" library="eagle-ltspice" deviceset="C" device="" value="10nF"/>
-<part name="L1" library="inductor-coilcraft" deviceset="DO3316P" device="" value="47uH"/>
+<part name="L1" library="inductor-coilcraft" deviceset="DO3316P" device="" value="33uH - Coilcraft DO3316"/>
 <part name="SUPPLY1" library="supply2" deviceset="GND" device=""/>
 <part name="D1" library="SparkFun-DiscreteSemi" deviceset="MBRA140" device="" value="20v 1A"/>
 <part name="SUPPLY4" library="supply2" deviceset="GND" device=""/>
@@ -6287,9 +6287,9 @@ www.irf.com&lt;p&gt;
 <part name="SUPPLY5" library="supply2" deviceset="GND" device=""/>
 <part name="C9" library="SparkFun-Passives" deviceset="CAP_POL" device="D" value="100uF"/>
 <part name="SUPPLY2" library="supply2" deviceset="GND" device=""/>
-<part name="C8" library="SparkFun-Passives" deviceset="CAP_POL" device="D" value="68uF"/>
+<part name="C8" library="SparkFun-Passives" deviceset="CAP_POL" device="D" value="100uF"/>
 <part name="SUPPLY3" library="supply2" deviceset="GND" device=""/>
-<part name="QF1" library="crystal" deviceset="CRYSTAL" device="HC49U-V" value="16Mhz"/>
+<part name="QF1" library="crystal" deviceset="CRYSTAL" device="HC49U-V" value="8Mhz"/>
 <part name="C6" library="eagle-ltspice" deviceset="C" device="" value="22pF"/>
 <part name="SUPPLY6" library="supply2" deviceset="GND" device=""/>
 <part name="SUPPLY11" library="supply2" deviceset="GND" device=""/>
@@ -6337,13 +6337,13 @@ www.irf.com&lt;p&gt;
 <part name="J1" library="eagle-ltspice" deviceset="R" device="" value="JUMPER"/>
 <part name="C3" library="eagle-ltspice" deviceset="C" device="" value="0.1uF"/>
 <part name="SUPPLY34" library="supply2" deviceset="GND" device=""/>
-<part name="R3" library="eagle-ltspice" deviceset="R" device="" value="10K"/>
+<part name="R3" library="eagle-ltspice" deviceset="R" device="" value="100K"/>
 <part name="SUPPLY40" library="supply2" deviceset="GND" device=""/>
 <part name="P+7" library="supply1" deviceset="+5V" device="" value="VCC"/>
 <part name="MP1" library="transistor-power" deviceset="FDN360P" device=""/>
 <part name="MP2" library="transistor-power" deviceset="FDN360P" device=""/>
 <part name="C15" library="eagle-ltspice" deviceset="C" device="" value="10nF"/>
-<part name="C5" library="eagle-ltspice" deviceset="C" device="" value="22uF"/>
+<part name="C5" library="eagle-ltspice" deviceset="C" device="" value="0.1uF"/>
 <part name="MN1" library="transistor-small-signal" deviceset="BSS123" device=""/>
 <part name="SUPPLY19" library="supply2" deviceset="GND" device=""/>
 <part name="SUPPLY23" library="supply2" deviceset="GND" device=""/>
@@ -6387,8 +6387,8 @@ www.irf.com&lt;p&gt;
 <instance part="R13" gate="G$1" x="33.02" y="101.6" rot="R270"/>
 <instance part="R2" gate="G$1" x="81.28" y="38.1" rot="R180"/>
 <instance part="R1" gate="G$1" x="81.28" y="17.78" rot="R180"/>
-<instance part="P+2" gate="1" x="78.74" y="137.16" smashed="yes">
-<attribute name="VALUE" x="81.026" y="135.382" size="1.778" layer="96"/>
+<instance part="P+2" gate="1" x="96.52" y="147.32" smashed="yes">
+<attribute name="VALUE" x="98.806" y="145.542" size="1.778" layer="96"/>
 </instance>
 <instance part="P+4" gate="1" x="33.02" y="114.3" smashed="yes">
 <attribute name="VALUE" x="35.306" y="112.522" size="1.778" layer="96"/>
@@ -6864,6 +6864,7 @@ www.irf.com&lt;p&gt;
 <wire x1="-58.42" y1="43.18" x2="-58.42" y2="20.32" width="0.1524" layer="91"/>
 <pinref part="FT232RL" gate="G$1" pin="TXD"/>
 <wire x1="-58.42" y1="20.32" x2="-109.22" y2="20.32" width="0.1524" layer="91"/>
+<label x="-5.08" y="40.64" size="1.778" layer="95"/>
 </segment>
 <segment>
 <pinref part="H_1" gate="G$1" pin="1"/>
@@ -7359,8 +7360,8 @@ www.irf.com&lt;p&gt;
 <wire x1="63.5" y1="147.32" x2="63.5" y2="132.08" width="0.1524" layer="91"/>
 <junction x="63.5" y="132.08"/>
 <pinref part="P+2" gate="1" pin="+5V"/>
-<wire x1="63.5" y1="132.08" x2="78.74" y2="132.08" width="0.1524" layer="91"/>
-<wire x1="78.74" y1="132.08" x2="78.74" y2="134.62" width="0.1524" layer="91"/>
+<wire x1="63.5" y1="132.08" x2="96.52" y2="132.08" width="0.1524" layer="91"/>
+<wire x1="96.52" y1="132.08" x2="96.52" y2="144.78" width="0.1524" layer="91"/>
 <pinref part="C8" gate="G$1" pin="+"/>
 </segment>
 <segment>
@@ -7701,6 +7702,7 @@ www.irf.com&lt;p&gt;
 <pinref part="ATMEGA328P" gate="G$1" pin="PD1(TXD)"/>
 <wire x1="48.26" y1="-17.78" x2="10.16" y2="-17.78" width="0.1524" layer="91"/>
 <wire x1="-60.96" y1="17.78" x2="-60.96" y2="53.34" width="0.1524" layer="91"/>
+<label x="-5.08" y="55.88" size="1.778" layer="95"/>
 </segment>
 <segment>
 <pinref part="H_1" gate="G$1" pin="2"/>
@@ -7728,29 +7730,29 @@ www.irf.com&lt;p&gt;
 </sheet>
 </sheets>
 <errors>
-<approved hash="102,1,78.74,134.62,+5V,VCC,,,,"/>
+<approved hash="102,1,96.52,144.78,+5V,VCC,,,,"/>
 <approved hash="102,1,33.02,111.76,+5V,VCC,,,,"/>
 <approved hash="102,1,-38.1,33.02,+5V,VCC,,,,"/>
 <approved hash="102,1,-48.26,33.02,+5V,VCC,,,,"/>
 <approved hash="102,1,-177.8,-40.64,+5V,VCC,,,,"/>
 <approved hash="102,1,-157.48,-40.64,+5V,VCC,,,,"/>
-<approved hash="102,1,-142.24,50.8,+5V,VCC,,,,"/>
 <approved hash="102,1,-165.1,114.3,+5V,VCC,,,,"/>
 <approved hash="102,1,-144.78,-40.64,+5V,VCC,,,,"/>
 <approved hash="102,1,167.64,60.96,+5V,VCC,,,,"/>
 <approved hash="102,1,53.34,66.04,+5V,VCC,,,,"/>
 <approved hash="102,1,-53.34,132.08,+5V,VCC,,,,"/>
-<approved hash="102,1,101.6,134.62,+5V,VCC,,,,"/>
 <approved hash="102,1,-246.38,-182.88,GND,CAM_GND,,,,"/>
 <approved hash="102,1,149.86,5.08,GND,CAM_GND,,,,"/>
 <approved hash="102,1,127,5.08,GND,CAM_GND,,,,"/>
-<approved hash="102,1,86.36,-167.64,GND,CAM_GND,,,,"/>
+<approved hash="102,1,96.52,-195.58,GND,CAM_GND,,,,"/>
 <approved hash="102,1,137.16,-53.34,+5V,VCC,,,,"/>
-<approved hash="102,1,-200.66,-134.62,+5V,VCC,,,,"/>
-<approved hash="201,1,86.36,-167.64,GND,GND\, CAM_GND,,,,"/>
+<approved hash="102,1,-132.08,-132.08,+5V,VCC,,,,"/>
+<approved hash="102,1,-152.4,-132.08,+5V,VCC,,,,"/>
+<approved hash="201,1,96.52,-195.58,GND,GND\, CAM_GND,,,,"/>
 <approved hash="201,1,127,5.08,GND,GND\, CAM_GND,,,,"/>
 <approved hash="201,1,149.86,5.08,GND,GND\, CAM_GND,,,,"/>
 <approved hash="201,1,-246.38,-182.88,GND,GND\, CAM_GND,,,,"/>
+<approved hash="202,1,-139.7,-2.54,FT232RL,RESET,,,,"/>
 <approved hash="202,1,-139.7,2.54,FT232RL,OSCI,,,,"/>
 <approved hash="202,1,-109.22,5.08,FT232RL,DSR,,,,"/>
 <approved hash="202,1,-109.22,2.54,FT232RL,DCD,,,,"/>
@@ -7758,8 +7760,9 @@ www.irf.com&lt;p&gt;
 <approved hash="104,1,-139.7,-10.16,FT232RL,GND7,GND,,,"/>
 <approved hash="104,1,-139.7,-12.7,FT232RL,GND18,GND,,,"/>
 <approved hash="104,1,-139.7,-15.24,FT232RL,GND21,GND,,,"/>
-<approved hash="104,1,-139.7,7.62,FT232RL,VCCIO,VCC,,,"/>
+<approved hash="104,1,-139.7,7.62,FT232RL,VCCIO,N$43,,,"/>
 <approved hash="104,1,-139.7,-7.62,FT232RL,AGND,GND,,,"/>
+<approved hash="104,1,-139.7,12.7,FT232RL,VCC,N$30,,,"/>
 <approved hash="202,1,-109.22,-5.08,FT232RL,TXLED,,,,"/>
 <approved hash="202,1,-109.22,-7.62,FT232RL,RXLED,,,,"/>
 <approved hash="202,1,-109.22,12.7,FT232RL,CTS,,,,"/>
@@ -7771,10 +7774,10 @@ www.irf.com&lt;p&gt;
 <approved hash="104,1,-35.56,116.84,LTC2950,VIN,V+,,,"/>
 <approved hash="202,1,-35.56,109.22,LTC2950,ONT,,,,"/>
 <approved hash="202,1,-35.56,104.14,LTC2950,OFFT,,,,"/>
-<approved hash="104,1,12.7,142.24,LM2675,VIN,V+,,,"/>
+<approved hash="104,1,12.7,142.24,LM2675-3.3,VIN,V+,,,"/>
 <approved hash="104,1,-121.92,101.6,LTC4412,VIN,BATTVIN,,,"/>
 <approved hash="104,1,137.16,58.42,A4988_CARRIER,VDD,VCC,,,"/>
-<approved hash="104,1,137.16,73.66,A4988_CARRIER,VMOT,N$9,,,"/>
+<approved hash="104,1,137.16,73.66,A4988_CARRIER,VMOT,V+,,,"/>
 <approved hash="113,1,-45.824,4.976,FRAME1,,,,,"/>
 </errors>
 </schematic>
