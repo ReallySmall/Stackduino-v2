@@ -8,10 +8,9 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 #define _Digole_Serial_SPI_ //OLED screen - must be configured with solder jumper to run in SPI mode
+#include <DigoleSerial.h> //https://github.com/chouckz/HVACX10Arduino/blob/master/1.0.1_libraries/DigoleSerial/DigoleSerial.h
 #include <Wire.h>
 #include "Adafruit_MCP23017.h" //customised version with interrupts by husio-org: https://github.com/adafruit/Adafruit-MCP23017-Arduino-Library/pull/6
-#include <DigoleSerial.h>
- //https://github.com/chouckz/HVACX10Arduino/blob/master/1.0.1_libraries/DigoleSerial/DigoleSerial.h
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  INSTANTIATE OBJECTS                                                                                 //       
@@ -34,8 +33,10 @@ const byte stepper_driver_direction = 4; //direction pin on A4988 stepper driver
 const byte stepper_driver_do_step = 5; //step pin on A4988 stepper driver
 const byte camera_focus = 6; //camera autofocus
 const byte camera_shutter = 7; //camera shutter
-const byte ext_analogue_1 = 16; //analogue pin broken out through DB15 - unused (for future functionality)
-const byte ext_analogue_2 = 17; //analogue pin broken out through DB15 - unused (for future functionality)
+const byte batt_fet = 14; //connect/ disconnect battery sample voltage line
+const byte batt_sense = 15; //analogue read battery sample voltage line
+const byte ext_analogue_1 = A6; //analogue pin broken out through DB15 - unused (for future functionality)
+const byte ext_analogue_2 = A7; //analogue pin broken out through DB15 - unused (for future functionality)
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  DEFINE MCP23017 PINS                                                                                //       
@@ -48,7 +49,7 @@ const byte limit_switch_back = 3; //limit switch to stop stepper motor if end of
 const byte power_in_status = 4; //LTC4412 stat pin - indicates whether controller is currently powered by wall adapter or battery
 const byte button_rotary = 5; //select/ unselect menu item button
 const byte switch_off_flag = 6; //LTC2950 interrupt pin - signals to the controller that it is about to be switched off
-const byte bluetooth_toggle = 6; //toggles power to bluetooth breakout board (if attached)
+const byte bluetooth_toggle = 7; //toggles power to bluetooth breakout board (if attached)
 const byte ext_digital_1 = 8; //digital pin broken out through DB15 - unused (for future functionality)
 const byte ext_digital_2 = 9;//digital pin broken out through DB15 - unused (for future functionality)
 const byte switch_off = 10; //LTC2950 kill pin - disables 5v regulator and switches off controller
@@ -62,12 +63,17 @@ const byte stepper_driver_sleep = 15; //sleep/wake A4988 stepper driver to conse
 //  SETTINGS                                                                                            //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+int bluetooth_enabled = 0; //toggle power to bluetooth port
 int camera_bracket = 3; //number of images to bracket per focus slice
 int camera_pause = 5; //default time in seconds to wait for camera to take picture and allow any flashes to recharge
 int encoder_pulse_counter = 0; //counts pulses from encoder - used by encoderUpdate to adjust responsiveness
+int loop_counter = 0; //counts how many loops have elapsed - used to execute housekeeping functions periodically
 int menu_item = 1; //which menu item to display when turning rotary encoder
-int mirror_lockup = 1; //set to 2 to enable camera mirror lockup
-int return_to_start = 1; //whether linear stage is returned to starting position at end of stack
+int mirror_lockup = 0; //set to 2 to enable camera mirror lockup
+int raw_voltage_reading = 0; //raw anologue reading of current battery voltage
+int resistor_1 = 10000; // battery monitor voltage divider R1
+int resistor_2 = 3300; // battery monitor voltage divider R2
+int return_to_start = 0; //whether linear stage is returned to starting position at end of stack
 int slices = 10; //default number of focus slices to make in the stack
 int slice_size = 10; //default depth of each focus slice - used with unit_of_measure
 int slice_counter = 0; //count of number of focus slices made so far in the stack - used by returnToStart()
@@ -75,6 +81,9 @@ int step_delay = 2000; //delay in microseconds between stepper motor steps, gove
 int tuning = 16; //multiplier used to tune distance travelled - e.g. adjust this so that 1 motor step = 1 micron on your setup
 int unit_of_measure = 1; //whether slice_size should be  microns, mm or cm
 int unit_of_measure_multiplier = 1; //multiplier for active unit_of_measure (1, 1000 or 10,000)
+float calculated_voltage_reading = 0; //the actual battery voltage as calculated through the divider
+float voltage_denominator = (float)resistor_2 / (resistor_1 + resistor_2);
+boolean bluetooth_connected = false;
 boolean start_stack = true;
 boolean stepper_driver_disable = true; //whether to disable the A4988 stepper driver when possible to save power and heat
 boolean screen_update = true; //true whenever encoder or button functions are called, prompting a screen update
@@ -103,65 +112,55 @@ void setup() {
 //  SET ATMEGA PINMODES AND PULLUPS                                                                     //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-pinMode(mcp_interrupt, INPUT);
-digitalWrite(mcp_interrupt, HIGH);
-pinMode(button_main, INPUT); 
-digitalWrite(button_main, HIGH);
-pinMode(ENC_A, INPUT); 
-digitalWrite(ENC_A, HIGH);
-pinMode(ENC_B, INPUT); 
-digitalWrite(ENC_B, HIGH);
-pinMode(stepper_driver_direction, OUTPUT); 
-digitalWrite(stepper_driver_direction, LOW); 
-pinMode(stepper_driver_do_step, OUTPUT); 
-digitalWrite(stepper_driver_do_step, LOW);     
-pinMode(camera_focus, OUTPUT); 
-digitalWrite(camera_focus, LOW);
-pinMode(camera_shutter, OUTPUT); 
-digitalWrite(camera_shutter, LOW);
+  pinMode(mcp_interrupt, INPUT_PULLUP);
+  pinMode(button_main, INPUT_PULLUP); 
+  pinMode(ENC_A, INPUT_PULLUP); 
+  pinMode(ENC_B, INPUT_PULLUP); 
+  pinMode(stepper_driver_direction, OUTPUT); 
+  digitalWrite(stepper_driver_direction, LOW); 
+  pinMode(stepper_driver_do_step, OUTPUT); 
+  digitalWrite(stepper_driver_do_step, LOW);     
+  pinMode(camera_focus, OUTPUT); 
+  digitalWrite(camera_focus, LOW);
+  pinMode(camera_shutter, OUTPUT); 
+  digitalWrite(camera_shutter, LOW);
+  pinMode(batt_fet, OUTPUT); 
+  digitalWrite(batt_fet, LOW);
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  START MCP23017 AND SET PINMODES AND PULLUPS                                                         //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
   mcp.begin();// using default address 0
-  mcp.setupInterrupts(true,false,LOW);
-  Serial.begin(9600); //start serial
 
-  //set MSCP23017 bank A pins as inputs and switch on internal pullups
-  //lots of pins with the same settings so quicker to loop through with array
-  int mcp_input_pins[] = {
-    0,1,2,3,4,5,6                      };
-    for(int i=0; i < 7; i++){
-      mcp.pinMode(mcp_input_pins[i], INPUT);
-      if(i == 4 || i == 6){ //stat and pbInterrupt have external pullups so don't need setting HIGH
-      continue;
-    }
+  int mcp_input_pins[] = {0,1,2,3,4,5,6};
+  for(int i=0; i < 7; i++){
+    mcp.pinMode(mcp_input_pins[i], INPUT);
     mcp.pullUp(mcp_input_pins[i], HIGH);
   }
 
+  int mcp_output_pins[] = {8,9,10,11,12,13,14,15};
+  for(int i=0; i < 8; i++){
+    mcp.pinMode(mcp_output_pins[i], OUTPUT);
+    mcp.digitalWrite(mcp_output_pins[i], HIGH);
+  }
+  mcp.digitalWrite(8, LOW); //the currently unused pin needs setting LOW
+  mcp.digitalWrite(9, LOW); //the currently unused pin needs setting LOW
+  mcp.digitalWrite(14, LOW); //the a4988 enable pin needs setting LOW
+
+  //set up interrupts
   mcp.setupInterrupts(true,false,LOW);
   mcp.setupInterruptPin(limit_switch_front,FALLING);
   mcp.setupInterruptPin(limit_switch_back,FALLING);
   mcp.setupInterruptPin(switch_off_flag,FALLING);
-  mcp.setupInterruptPin(button_rotary,FALLING);
-
-  //set MSCP23017 bank B pins as outputs and write HIGH
-  //lots of pins with the same settings so quicker to loop through with array
-  int mcp_output_pins[] = {
-    8,9,10,11,12,13,14,15};
-    for(int i=0; i < 8; i++){
-      mcp.pinMode(mcp_output_pins[i], OUTPUT);
-      if(i == 14){
-        mcp.digitalWrite(mcp_output_pins[i], LOW); //just to be awkward, enable needs setting LOW
-        } else {
-        mcp.digitalWrite(mcp_output_pins[i], HIGH); //but every other mcp output pin should be HIGH
-      }
-    }
+  mcp.setupInterruptPin(button_rotary,FALLING); 
+  mcp.setupInterruptPin(power_in_status,FALLING);  
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  START SERIAL CONNECTION AND ATTACH INTERRUPTS                                                       //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+  Serial.begin(19200); //start serial
 
   screen.displayConfig(0); //disable config message on the Digole OLED screen
   screen.displayStartScreen(0); //disable splash on the Digole OLED screen
@@ -173,8 +172,41 @@ digitalWrite(camera_shutter, LOW);
 //  CHECK LIMIT SWITCHES                                                                                //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-stepperDriverClearLimitSwitch(); //make sure neither limit switch is hit on startup - rectify if so
+  stepperDriverClearLimitSwitch(); //make sure neither limit switch is hit on startup - rectify if so
 
+}
+
+/*////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  BATTERY VOLTAGE READING                                                                             //       
+////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+void batteryMonitor(){ /* CONNECT THE BATTERY VOLTAGE SAMPLE LINE AND READ THE VOLTAGE THROUGH A DIVIDER */
+  if(power_in_status == HIGH){ //if currently running on battery
+    digitalWrite(batt_fet, HIGH); //connect the battery voltage line for reading
+    raw_voltage_reading = digitalRead(batt_sense); //get an analogue reading of the battery voltage through the divider
+    calculated_voltage_reading = ((batt_sense / 1024) * 3.3) / voltage_denominator; //calculate the actual voltage
+    digitalWrite(batt_fet, LOW); //disconnect the battery voltage line again
+    screen_update = true; //flag the screen as updatable to display newest battery voltage reading
+  }
+}
+
+/*////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  BLUETOOTH                                                                                           //
+//  requires a compatible bluetooth breakout board (e.g. HC-05) connected to header H_1                 //       
+////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+void bluetooth_power(){
+  if(bluetooth_enabled){ //enable power to VCC pin on header H_1
+      mcp.digitalWrite(bluetooth_toggle, LOW);
+    } else { //cut power to VCC pin on header H_1
+      mcp.digitalWrite(bluetooth_toggle, LOW);
+    }
+}
+
+void bluetooth_communication(){
+  if(bluetooth_enabled){
+    //TODO
+  }
 }
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -260,7 +292,7 @@ void cameraShutterSignal() { /* SEND SHUTTER SIGNAL */
   for (int i = 0; i < mirror_lockup; i++)
   {
 
-    if(mirror_lockup == 2 && i == 0){
+    if(mirror_lockup && i == 0){
       screen.clearScreen();
       screen.print("Mirror up");
     }
@@ -273,7 +305,7 @@ void cameraShutterSignal() { /* SEND SHUTTER SIGNAL */
     digitalWrite(camera_shutter, LOW); //switch off camera trigger signal
     digitalWrite(camera_focus, LOW); //switch off camera focus signal
 
-    if(mirror_lockup == 2 && i == 0){
+    if(mirror_lockup && i == 0){
       delay(2000); //sets the delay between mirror up and shutter
       screen.clearScreen();
     }
@@ -331,7 +363,7 @@ void encoderUpdate(int &variable, int lower, int upper, int multiplier = 1){ /* 
 }
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  INTERRUPT FUNCTIONS                                                                                 //       
+//  MCP 23017 INTERRUPT FUNCTIONS                                                                       //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 void mcpInterrupt(){ /* PROCESS INTERRUPTS FROM THE MCP23017 */
@@ -348,8 +380,18 @@ void mcpInterrupt(){ /* PROCESS INTERRUPTS FROM THE MCP23017 */
   }
 
   //if the rotary push button was pressed and a stack is not currently running, update its state
-  if(pin == button_rotary && start_stack == false){
+  if(pin == button_rotary && val == LOW && start_stack == false){
     buttonRotaryToggle();
+  }
+
+  //if a limit switch was hit, clear it
+  if(pin == limit_switch_front || limit_switch_back && val == LOW){
+    stepperDriverClearLimitSwitch();
+  }
+
+  //if the power source changed, update the screen
+  if(pin == power_in_status){
+    screen_update = true;
   }
 
   attachInterrupt(0, mcpInterrupt, FALLING); //re-attach the interrupt
@@ -386,6 +428,7 @@ void screenFrontLoadAndPrint(int menu_var) { /* FRONT PAD MENU ITEM VARIABLE NUM
 void screenPrintHeader(){ /* PRINT THE HEADER */
   screen.clearScreen(); //clear the screen
   screen.drawBox(1,15,128,1); //draw a horizontal line to mark out a header section
+  screenPrintBluetooth(); //display an icon for current bluetooth connection state
   screenPrintPowerSource(); //display the current power source in top right corner
   screen.setPrintPos(0,0); //set text position in top left corner
   if(start_stack == false){ //if the menu section is active, print the current menu item number
@@ -431,6 +474,15 @@ void screenPrintMenuArrows(){ /* PRINT MENU NAVIGATION ARROWS */
   }
 }
 
+void screenPrintBluetooth(){ /* PRINT BLUETOOTH ICONS */
+  if(bluetooth_enabled && !bluetooth_connected){ //if the bluetooth header (H_1) is active but there isn't an active pairing
+    //TODO
+  }
+  if(bluetooth_enabled && bluetooth_connected){ //if the bluetooth header (H_1) is active and there's an active pairing
+    //TODO
+  }
+}
+
 void screenPrintPowerSource(){ /* PRINT THE ACTIVE POWER SOURCE */
   if(mcp.digitalRead(power_in_status) == LOW){
     //draw plug symbol (dc adapter connected)
@@ -442,6 +494,10 @@ void screenPrintPowerSource(){ /* PRINT THE ACTIVE POWER SOURCE */
   } 
   else {
     //draw battery symbol
+    screen.setPrintPos(7,0);
+    screen.print(calculated_voltage_reading);
+    screen.print("v");
+    Serial.print(calculated_voltage_reading);
     screen.drawBox(112,3,2,2);
     screen.drawBox(114,1,14,6);
   }
@@ -634,19 +690,28 @@ void loop(){
 
   if (start_stack == false){ //this section allows manual control and configures settings using a simple screen menu system
 
+    loop_counter++;
+      
+    if(loop_counter > 5000){ //run periodical housekeeping tasks
+      batteryMonitor(); //measure the battery voltage if running on battery power
+      loop_counter = 0;
+    }
+
+    bluetooth_communication();
+
     stepperDriverDisable(); //switch off stepper motor power if option set
     stepperDriverManualControl(); //manual motor control to position stage before stack
 
     if (button_rotary_state == HIGH) { //use encoder to scroll through menu items
 
-      encoderUpdate(menu_item, 0, 8); //display the currently selected menu item
+      encoderUpdate(menu_item, 0, 10); //display the currently selected menu item
 
-      if (menu_item == 9){ //when counter value exceeds number of menu items
+      if (menu_item == 10){ //when counter value exceeds number of menu items
         menu_item = 1; //reset it to 1 again to create a looping navigation
       }
 
       if (menu_item == 0){ //when counter value goes below minimum number of menu items
-        menu_item = 8; //reset it to 8 again to create a looping navigation
+        menu_item = 9; //reset it to 8 again to create a looping navigation
       }  
 
     } 
@@ -674,7 +739,7 @@ void loop(){
 
       break;
 
-    case 2: //this menu item changes the number of sliceNum to create in the stack
+    case 2: //this menu item changes the number of slices to create in the stack
 
       if (button_rotary_state == LOW) { //press rotary encoder button within this menu item to edit variable
         encoderUpdate(slices, 10, 5000, 10);
@@ -722,7 +787,7 @@ void loop(){
     case 4: //this menu item toggles whether camera/subject is returned the starting position at the end of the stack
 
       if (button_rotary_state == LOW) { //press rotary encoder button within this menu item to edit variable
-        encoderUpdate(return_to_start, 1, 2);
+        encoderUpdate(return_to_start, 0, 1);
       }
 
       if (screen_update){ //only write to the screen when a change to the variables has been flagged
@@ -732,7 +797,7 @@ void loop(){
         screen.setPrintPos(0,2);
         screen.print("Return to start:");
         screen.setPrintPos(5,4);
-        if(return_to_start == 1){
+        if(return_to_start){
           screen.print ("Enabled");
         }
         else {
@@ -813,7 +878,7 @@ void loop(){
     case 8: //this menu item screen toggles mirror lockup for the camera
 
       if (button_rotary_state == LOW) { //press rotary encoder button within this menu item to edit variable
-        encoderUpdate(mirror_lockup, 1, 2);
+        encoderUpdate(mirror_lockup, 0, 1);
       }
 
       if (screen_update){ //only write to the screen when a change to the variables has been flagged
@@ -823,11 +888,41 @@ void loop(){
         screen.setPrintPos(0,2);
         screen.print("Mirror Lockup: ");
         screen.setPrintPos(4,4);
-        if(mirror_lockup == 1){
-            screen.print("Disabled");
-          } else {
+        if(mirror_lockup){
             screen.print("Enabled");
+          } else {
+            screen.print("Disabled");
           }
+        screenPrintMenuArrows();           
+        screen_update = false;
+
+      }      
+
+      break;
+
+    case 9: //this menu item screen toggles power to an external bluetooth board e.g. HC-05
+
+      if (button_rotary_state == LOW) { //press rotary encoder button within this menu item to edit variable
+        encoderUpdate(bluetooth_enabled, 0, 1);
+        bluetooth_power();
+      }
+
+      if (screen_update){ //only write to the screen when a change to the variables has been flagged
+
+        screen.clearScreen();
+        screenPrintHeader();
+        screen.setPrintPos(0,2);
+        screen.print("Bluetooth port:");
+        screen.setPrintPos(4,4);
+        if(bluetooth_enabled){
+          if(bluetooth_connected){
+            screen.print("Connected");  
+          } else {
+            screen.print("Unconnected");  
+          }
+        } else {
+          screen.print("Disabled");
+        }
         screenPrintMenuArrows();           
         screen_update = false;
 
@@ -846,6 +941,7 @@ void loop(){
 //  THE LOOP ADVANCES THE STAGE, TAKES A PICTURE AND REPEATS.                                           //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/ 
 
+    bluetooth_communication();
     stepperDriverDisable(); //disable the stepper driver when not in use to save power
 
     for (int i = 0; i < slices; i++){ //for each focus slice in the stack...
