@@ -33,8 +33,8 @@ const byte stepper_driver_direction = 4; //direction pin on A4988 stepper driver
 const byte stepper_driver_do_step = 5; //step pin on A4988 stepper driver
 const byte camera_focus = 6; //camera autofocus
 const byte camera_shutter = 7; //camera shutter
-const byte batt_fet = 16; //connect/ disconnect battery sample voltage line
-const byte batt_sense = 17; //analogue read battery sample voltage line
+const byte batt_sense = A2; //analogue read battery sample voltage line
+const byte batt_fet = 17; //connect/ disconnect battery sample voltage line
 const byte ext_analogue_1 = A6; //analogue pin broken out through DB15 - unused (for future functionality)
 const byte ext_analogue_2 = A7; //analogue pin broken out through DB15 - unused (for future functionality)
 
@@ -70,7 +70,6 @@ int encoder_pulse_counter = 0; //counts pulses from encoder - used by encoderUpd
 int loop_counter = 0; //counts how many loops have elapsed - used to execute housekeeping functions periodically
 int menu_item = 1; //which menu item to display when turning rotary encoder
 int mirror_lockup = 0; //set to 1 to enable camera mirror lockup
-int raw_voltage_reading = 0; //raw anologue reading of current battery voltage
 int resistor_1 = 10000; // battery monitor voltage divider R1
 int resistor_2 = 3300; // battery monitor voltage divider R2
 int return_to_start = 0; //whether linear stage is returned to starting position at end of stack
@@ -81,6 +80,7 @@ int step_delay = 2000; //delay in microseconds between stepper motor steps, gove
 int tuning = 16; //multiplier used to tune distance travelled - e.g. adjust this so that 1 motor step = 1 micron on your setup
 int unit_of_measure = 1; //whether slice_size should be  microns, mm or cm
 int unit_of_measure_multiplier = 1; //multiplier for active unit_of_measure (1, 1000 or 10,000)
+float raw_voltage_reading = 0; //raw anologue reading of current battery voltage
 float calculated_voltage_reading = 0; //the actual battery voltage as calculated through the divider
 float voltage_denominator = (float)resistor_2 / (resistor_1 + resistor_2);
 boolean bluetooth_connected = false;
@@ -161,7 +161,6 @@ digitalWrite(batt_fet, LOW);
   mcp.setupInterruptPin(limit_switch_front,FALLING);
   mcp.setupInterruptPin(limit_switch_back,FALLING);
   mcp.setupInterruptPin(switch_off_flag,FALLING);
-  mcp.setupInterruptPin(button_rotary,FALLING); 
   mcp.setupInterruptPin(power_in_status,FALLING);  
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -170,8 +169,8 @@ digitalWrite(batt_fet, LOW);
 
   Serial.begin(19200); //start serial
 
-  //screen.displayConfig(0); //disable config message on the Digole OLED screen
-  //screen.displayStartScreen(0); //disable splash on the Digole OLED screen
+  screen.displayConfig(0); //disable config message on the Digole OLED screen
+  screen.displayStartScreen(0); //disable splash on the Digole OLED screen
 
   attachInterrupt(0, mcpInterrupt, FALLING); //mcp23017 on interrupt 0
   attachInterrupt(1, buttonMainToggle, FALLING); //main push button on interrupt 1
@@ -189,11 +188,13 @@ digitalWrite(batt_fet, LOW);
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 void batteryMonitor(){ /* CONNECT THE BATTERY VOLTAGE SAMPLE LINE AND READ THE VOLTAGE THROUGH A DIVIDER */
-  if(power_in_status == HIGH){ //if currently running on battery
-    //digitalWrite(batt_fet, HIGH); //connect the battery voltage line for reading
-    //raw_voltage_reading = digitalRead(batt_sense); //get an analogue reading of the battery voltage through the divider
-    //calculated_voltage_reading = ((batt_sense / 1024) * 3.3) / voltage_denominator; //calculate the actual voltage
-    //digitalWrite(batt_fet, LOW); //disconnect the battery voltage line again
+  if(mcp.digitalRead(power_in_status) == HIGH){ //if currently running on battery
+    digitalWrite(batt_fet, HIGH); //connect the battery voltage line for reading
+    raw_voltage_reading = analogRead(batt_sense); //get an analogue reading of the battery voltage through the divider
+    calculated_voltage_reading = ((raw_voltage_reading / 1024) * 3.3) / voltage_denominator; //calculate the actual voltage
+    Serial.print(raw_voltage_reading);
+    Serial.print(calculated_voltage_reading);
+    digitalWrite(batt_fet, LOW); //disconnect the battery voltage line again
     screen_update = true; //flag the screen as updatable to display newest battery voltage reading
   }
 }
@@ -248,9 +249,10 @@ void buttonRotaryToggle(){ /* RETURN CURRENT TOGGLE STATE OF ROTARY ENCODER'S PU
       } else {
         button_rotary_state = HIGH;
       }
-      button_rotary_time = millis();    
+      button_rotary_time = millis(); 
+   Serial.print(button_rotary_state);   
     }
-
+    
     button_rotary_previous = button_rotary_reading;
 
   } 
@@ -400,15 +402,9 @@ void handleMcpInterrupt(){
     mcp.digitalWrite(switch_off, LOW);
   }
   
-  //if a maual stage control button was pressed
+  //if a manual stage control button was pressed
   if((pin == stepper_driver_forward && val == LOW || pin == stepper_driver_backward && val == LOW) && start_stack == false){
     stepperDriverManualControl();
-  }
-
-  //if the rotary push button was pressed and a stack is not currently running, update its state
-  if(pin == button_rotary && val == LOW && start_stack == false){
-    //buttonRotaryToggle();
-    Serial.print("buttom");
   }
 
   //if a limit switch was hit, clear it
@@ -632,8 +628,7 @@ void stepperDriverClearLimitSwitch(){ /* PULL LINEAR STAGE AWAY FROM TRIPPED LIM
 
   if (mcp.digitalRead(limit_switch_back) == LOW){
     Serial.print("Limit switch back hit");
-    stepperDriverDirection("forwards");
-    ; //reverse stepper motor direction
+    stepperDriverDirection("forwards");//reverse stepper motor direction
     while (mcp.digitalRead(limit_switch_back) == LOW) //turn stepper motor for as long as  the limit switch remains pressed 
     {  
       stepperDriverStep();
@@ -757,16 +752,16 @@ void loop(){
     loop_counter++;
     
 
-    if(loop_counter > 5000){ //run periodical housekeeping tasks
+    if(loop_counter > 2000){ //run periodical housekeeping tasks
       batteryMonitor(); //measure the battery voltage if running on battery power
       loop_counter = 0;
-      Serial.print("menu");
     }
     
     if(mcp_interrupt_fired){ //if an interrupt fired from the mcp23017, find out which pin fired it and deal with it
       handleMcpInterrupt();
     }
 
+    buttonRotaryToggle();
     bluetooth_communication();
 
     stepperDriverDisable(); //switch off stepper motor power if option set
