@@ -10,14 +10,14 @@
 #define _Digole_Serial_SPI_ //OLED screen - must be configured with solder jumper to run in SPI mode
 #include "DigoleSerial.h" //https://github.com/chouckz/HVACX10Arduino/blob/master/1.0.1_libraries/DigoleSerial/DigoleSerial.h
 #include "Wire.h"
-#include "Adafruit_MCP23017.h" //customised version with interrupts by husio-org: https://github.com/adafruit/Adafruit-MCP23017-Arduino-Library/pull/6
+#include "Adafruit_MCP23017.h"
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  INSTANTIATE OBJECTS                                                                                 //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 Adafruit_MCP23017 mcp; //16 pin port expander
-DigoleSerialDisp screen(8,9,10);  //OLED screen - SPI mode - Pin 8: data, 9:clock, 10: SS
+DigoleSerialDisp screen(8,9,0);  //OLED screen - SPI mode - Pin 8: data, 9:clock, 10: SS
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  DEFINE REMAINING ATMEGA PINS                                                                        //       
@@ -63,7 +63,7 @@ const byte stepper_driver_sleep = 15; //sleep/wake A4988 stepper driver to conse
 //  SETTINGS                                                                                            //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-int bluetooth_enabled = 0; //toggle power to bluetooth port
+int bluetooth_enabled = 1; //toggle power to bluetooth port
 int camera_bracket = 2; //number of images to bracket per focus slice
 int camera_pause = 5; //default time in seconds to wait for camera to take picture and allow any flashes to recharge
 int encoder_pulse_counter = 0; //counts pulses from encoder - used by encoderUpdate to adjust responsiveness
@@ -179,8 +179,10 @@ digitalWrite(batt_fet, LOW);
 //  CHECK LIMIT SWITCHES                                                                                //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-  //stepperDriverClearLimitSwitch(); //make sure neither limit switch is hit on startup - rectify if so
-
+  stepperDriverClearLimitSwitch(); //make sure neither limit switch is hit on startup - rectify if so
+  batteryMonitor();
+  bluetooth_power();
+  
 }
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -191,9 +193,7 @@ void batteryMonitor(){ /* CONNECT THE BATTERY VOLTAGE SAMPLE LINE AND READ THE V
   if(mcp.digitalRead(power_in_status) == HIGH){ //if currently running on battery
     digitalWrite(batt_fet, HIGH); //connect the battery voltage line for reading
     raw_voltage_reading = analogRead(batt_sense); //get an analogue reading of the battery voltage through the divider
-    calculated_voltage_reading = ((raw_voltage_reading / 1024) * 3.3) / voltage_denominator; //calculate the actual voltage
-    Serial.print(raw_voltage_reading);
-    Serial.print(calculated_voltage_reading);
+    calculated_voltage_reading = ((raw_voltage_reading / 1023) * 3.3) / voltage_denominator; //calculate the actual voltage
     digitalWrite(batt_fet, LOW); //disconnect the battery voltage line again
     screen_update = true; //flag the screen as updatable to display newest battery voltage reading
   }
@@ -262,7 +262,6 @@ void buttonRotaryToggle(){ /* RETURN CURRENT TOGGLE STATE OF ROTARY ENCODER'S PU
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/ 
 
 void cameraProcessImages(){ /* SEND SIGNAL TO CAMERA TO TAKE PICTURE(S) */
-  Serial.print("Take picture");
   for (int i = 1; i <= camera_bracket; i++){
     screenEmptyTextRow(4); //wipe the last row of the screen ready for new content
     if(stackCancelled()){ //check the button to cancel the stack hasn't been pressed - if yes end this loop early (ie cancel the stack), print a message, then return to the menu section
@@ -314,7 +313,6 @@ for (int i = 0; i < mirror_lockup + 1; i++)
     screen.clearScreen();
     screen.print("Mirror up");
   }
-Serial.print("Send shutter signal");
     digitalWrite(camera_focus, HIGH); //trigger camera autofocus - camera may not take picture in some modes if this is not triggered first
     digitalWrite(camera_shutter, HIGH); //trigger camera shutter
 
@@ -359,9 +357,8 @@ void encoderUpdate(int &variable, int lower, int upper, int multiplier = 1){ /* 
       encoder_pulse_counter++;
     }
 
-    if(encoder_pulse_counter == 2){ //change this number to adjust encoder sensitivity 4 or 2 are usually the values to use
+    if(encoder_pulse_counter == 4){ //change this number to adjust encoder sensitivity 4 or 2 are usually the values to use
       variable = variable + multiplier;
-      Serial.print(variable);
       screen_update = true; //as a variable has just been changed by the encoder, flag the screen as updatable
       encoder_pulse_counter = 0;
     }
@@ -369,9 +366,8 @@ void encoderUpdate(int &variable, int lower, int upper, int multiplier = 1){ /* 
     if(encoder_data == -1){
       encoder_pulse_counter--;
     }
-    if(encoder_pulse_counter == -2){ //change this number to adjust encoder sensitivity 4 or 2 are usually the values to use
+    if(encoder_pulse_counter == -4){ //change this number to adjust encoder sensitivity 4 or 2 are usually the values to use
       variable = variable - multiplier;
-      Serial.print(variable);
       screen_update = true; //as a variable has just been changed by the encoder, flag the screen as updatable
       encoder_pulse_counter = 0;
     }
@@ -386,16 +382,20 @@ void encoderUpdate(int &variable, int lower, int upper, int multiplier = 1){ /* 
 void mcpInterrupt(){ /* PROCESS INTERRUPTS FROM THE MCP23017 */
 
   mcp_interrupt_fired = true;
+  Serial.println("interrupt");
 
 }
 
 void handleMcpInterrupt(){
+  
+  detachInterrupt(0); //detach the interrupt while the current instance is dealt with
 
   //find out which pin on the mcp created the interrupt and its current state
   uint8_t pin = mcp.getLastInterruptPin();
   uint8_t val = mcp.getLastInterruptPinValue();
-
-  detachInterrupt(0); //detach the interrupt while the current instance is dealt with
+  
+  Serial.println(pin);
+  Serial.println(val);
 
   //if a switchoff signal was recieved from the pushbutton controller, pull kill pin low to power off
   if(pin == switch_off_flag && val == LOW) {
@@ -403,7 +403,7 @@ void handleMcpInterrupt(){
   }
   
   //if a manual stage control button was pressed
-  if((pin == stepper_driver_forward && val == LOW || pin == stepper_driver_backward && val == LOW) && start_stack == false){
+  if(((pin == stepper_driver_forward) || (pin == stepper_driver_backward)) && start_stack == false){
     stepperDriverManualControl();
   }
 
@@ -416,7 +416,8 @@ void handleMcpInterrupt(){
   if(pin == power_in_status){
     screen_update = true;
   }
-
+  
+  EIFR=0x01;
   mcp_interrupt_fired = false;
   attachInterrupt(0, mcpInterrupt, FALLING); //re-attach the interrupt
 
@@ -551,7 +552,6 @@ boolean stackCancelled(){ /* CHECK IF THE MAIN BUTTON HAS BEEN PUSHED DURING STA
     screenPrintPowerSource();
     screen.setPrintPos(0,2);
     screen.print("Stack cancelled");
-    Serial.print("Stack cancelled");
     delay(1000);
     screen.clearScreen();
     return true;
@@ -599,7 +599,6 @@ void stackEnd(){ /* RUN CLEANUP THEN GO BACK TO MENU SECTION */
   slice_counter = 0; //reset pic counter
   start_stack = false; //return to menu options section
   screen_update = true; //write the first menu item to the screen
-  Serial.print("Stack end");
 
 }
 
@@ -617,7 +616,6 @@ void stepperDriverClearLimitSwitch(){ /* PULL LINEAR STAGE AWAY FROM TRIPPED LIM
   screen.print("Returning...");
 
   if (mcp.digitalRead(limit_switch_front) == LOW){
-    Serial.print("Limit switch front hit");
     stepperDriverDirection("backwards"); //reverse stepper motor direction
     while (mcp.digitalRead(limit_switch_front) == LOW) //turn stepper motor for as long as  the limit switch remains pressed 
     {  
@@ -627,7 +625,6 @@ void stepperDriverClearLimitSwitch(){ /* PULL LINEAR STAGE AWAY FROM TRIPPED LIM
   }
 
   if (mcp.digitalRead(limit_switch_back) == LOW){
-    Serial.print("Limit switch back hit");
     stepperDriverDirection("forwards");//reverse stepper motor direction
     while (mcp.digitalRead(limit_switch_back) == LOW) //turn stepper motor for as long as  the limit switch remains pressed 
     {  
@@ -636,6 +633,7 @@ void stepperDriverClearLimitSwitch(){ /* PULL LINEAR STAGE AWAY FROM TRIPPED LIM
   }
 
   screen.clearScreen();
+  screen_update = true;
   stepperDriverDisable();
 
   if(start_stack == true){ //if a stack was in progress, cancel it as there probably isn't space to continue
@@ -679,11 +677,11 @@ boolean stepperDriverInBounds(){ /* CHECK IF LINEAR STAGE IS IN BOUNDS OF TRAVEL
 void stepperDriverManualControl(){ /* MOVE STAGE BACKWARD AND FORWARD USING PUSH BUTTONS */
 
     if (mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
+      Serial.println("forwards");
       screen.clearScreen();
       screenPrintHeader();
       screen.setPrintPos(0,2);
       screen.print("Moving forwards");
-      Serial.print("Going forwards");
       screen.setPrintPos(0,4);
       screen.print(">-->>-->>-->>-->");
       while (mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
@@ -698,11 +696,11 @@ void stepperDriverManualControl(){ /* MOVE STAGE BACKWARD AND FORWARD USING PUSH
   }
 
   if (mcp.digitalRead(stepper_driver_backward) == LOW && stepperDriverInBounds()) {
+    Serial.println("backwards");
     screen.clearScreen();
     screenPrintHeader();
     screen.setPrintPos(0,2);
     screen.print("Moving backwards");
-    Serial.print("Going backwards");
     screen.setPrintPos(0,4);
     screen.print("<--<<--<<--<<--<");
     while (mcp.digitalRead(stepper_driver_backward) == LOW && stepperDriverInBounds()) {
@@ -750,9 +748,8 @@ void loop(){
   if (start_stack == false){ //this section allows manual control and configures settings using a simple screen menu system
 
     loop_counter++;
-    
 
-    if(loop_counter > 2000){ //run periodical housekeeping tasks
+    if(loop_counter > 10000 && !mcp_interrupt_fired){ //run periodical housekeeping tasks
       batteryMonitor(); //measure the battery voltage if running on battery power
       loop_counter = 0;
     }
@@ -1005,7 +1002,6 @@ void loop(){
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/ 
 
 bluetooth_communication();
-Serial.print("Stack started");
     stepperDriverDisable(); //disable the stepper driver when not in use to save power
 
     for (int i = 0; i < slices; i++){ //for each focus slice in the stack...
