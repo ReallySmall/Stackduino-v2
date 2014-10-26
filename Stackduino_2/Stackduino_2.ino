@@ -168,9 +168,9 @@ digitalWrite(batt_fet, LOW);
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
   Serial.begin(19200); //start serial
-
-  screen.displayConfig(0); //disable config message on the Digole OLED screen
-  screen.displayStartScreen(0); //disable splash on the Digole OLED screen
+  
+  //screen.displayConfig(0); //disable config message on the Digole OLED screen
+  //screen.displayStartScreen(0); //disable splash on the Digole OLED screen
 
   attachInterrupt(0, mcpInterrupt, FALLING); //mcp23017 on interrupt 0
   attachInterrupt(1, buttonMainToggle, FALLING); //main push button on interrupt 1
@@ -205,7 +205,6 @@ void batteryMonitor(){ /* CONNECT THE BATTERY VOLTAGE SAMPLE LINE AND READ THE V
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 void bluetooth_power(){
-  Serial.print("bluetooth");
   if(bluetooth_enabled){ //enable power to VCC pin on header H_1
     mcp.digitalWrite(bluetooth_toggle, LOW);
     } else { //cut power to VCC pin on header H_1
@@ -382,6 +381,7 @@ void encoderUpdate(int &variable, int lower, int upper, int multiplier = 1){ /* 
 void mcpInterrupt(){ /* PROCESS INTERRUPTS FROM THE MCP23017 */
 
   mcp_interrupt_fired = true;
+  Serial.println(" ");
   Serial.println("interrupt");
 
 }
@@ -394,8 +394,12 @@ void handleMcpInterrupt(){
   uint8_t pin = mcp.getLastInterruptPin();
   uint8_t val = mcp.getLastInterruptPinValue();
   
-  Serial.println(pin);
-  Serial.println(val);
+  Serial.print("MCP pin: ");
+  Serial.print(pin);
+  Serial.println(" ");
+  Serial.print("Pin state: ");
+  Serial.print(val);
+  Serial.println(" ");
 
   //if a switchoff signal was recieved from the pushbutton controller, pull kill pin low to power off
   if(pin == switch_off_flag && val == LOW) {
@@ -616,6 +620,7 @@ void stepperDriverClearLimitSwitch(){ /* PULL LINEAR STAGE AWAY FROM TRIPPED LIM
   screen.print("Returning...");
 
   if (mcp.digitalRead(limit_switch_front) == LOW){
+      Serial.print("limit_front");
     stepperDriverDirection("backwards"); //reverse stepper motor direction
     while (mcp.digitalRead(limit_switch_front) == LOW) //turn stepper motor for as long as  the limit switch remains pressed 
     {  
@@ -625,6 +630,7 @@ void stepperDriverClearLimitSwitch(){ /* PULL LINEAR STAGE AWAY FROM TRIPPED LIM
   }
 
   if (mcp.digitalRead(limit_switch_back) == LOW){
+    Serial.print("limit_back");
     stepperDriverDirection("forwards");//reverse stepper motor direction
     while (mcp.digitalRead(limit_switch_back) == LOW) //turn stepper motor for as long as  the limit switch remains pressed 
     {  
@@ -676,15 +682,18 @@ boolean stepperDriverInBounds(){ /* CHECK IF LINEAR STAGE IS IN BOUNDS OF TRAVEL
 
 void stepperDriverManualControl(){ /* MOVE STAGE BACKWARD AND FORWARD USING PUSH BUTTONS */
 
-    if (mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
-      Serial.println("forwards");
+    if (mcp.digitalRead(stepper_driver_forward) == LOW) {
+      Serial.println("stepperDriverManualControl(): forwards");
+      //Serial.println(mcp.digitalRead(limit_switch_front));
+      //Serial.println(mcp.digitalRead(limit_switch_back));
+      Serial.println(stepperDriverInBounds());
       screen.clearScreen();
       screenPrintHeader();
       screen.setPrintPos(0,2);
       screen.print("Moving forwards");
       screen.setPrintPos(0,4);
       screen.print(">-->>-->>-->>-->");
-      while (mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
+      while (mcp.digitalRead(stepper_driver_forward) == LOW) {
         stepperDriverEnable();
         stepperDriverDirection("forwards");
         for (int i = 0; i<1; i++) {
@@ -696,7 +705,10 @@ void stepperDriverManualControl(){ /* MOVE STAGE BACKWARD AND FORWARD USING PUSH
   }
 
   if (mcp.digitalRead(stepper_driver_backward) == LOW && stepperDriverInBounds()) {
-    Serial.println("backwards");
+    Serial.println("stepperDriverManualControl(): backwards");
+          //Serial.println(mcp.digitalRead(limit_switch_front));
+      //Serial.println(mcp.digitalRead(limit_switch_back));
+      Serial.println(stepperDriverInBounds());
     screen.clearScreen();
     screenPrintHeader();
     screen.setPrintPos(0,2);
@@ -747,9 +759,10 @@ void loop(){
 
   if (start_stack == false){ //this section allows manual control and configures settings using a simple screen menu system
 
+    //stepperDriverManualControl();
     loop_counter++;
 
-    if(loop_counter > 10000 && !mcp_interrupt_fired){ //run periodical housekeeping tasks
+    if(loop_counter > 5000 && !mcp_interrupt_fired){ //run periodical housekeeping tasks
       batteryMonitor(); //measure the battery voltage if running on battery power
       loop_counter = 0;
     }
