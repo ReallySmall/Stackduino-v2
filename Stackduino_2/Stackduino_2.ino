@@ -158,8 +158,6 @@ digitalWrite(batt_fet, LOW);
   mcp.setupInterrupts(true,false,LOW);
   mcp.setupInterruptPin(stepper_driver_forward, FALLING);
   mcp.setupInterruptPin(stepper_driver_backward, FALLING);
-  mcp.setupInterruptPin(limit_switch_front,FALLING);
-  mcp.setupInterruptPin(limit_switch_back,FALLING);
   mcp.setupInterruptPin(switch_off_flag,FALLING);
   mcp.setupInterruptPin(power_in_status,FALLING);  
 
@@ -272,32 +270,20 @@ void cameraProcessImages(){ /* SEND SIGNAL TO CAMERA TO TAKE PICTURE(S) */
       screen.print(i);
       screen.print("/");
       screen.print(camera_bracket);
-      delay(600);
+      pause(600);
     }
     screenEmptyTextRow(4); //wipe the last row of the screen ready for new content
     screen.print("Pause for camera");
 
     cameraShutterSignal(); //take the image
 
-    //A delay is required here for the camera to take an image, taking into account any flash recharge time
-    //The controller should still respond to a cancel event during this pause though so a non-blocking delay is required
-    unsigned long initial_millis = millis(); //get the current millis
-    unsigned long end_millis = initial_millis + (camera_pause * 1000); //when the pause ends
-    int count_down = 1; //slightly counter-intuitively counts upwards until equal to the pause time set
-
-    while(end_millis > millis()){ //if the end of the pause time hasn't yet been reached
-      if(stackCancelled()){ //check the button to cancel the stack hasn't been pressed - if yes we'll end this loop early (ie cancel the stack), print a message, then return to the menu section
-      break;
-    }
-      if(millis() > (initial_millis + (count_down * 1000)) && camera_pause > count_down){ //if a second has elapsed since the last countdown statement, update it
+    for(int i = 1; i <= camera_pause; i++){
+        pause(1000);
         screenEmptyTextRow(4); //wipe the last row of the screen ready for new content
         screen.print("Resume in ");
-        screen.print(camera_pause - count_down); //print number of seconds remaining
+        screen.print(camera_pause - i); //print number of seconds remaining
         screen.print("s");
-        count_down++;
-      }
     }
-    count_down = 1; //reset the counter for next time
   }
 
 }
@@ -315,13 +301,13 @@ for (int i = 0; i < mirror_lockup + 1; i++)
     digitalWrite(camera_focus, HIGH); //trigger camera autofocus - camera may not take picture in some modes if this is not triggered first
     digitalWrite(camera_shutter, HIGH); //trigger camera shutter
 
-    delay(500); //small delay needed for camera to process above signals
+    pause(500); //small delay needed for camera to process above signals
 
     digitalWrite(camera_shutter, LOW); //switch off camera trigger signal
     digitalWrite(camera_focus, LOW); //switch off camera focus signal
 
     if(mirror_lockup && i == 0){
-      delay(2000); //sets the delay between mirror up and shutter
+      pause(2000); //sets the delay between mirror up and shutter
       screen.clearScreen();
     }
   }
@@ -381,8 +367,6 @@ void encoderUpdate(int &variable, int lower, int upper, int multiplier = 1){ /* 
 void mcpInterrupt(){ /* PROCESS INTERRUPTS FROM THE MCP23017 */
 
   mcp_interrupt_fired = true;
-  Serial.println(" ");
-  Serial.println("interrupt");
 
 }
 
@@ -393,13 +377,6 @@ void handleMcpInterrupt(){
   //find out which pin on the mcp created the interrupt and its current state
   uint8_t pin = mcp.getLastInterruptPin();
   uint8_t val = mcp.getLastInterruptPinValue();
-  
-  Serial.print("MCP pin: ");
-  Serial.print(pin);
-  Serial.println(" ");
-  Serial.print("Pin state: ");
-  Serial.print(val);
-  Serial.println(" ");
 
   //if a switchoff signal was recieved from the pushbutton controller, pull kill pin low to power off
   if(pin == switch_off_flag && val == LOW) {
@@ -425,6 +402,24 @@ void handleMcpInterrupt(){
   mcp_interrupt_fired = false;
   attachInterrupt(0, mcpInterrupt, FALLING); //re-attach the interrupt
 
+}
+
+/*////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  NON BLOCKING DELAY                                                                                  //       
+////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+void pause(int length){
+
+    //delays are needed throughout the stacking process, but these pauses should be non-blocking
+    unsigned long initial_millis = millis(); //get the current millis
+    unsigned long end_millis = initial_millis + length; //when the pause ends
+
+    while(end_millis > millis()){ //if the end of the pause time hasn't yet been reached
+      if(stackCancelled()){ //check the button to cancel the stack hasn't been pressed - if yes we'll end this loop early (ie cancel the stack), print a message, then return to the menu section
+      break;
+    }
+    }
+    
 }
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -556,7 +551,7 @@ boolean stackCancelled(){ /* CHECK IF THE MAIN BUTTON HAS BEEN PUSHED DURING STA
     screenPrintPowerSource();
     screen.setPrintPos(0,2);
     screen.print("Stack cancelled");
-    delay(1000);
+    pause(1000);
     screen.clearScreen();
     return true;
   } 
@@ -571,7 +566,7 @@ void stackEnd(){ /* RUN CLEANUP THEN GO BACK TO MENU SECTION */
   screenEmptyTextRow(4);
   screenEmptyTextRow(2);
   screen.print("Stack finished");
-  delay(2000);
+  pause(2000);
 
   if (return_to_start){   
       stepperDriverDirection("backwards"); //set the stepper direction for backward travel
@@ -620,7 +615,6 @@ void stepperDriverClearLimitSwitch(){ /* PULL LINEAR STAGE AWAY FROM TRIPPED LIM
   screen.print("Returning...");
 
   if (mcp.digitalRead(limit_switch_front) == LOW){
-      Serial.print("limit_front");
     stepperDriverDirection("backwards"); //reverse stepper motor direction
     while (mcp.digitalRead(limit_switch_front) == LOW) //turn stepper motor for as long as  the limit switch remains pressed 
     {  
@@ -630,7 +624,6 @@ void stepperDriverClearLimitSwitch(){ /* PULL LINEAR STAGE AWAY FROM TRIPPED LIM
   }
 
   if (mcp.digitalRead(limit_switch_back) == LOW){
-    Serial.print("limit_back");
     stepperDriverDirection("forwards");//reverse stepper motor direction
     while (mcp.digitalRead(limit_switch_back) == LOW) //turn stepper motor for as long as  the limit switch remains pressed 
     {  
@@ -673,7 +666,7 @@ void stepperDriverDirection(String direction){ /* SET STEPPER MOTOR DIRECTION */
 }
 
 boolean stepperDriverInBounds(){ /* CHECK IF LINEAR STAGE IS IN BOUNDS OF TRAVEL I.E. NEITHER LIMIT SWITCH IS TRIPPED */
-  if (mcp.digitalRead(limit_switch_front) == HIGH && mcp.digitalRead(limit_switch_back == HIGH)){
+  if (mcp.digitalRead(limit_switch_front) == HIGH && mcp.digitalRead(limit_switch_back) == HIGH){
     return true;
   } else {
     return false;
@@ -682,18 +675,14 @@ boolean stepperDriverInBounds(){ /* CHECK IF LINEAR STAGE IS IN BOUNDS OF TRAVEL
 
 void stepperDriverManualControl(){ /* MOVE STAGE BACKWARD AND FORWARD USING PUSH BUTTONS */
 
-    if (mcp.digitalRead(stepper_driver_forward) == LOW) {
-      Serial.println("stepperDriverManualControl(): forwards");
-      //Serial.println(mcp.digitalRead(limit_switch_front));
-      //Serial.println(mcp.digitalRead(limit_switch_back));
-      Serial.println(stepperDriverInBounds());
+    if (mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
       screen.clearScreen();
       screenPrintHeader();
       screen.setPrintPos(0,2);
       screen.print("Moving forwards");
       screen.setPrintPos(0,4);
       screen.print(">-->>-->>-->>-->");
-      while (mcp.digitalRead(stepper_driver_forward) == LOW) {
+      while (mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
         stepperDriverEnable();
         stepperDriverDirection("forwards");
         for (int i = 0; i<1; i++) {
@@ -705,10 +694,6 @@ void stepperDriverManualControl(){ /* MOVE STAGE BACKWARD AND FORWARD USING PUSH
   }
 
   if (mcp.digitalRead(stepper_driver_backward) == LOW && stepperDriverInBounds()) {
-    Serial.println("stepperDriverManualControl(): backwards");
-          //Serial.println(mcp.digitalRead(limit_switch_front));
-      //Serial.println(mcp.digitalRead(limit_switch_back));
-      Serial.println(stepperDriverInBounds());
     screen.clearScreen();
     screenPrintHeader();
     screen.setPrintPos(0,2);
@@ -733,10 +718,6 @@ void stepperDriverStep(){ /* SEND STEP SIGNAL TO A4988 STEPPER DRIVER */
   digitalWrite(stepper_driver_do_step, LOW); //this LOW to HIGH change is what creates the
   digitalWrite(stepper_driver_do_step, HIGH); //"Rising Edge" so the easydriver knows to when to step
   delayMicroseconds(step_delay); //delay time between sliceSize, too fast and motor stalls
-
-  if(!stepperDriverInBounds()){ //if a limit switch is triggered, pull back to within bounds and flag the collision
-    stepperDriverClearLimitSwitch();
-  }
 
 }
 
@@ -1044,7 +1025,7 @@ bluetooth_communication();
 
       stepperDriverEnable(); //enable the A4988 stepper driver
       stepperDriverDirection("forwards"); //set the stepper direction for forward travel
-      delay(100);
+      pause(100);
 
       for (int i = 0; i < slice_size * tuning * unit_of_measure_multiplier; i++){ 
 
