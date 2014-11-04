@@ -502,7 +502,7 @@ void screenPrintBluetooth(){ /* PRINT BLUETOOTH ICONS */
   }
 
   if(bluetooth_enabled && bluetooth_connected){ //if the bluetooth header (H_1) is active and there's an active pairing
-    //TODO PRINT AN ACTIVE ICON
+    //TODO PRINT AN ACTIVE ICON.
   }
 
 }
