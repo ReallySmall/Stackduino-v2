@@ -202,22 +202,27 @@ void screenRefresh(int print_pos_y = 2, int print_pos_x = 0){ /* WIPE THE SCREEN
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 void batteryMonitor(){ /* CONNECT THE BATTERY VOLTAGE SAMPLE LINE AND READ THE VOLTAGE THROUGH A DIVIDER */
-
-  static int resistor_1 = 10000; // battery monitor voltage divider R1
-  static int resistor_2 = 3300; // battery monitor voltage divider R2
   
   if(mcp.digitalRead(power_in_status) == HIGH){ //if currently running on battery
-
-    float raw_voltage_reading = 0; //raw anologue reading of current battery voltage
-    float voltage_denominator = (float)resistor_2 / (resistor_1 + resistor_2);
+  
+    static int resistor_1 = 10000; // battery monitor voltage divider R1
+    static int resistor_2 = 3300; // battery monitor voltage divider R2
+    static float last_calculated_voltage_reading = 0.00; // the last battery reading
+    static float raw_voltage_reading = 0; //raw anologue reading of current battery voltage
+    static float voltage_denominator = (float)resistor_2 / (resistor_1 + resistor_2);
 
     digitalWrite(batt_fet, HIGH); //connect the battery voltage line for reading
     raw_voltage_reading = analogRead(batt_sense); //get an analogue reading of the battery voltage through the divider
     calculated_voltage_reading = ((raw_voltage_reading / 1023) * 3.3) / voltage_denominator; //calculate the actual voltage
     digitalWrite(batt_fet, LOW); //disconnect the battery voltage line again
-    screen_update = true; //flag the screen as updatable to display newest battery voltage reading
+    
+    if(calculated_voltage_reading != last_calculated_voltage_reading){
+      screen_update = true; //flag the screen as updatable to display newest battery voltage reading
+    }
+    
+    last_calculated_voltage_reading = calculated_voltage_reading;
+    
   }
-
 }
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -439,14 +444,13 @@ void handleMcpInterrupt(){
 //  NON BLOCKING DELAY                                                                                  //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-void pause(int length){
+void pause(int length){ //delays are needed throughout the stacking process, but these pauses should be non-blocking
 
-    //delays are needed throughout the stacking process, but these pauses should be non-blocking
     unsigned long initial_millis = millis(); //get the current millis
     unsigned long end_millis = initial_millis + length; //when the pause ends
 
     while(end_millis > millis()){ //if the end of the pause time hasn't yet been reached
-            if(stackCancelled()){ //exit early if the stack has been cancelled
+      if(stackCancelled()){ //exit early if the stack has been cancelled
         break; 
       }
     }
@@ -456,8 +460,6 @@ void pause(int length){
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  DISPLAY FORMATTING FUNCTIONS                                                                        //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-
-
 
 void screenPrintMenuArrows(){ /* PRINT MENU NAVIGATION ARROWS */
 
@@ -510,13 +512,15 @@ void screenPrintBluetooth(){ /* PRINT BLUETOOTH ICONS */
 void screenPrintCentre(String text, int print_pos_y = 4){ /* PRINT TEXT CENTERED ON SCREEN */
 
   int text_length = text.length();
-  int offset = 0;
-
-  //calculate the offset for the number of characters in the string
-  text_length % 2 == 0 ? offset = (16 - text_length) / 2 : offset = ((16 - text_length) / 2) - 1;
+  int offset = (16 - text_length) / 2; //calculate the offset for the number of characters in the string
 
   screen.setPrintPos(offset, print_pos_y);
-  screen.print(text);
+
+  if(text_length % 2 != 0){ //dividing an odd numbered int by 2 discards the remainder, creating an offset which is half a text character width too short
+    screen.setTextPosOffset(4, 0); //so the text needs to be nudged to the right a bit on a pixel level to centre it properly 
+  } 
+
+  screen.print(text); //finally, print the centered text to the screen
 
 }
 
@@ -571,7 +575,7 @@ String screenUnitOfMeasure() { /* GET SELECTED UNIT OF MEASURE FOR PRINTING TO S
 //  END OF STACK FUNCTIONS                                                                              //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-boolean stackCancelled(){ /* CHECK IF THE MAIN BUTTON HAS BEEN PUSHED DURING STACK AND END STACK IF YES */
+boolean stackCancelled(){ /* CHECK IF THE MAIN BUTTON HAS BEEN PUSHED DURING STACK TO CANCEL */
 
   if(!start_stack){
     return true;
@@ -581,7 +585,7 @@ boolean stackCancelled(){ /* CHECK IF THE MAIN BUTTON HAS BEEN PUSHED DURING STA
 
 }
 
-void stackEnd(){ /* RUN CLEANUP THEN GO BACK TO MENU SECTION */
+void stackEnd(){ /* RUN POST STACK CLEANUP THEN GO BACK TO MENU SECTION */
 
   screenRefresh();
   start_stack == false ? screen.print("Stack cancelled") : screen.print("Stack finished"); 
@@ -757,7 +761,7 @@ void stepperDriverStep(){ /* SEND STEP SIGNAL TO A4988 STEPPER DRIVER */
 
   digitalWrite(stepper_driver_do_step, LOW); //this LOW to HIGH change is what creates the
   digitalWrite(stepper_driver_do_step, HIGH); //"Rising Edge" so the easydriver knows to when to step
-  delayMicroseconds(step_delay); //delay time between sliceSize, too fast and motor stalls
+  delayMicroseconds(step_delay); //delay time between steps, too fast and motor stalls
 
 }
 
@@ -800,8 +804,13 @@ void loop(){
       encoderUpdate(menu_item, 0, 10); //display the currently selected menu item
 
       //create looping navigation
-      menu_item == 10 ? menu_item = 1 : menu_item == menu_item;
-      menu_item == 0 ? menu_item = 9 : menu_item == menu_item;
+      if(menu_item == 10){
+       menu_item = 1;
+      }
+      
+      if(menu_item == 0){
+       menu_item = 9;
+      }
 
     } 
 
@@ -992,9 +1001,9 @@ void loop(){
 
       slice_counter++; //count slices made in the stack so far
 
-      if(stackCancelled()){
+      if(stackCancelled()){ //exit early if the stack has been cancelled
        break;
-      }//exit early if the stack has been cancelled
+      }
 
       //print the current position in the stack to the screen
       screenRefresh(); 
@@ -1007,9 +1016,9 @@ void loop(){
       screen.print(slice_size);
       screen.print(screenUnitOfMeasure());
 
-            if(stackCancelled()){
+      if(stackCancelled()){ //exit early if the stack has been cancelled
        break;
-      }//exit early if the stack has been cancelled
+      }
 
       stepperDriverEnable(); //enable the A4988 stepper driver
       stepperDriverDirection("forwards"); //set the stepper direction for forward travel
@@ -1018,12 +1027,14 @@ void loop(){
       for (int i = 0; i < slice_size * tuning * unit_of_measure_multiplier; i++){ 
 
         stepperDriverStep(); //send a step signal to the stepper driver
-              if(stackCancelled()){
-       break;
-      }//exit early if the stack has been cancelled
-              if(!stepperDriverInBounds()){
-       break;
-      }//exit early if the stack has been cancelled
+              
+        if(stackCancelled()){ //exit early if the stack has been cancelled
+          break;
+        }
+              
+        if(!stepperDriverInBounds()){ //exit early if the stack has been cancelled
+          break;
+        }
 
       }
 
@@ -1031,9 +1042,10 @@ void loop(){
         stepperDriverClearLimitSwitch();
       }
 
-                    if(stackCancelled()){
-       break;
-      }//exit early if the stack has been cancelled
+      if(stackCancelled()){ //exit early if the stack has been cancelled
+        break;
+      }
+
       stepperDriverDisable(); //disable the stepper driver when not in use to save power  
       cameraProcessImages(); //take image(s)
 
