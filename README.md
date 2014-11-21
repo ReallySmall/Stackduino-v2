@@ -1,7 +1,7 @@
 Stackduino-2
 ============
 
-Stackduino 2 is an open source motion controller, designed primarily for focus stacking, which interfaces with a stepper motor, limit switches and a camera shutter. It aims to build on the features of the first Stackduino (reallysmall.github.io/Stackduino/) and become more efficient, versatile and portable than its predecessor. 
+Stackduino 2 is an open source motion controller, designed primarily for focus stacking, which interfaces with a stepper motor, limit switches and a camera shutter. It aims to build on the features of the first Stackduino (reallysmall.github.io/Stackduino/) and be more efficient, versatile and portable than its predecessor. 
  
 Power
  
