@@ -380,6 +380,8 @@ int8_t encoderRead(){ /* RETURN CHANGE IN ENCODER STATE */
   if(encoder_data){ //if Gray Code returns a valid input (1 or -1) 
     encoder_data == 1 ? encoder_pulse_counter++ : encoder_pulse_counter--; 
   }
+  
+
 
   if(encoder_pulse_counter > 3){ //record the encoder was moved by one click (detent)
     encoder_detent_counter++;
@@ -893,6 +895,7 @@ void variableUpdate(int &variable, int lower, int upper, int multiplier = 1){ /*
 
 void menuInteractions(){
 
+
   switch (menu_item) { //the menu options
 
     case 1: //this menu item changes the number of increments to move each time
@@ -1092,10 +1095,15 @@ void loop(){
       if(menu_item == 0){
        menu_item = 9;
       }
+      
+        Serial.print(menu_item);
+   Serial.println();
 
-      menuInteractions();
-
-    } 
+    } else {
+    
+    menuInteractions();
+    
+    }
 
   } else { //end of setup menu section
 
