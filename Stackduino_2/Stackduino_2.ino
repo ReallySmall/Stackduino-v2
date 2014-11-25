@@ -67,8 +67,6 @@ const byte stepper_driver_sleep = 15; //sleep/wake A4988 stepper driver to conse
 //  SETTINGS                                                                                            //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-const long int switchoff_counter = 900000; //millis to count with no activity
-
 int bluetooth_enabled = 1; //toggle power to bluetooth port
 int camera_bracket = 1; //number of images to bracket per focus slice
 int camera_pause = 5; //default time in seconds to wait for camera to take picture and allow any flashes to recharge
