@@ -67,31 +67,46 @@ const byte stepper_driver_sleep = 15; //sleep/wake A4988 stepper driver to conse
 //  SETTINGS                                                                                            //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+//the controller relies on the assumption that 1 step signal sent by the motor driver will move the 
+//linear stage by 1 (or as close as possible to 1) increment of the selected unit of measure for travel.
+//to achieve this relationship, the number of step signals generated should be multiplied by a constant 
+//(obtained through a little maths and experimentation) which is unique to your hardware.
+//as you may use Stackduino on more than one linear stage (e.g. studio and field setups), which each require
+//unique constants, these are stored in the array hardware_calibration_settings[].
+const int hardware_calibration_settings[] = {16, 0}; //hardware calibration settings
+int active_hardware_calibration = 0; //array index of default hardware calibration setting
+
 int bluetooth_enabled = 1; //toggle power to bluetooth port
+boolean bluetooth_connected = false; //whether bluetooth is connected to a device
+
 int camera_bracket = 1; //number of images to bracket per focus slice
 int camera_pause = 5; //default time in seconds to wait for camera to take picture and allow any flashes to recharge
-int setting_changed = 0; //count detents (clicks) from encoder wheel
+int mirror_lockup = 0; //set to 1 to enable camera mirror lockup, 0 to disable
+
+volatile boolean start_stack = false; //false when in the menu, true when stacking
+volatile boolean traverse_menus = true; //true when scrolling through menus, false when changing a menu item's value
+volatile boolean mcp_interrupt_fired = false; //true whenever a pin on the mcp23017 with a listener went low
+int menu_item = 1; //the active menu item
+int setting_changed = 0; //count increments the active menu setting should be changed by on the next poll
+boolean publish_update = true; //true whenever functions are called which change a setting's value
+
 int incoming_serial; //store latest byte from incoming serial stream
-int menu_item = 1; //which menu item to display when turning rotary encoder
-int mirror_lockup = 0; //set to 1 to enable camera mirror lockup
-int return_to_start = 0; //whether linear stage is returned to starting position at end of stack
+float calculated_voltage_reading = 0; //the actual battery voltage as calculated through the divider
+/*TODO*/int system_timeout_sleep = 10; //minutes of inactivity to wait until controller enters sleep mode - set to 0 to disable
+int system_timeout_off = 20; //minutes of inactivity to wait until controller switches itself off - set to 0 to disable
+boolean system_idle = true; //true until the controller is interacted with
+
+boolean stepper_driver_disable = true; //whether to disable the A4988 stepper driver when possible to save power and heat
+int step_delay = 2000; //delay in microseconds between stepper motor steps, governing motor speed - too low may cause missed steps or stalling
+int available_micro_stepping[] = {1, 2, 4, 8, 16}; //degrees of microstepping available for the a4988 stepper driver should use (1 is full stepping)
+int selected_micro_stepping = 4; //array index of default micro-stepping setting
+
+int return_to_start = 0; //whether linear stage is returned to its starting position at the end of stack
 int slices = 10; //default number of focus slices to make in the stack
 int slice_size = 10; //default depth of each focus slice - used with unit_of_measure
 int slice_counter = 0; //count of number of focus slices made so far in the stack
-int step_delay = 2000; //delay in microseconds between stepper motor steps, governing motor speed - too low may cause missed steps or stalling
-/*TODO*/int system_timeout_sleep = 10; //minutes of inactivity to wait until controller enters sleep mode - set to 0 to disable
-int system_timeout_off = 20; //minutes of inactivity to wait until controller switches itself off - set to 0 to disable
-int tuning = 16; //multiplier used to tune distance travelled - e.g. adjust this so that 1 motor step = 1 micron on your setup
 int unit_of_measure = 1; //whether slice_size should be  microns, mm or cm
 int unit_of_measure_multiplier = 1; //multiplier for active unit_of_measure (1, 1000 or 10,000)
-boolean bluetooth_connected = false; //whether bluetooth is on and connected
-boolean publish_update = true; //true whenever encoder or button functions are called which change a setting's value
-boolean stepper_driver_disable = true; //whether to disable the A4988 stepper driver when possible to save power and heat
-boolean system_idle = true; //true until the controller is interacted with
-volatile boolean mcp_interrupt_fired = false; //true whenever a pin on the mcp23017 with a listener went low
-volatile boolean start_stack = false; //false when in the menu, true when stacking
-volatile boolean traverse_menus = true; //true when scrolling through menus, false when changing a menu item's value
-float calculated_voltage_reading = 0; //the actual battery voltage as calculated through the divider
 
 //main push button toggle
 volatile int button_main_reading; //the current reading from the input pin
@@ -181,9 +196,10 @@ void setup() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
   Serial.begin(19200); //start serial
+  stepperDriverMicroStepping(available_micro_stepping[selected_micro_stepping]); //set the degree of microstepping used by the a4988
   stepperDriverClearLimitSwitch(); //make sure neither limit switch is hit on startup - rectify if so
-  batteryMonitor();
-  bluetoothTogglePower();
+  batteryMonitor(); //check the battery level
+  bluetoothTogglePower(); //switch on Bluetooth if the option is enabled by default
   
 }
 
@@ -285,6 +301,8 @@ void cameraProcessImages(){ /* SEND SIGNAL TO CAMERA TO TAKE PICTURE(S) */
   
   for (int i = 1; i <= camera_bracket; i++){
 
+    pause(1000); //allow vibrations to settle
+
     if(camera_bracket > 1){ //if more than one image is being taken, display the current position in the bracket
       screenPrintProgress();
       screen.setPrintPos(0,4);
@@ -292,7 +310,6 @@ void cameraProcessImages(){ /* SEND SIGNAL TO CAMERA TO TAKE PICTURE(S) */
       screen.print(i);
       screen.print("/");
       screen.print(camera_bracket);
-      pause(1000);
     }
 
     screenPrintProgress();
@@ -744,7 +761,7 @@ void stackEnd(){ /* RUN POST STACK CLEANUP THEN GO BACK TO MENU SECTION */
     
     stepperDriverEnable();
 
-    for (int i; i < return_steps * tuning * unit_of_measure_multiplier; i++){
+    for (int i; i < return_steps * hardware_calibration_settings[active_hardware_calibration] * unit_of_measure_multiplier; i++){
 
       stepperDriverStep();
       if(!stepperDriverInBounds()){
@@ -896,6 +913,34 @@ void stepperDriverManualControl(){ /* MOVE STAGE BACKWARD AND FORWARD USING PUSH
 
 }
 
+void stepperDriverMicroStepping(int step_setting){ /* SET DEGREE OF MICROSTEPPING TO USE */
+
+  switch(step_setting){
+
+    case 1:
+
+      break;
+
+    case 2:
+
+      break;
+
+    case 4:
+
+      break;
+
+    case 8:
+
+      break;
+
+    case 16:
+
+      break;
+
+  }
+
+}
+
 void stepperDriverStep(){ /* SEND STEP SIGNAL TO A4988 STEPPER DRIVER */
 
   digitalWrite(stepper_driver_do_step, LOW); //this LOW to HIGH change is what creates the
@@ -1035,7 +1080,7 @@ void menuInteractions(){
 
       break; 
 
-    case 8: //this menu item adjusts the stepper motor speed (delay in microseconds between sliceSize)
+    case 8: //this menu item adjusts the stepper motor speed (delay in microseconds between slice_size)
       //setting this too low may cause the motor to begin stalling or failing to move at all
 
       if (traverse_menus == false) { //press rotary encoder button within this menu item to edit variable
@@ -1053,7 +1098,54 @@ void menuInteractions(){
 
       break; 
 
-    case 9: //this menu item screen toggles power to an external 3.3v bluetooth board e.g. HC-05
+    case 9: //this menu item adjusts the degree of microstepping made by the a4988 stepper driver
+    //more microsteps give the best stepping resolution but may require more power for consistency and accuracy
+      
+      if (traverse_menus == false) { //press rotary encoder button within this menu item to edit variable
+        settingUpdate(selected_micro_stepping, 0, 4);
+        stepperDriverMicroStepping(available_micro_stepping[selected_micro_stepping]);
+      }
+
+      if (publish_update){ //only write to the screen when a change to the variables has been flagged
+
+        screenUpdate(2, 0 , "Microstepping:");
+        String microstepping_string = "1/" + String(available_micro_stepping[selected_micro_stepping]);
+        screenPrintCentre(microstepping_string);  
+        publish_update = false;
+
+      }
+
+      break;
+
+    case 10: //this menu item screen selects the active hardware calibration constant
+
+      if (traverse_menus == false) { //press rotary encoder button within this menu item to edit variable
+        settingUpdate(active_hardware_calibration, 0, 1); //final argument should be index of last entry in hardware_calibration_settings[]
+      }
+
+      if (publish_update){ //only write to the screen when a change to the variables has been flagged
+
+        screenUpdate(2, 0, "Linear Stage:");
+
+        switch(active_hardware_calibration){
+
+          case 0:
+            screenPrintCentre("Studio");
+            break;
+
+          case 1:
+            screenPrintCentre("Field");
+            break;
+
+        }
+            
+        publish_update = false;
+
+      }      
+
+      break;
+
+    case 11: //this menu item screen toggles power to an external 3.3v bluetooth board e.g. HC-05
 
       if (traverse_menus == false) { //press rotary encoder button within this menu item to edit variable
         settingUpdate(bluetooth_enabled, 0, 1);
@@ -1108,8 +1200,8 @@ void loop(){
       settingUpdate(menu_item, 0, 10); //display the currently selected menu item
 
       //create looping navigation
-      if(menu_item == 10) menu_item = 1;
-      if(menu_item == 0) menu_item = 9;
+      if(menu_item == 12) menu_item = 1;
+      if(menu_item == 0) menu_item = 11;
 
     }
 
@@ -1125,8 +1217,9 @@ void loop(){
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/ 
 
     stepperDriverDisable(); //disable the stepper driver when not in use to save power
+    cameraProcessImages(); //take the image(s) for the first slice of the stack
 
-    for (int i = 0; i < slices; i++){ //for each focus slice in the stack...
+    for (int i = 0; i < slices -1; i++){ //for each subsequent focus slice in the stack...
 
       slice_counter++; //count slices made in the stack so far
 
@@ -1149,7 +1242,7 @@ void loop(){
       stepperDriverDirection("forwards"); //set the stepper direction for forward travel
       pause(100);
 
-      for (int i = 0; i < slice_size * tuning * unit_of_measure_multiplier; i++){ 
+      for (int i = 0; i < slice_size * hardware_calibration_settings[active_hardware_calibration] * unit_of_measure_multiplier; i++){ 
 
         stepperDriverStep(); //send a step signal to the stepper driver
               
