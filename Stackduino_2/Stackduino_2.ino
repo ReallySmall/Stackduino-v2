@@ -1,5 +1,5 @@
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  STACKDUINO 2                                                                                        //
+//  STACKDUINO 2 (BETA)                                                                                       //
 //                                                                                                      //
 //  https://github.com/ReallySmall/Stackduino-2                                                         //
 //                                                                                                      //
@@ -8,28 +8,28 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  DEPENDENCIES                                                                                        //       
+//  DEFINES AND DEPENDENCIES                                                                            //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 #define _Digole_Serial_SPI_ //OLED screen - must be configured with solder jumper to run in SPI mode
+#define ENC_A A0 //rotary encoder
+#define ENC_B A1 //rotary encoder
+#define ENC_PORT PINC //rotary encoder
+
 #include "DigoleSerial.h" //https://github.com/chouckz/HVACX10Arduino/blob/master/1.0.1_libraries/DigoleSerial/DigoleSerial.h
 #include "Wire.h"
 #include "Adafruit_MCP23017.h"
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  INSTANTIATE OBJECTS                                                                                 //       
+//  INSTANTIATE REQUIRED LIBRARY OBJECTS                                                                //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 Adafruit_MCP23017 mcp; //16 pin port expander
 DigoleSerialDisp screen(8,9,10);  //OLED screen - SPI mode - Pin 8: data, 9:clock, 10: SS
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  DEFINE REMAINING ATMEGA PINS                                                                        //       
+// SET UP REMAINING ATMEGA PINS                                                                         //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-
-#define ENC_A A0 //rotary encoder
-#define ENC_B A1 //rotary encoder
-#define ENC_PORT PINC //rotary encoder
 
 const byte mcp_interrupt = 2; //MCP23017 interrupt
 const byte button_main = 3;  //start/ stop stack button
@@ -43,7 +43,7 @@ const byte ext_analogue_1 = A6; //analogue pin broken out through DB15 - unused 
 const byte ext_analogue_2 = A7; //analogue pin broken out through DB15 - unused (for future functionality)
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  DEFINE MCP23017 PINS                                                                                //       
+//  SET UP MCP23017 PINS                                                                                //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 const byte stepper_driver_forward = 0; //for manual positioning
@@ -72,9 +72,9 @@ const byte stepper_driver_sleep = 15; //sleep/wake A4988 stepper driver to conse
 //to achieve this relationship, the number of step signals generated should be multiplied by a constant 
 //(obtained through a little maths and experimentation) which is unique to your hardware.
 //as you may use Stackduino on more than one linear stage (e.g. studio and field setups), which each require
-//unique constants, these are stored in the array hardware_calibration_settings[].
-const int hardware_calibration_settings[] = {16, 0}; //hardware calibration settings
-int active_hardware_calibration = 0; //array index of default hardware calibration setting
+//unique constants, these are stored in an array:
+const float hardware_calibration_settings[] = {1, 1}; //hardware calibration settings
+int active_hardware_calibration = 0; //array index of selected hardware calibration setting
 
 int bluetooth_enabled = 1; //toggle power to bluetooth port
 boolean bluetooth_connected = false; //whether bluetooth is connected to a device
@@ -99,26 +99,19 @@ boolean system_idle = true; //true until the controller is interacted with
 boolean stepper_driver_disable = true; //whether to disable the A4988 stepper driver when possible to save power and heat
 int step_delay = 2000; //delay in microseconds between stepper motor steps, governing motor speed - too low may cause missed steps or stalling
 int available_micro_stepping[] = {1, 2, 4, 8, 16}; //degrees of microstepping available for the a4988 stepper driver should use (1 is full stepping)
-int selected_micro_stepping = 4; //array index of default micro-stepping setting
+int active_micro_stepping = 4; //array index of selected micro-stepping setting
 
 int return_to_start = 0; //whether linear stage is returned to its starting position at the end of stack
 int slices = 10; //default number of focus slices to make in the stack
 int slice_size = 10; //default depth of each focus slice - used with unit_of_measure
 int slice_counter = 0; //count of number of focus slices made so far in the stack
-int unit_of_measure = 1; //whether slice_size should be  microns, mm or cm
-int unit_of_measure_multiplier = 1; //multiplier for active unit_of_measure (1, 1000 or 10,000)
+int unit_of_measure_multipliers[] = {1, 1000, 10000}; //multiplier for active unit of measure
+int active_unit_of_measure_multiplier = 0; //array index of selected multiplier
 
-//main push button toggle
-volatile int button_main_reading; //the current reading from the input pin
-volatile int button_main_previous = LOW; //the previous reading from the input pin
-volatile long button_main_time = 0; //the last time the output pin was toggled
-volatile long button_main_debounce = 400; //the debounce time, increase if the output flickers
-
-//rotary push button toggle
-volatile int button_rotary_reading; //the current reading from the input pin
-volatile int button_rotary_previous = LOW; //the previous reading from the input pin
-volatile long button_rotary_time = 0; //the last time the output pin was toggled
-volatile long button_rotary_debounce = 400; //the debounce time, increase if the output flickers
+//push buttons
+volatile int button_main_reading, button_rotary_reading; //the current reading from the input pin
+volatile int button_main_previous = LOW, button_rotary_previous = LOW; //the previous reading from the input pin
+volatile long button_main_time = 0, button_rotary_time = 0; //the last time the output pin was toggled
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  SETUP                                                                                               //       
@@ -196,7 +189,7 @@ void setup() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
   Serial.begin(19200); //start serial
-  stepperDriverMicroStepping(available_micro_stepping[selected_micro_stepping]); //set the degree of microstepping used by the a4988
+  stepperDriverMicroStepping(available_micro_stepping[active_micro_stepping]); //set the degree of microstepping used by the a4988
   stepperDriverClearLimitSwitch(); //make sure neither limit switch is hit on startup - rectify if so
   batteryMonitor(); //check the battery level
   bluetoothTogglePower(); //switch on Bluetooth if the option is enabled by default
@@ -257,21 +250,23 @@ void batteryMonitor(){ /* CONNECT THE BATTERY VOLTAGE SAMPLE LINE AND READ THE V
 //  requires a compatible bluetooth breakout board (e.g. HC-05) connected to header H_1                 //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-void bluetoothTogglePower(){
+void bluetoothTogglePower(){ /* TOGGLES VCC TO THE BLUETOOTH HEADER */
   
-  bluetooth_enabled == true ? mcp.digitalWrite(bluetooth_toggle, LOW) : mcp.digitalWrite(bluetooth_toggle, HIGH); //enable/ disable power to VCC pin on header H_1
+  bluetooth_enabled == true ? mcp.digitalWrite(bluetooth_toggle, LOW) : mcp.digitalWrite(bluetooth_toggle, HIGH);
 
 }
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  BUTTON FUNCTIONS                                                                                    //       
+//  BUTTONS                                                                                             //
+//  toggle a boolean state with a debounced button press                                                 //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/ 
 
 void buttonMainToggle(){ /* RETURN CURRENT TOGGLE STATE OF MAIN PUSH BUTTON */
 
+  static int button_debounce = 400;
   button_main_reading = digitalRead(button_main);
 
-  if (button_main_reading == LOW && button_main_previous == HIGH && millis() - button_main_time > button_main_debounce) {
+  if (button_main_reading == LOW && button_main_previous == HIGH && millis() - button_main_time > button_debounce) {
     start_stack = start_stack == true ? false : true; 
     button_main_time = millis();    
   }
@@ -282,9 +277,10 @@ void buttonMainToggle(){ /* RETURN CURRENT TOGGLE STATE OF MAIN PUSH BUTTON */
 
 void buttonRotaryToggle(){ /* RETURN CURRENT TOGGLE STATE OF ROTARY ENCODER'S PUSH BUTTON */
 
+  static int button_debounce = 400;
   button_rotary_reading = mcp.digitalRead(button_rotary);
   
-  if (button_rotary_reading == LOW && button_rotary_previous == HIGH && millis() - button_rotary_time > button_rotary_debounce) {
+  if (button_rotary_reading == LOW && button_rotary_previous == HIGH && millis() - button_rotary_time > button_debounce) {
     traverse_menus = traverse_menus == true ? false : true;
     button_rotary_time = millis();    
   }
@@ -378,7 +374,7 @@ void cameraShutterSignal() { /* SEND SHUTTER SIGNAL */
 
 void cronJobs(){
 
-  static long int a_minute = millis() + 60000; // 1 minute from now
+  static unsigned long a_minute = millis() + 60000; // 1 minute from now
   static int minutes_elapsed = 0; //number of 1 minute periods elapsed
 
   if(millis() >= a_minute){ //every 1 minute
@@ -394,16 +390,15 @@ void cronJobs(){
 
   }
 
-  if(minutes_elapsed == system_timeout_sleep){ //every n minutes
+  if(system_timeout_sleep && (system_timeout_sleep == minutes_elapsed)){ //every n minutes
     //put the controller in sleep mode if it has been unused, or restart the instance counter
     if(system_idle == true){
-      sleep();
-    } else {
       minutes_elapsed = 0;
-    }
+      sleep(); //TODO continue counting minutes elapsed when in sleep mode
+    } 
   }
 
-  if(minutes_elapsed == system_timeout_off){ //every n minutes
+  if(system_timeout_off && (system_timeout_off == minutes_elapsed)){ //every n minutes
     //switch the controller off if it has been unused, or restart the instance counter
     if(system_idle == true){
       mcp.digitalWrite(switch_off, LOW);
@@ -535,7 +530,7 @@ void pause(int length){ //delays are needed throughout the stacking process, but
 }
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  DISPLAY FORMATTING FUNCTIONS                                                                        //       
+//  DIGOLE OLED DISPLAY FORMATTING FUNCTIONS                                                            //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 void screenPrintMenuArrows(){ /* PRINT MENU NAVIGATION ARROWS */
@@ -632,32 +627,6 @@ void screenPrintProgress(){
 
 }
 
-String screenUnitOfMeasure() { /* GET SELECTED UNIT OF MEASURE FOR PRINTING TO SCREEN */        
-  
-  String unit = "";
-
-  switch (unit_of_measure) {
-    
-    case 1:
-      unit_of_measure_multiplier = 1;
-      unit = "mn";
-      break;
-    
-    case 2:
-      unit_of_measure_multiplier = 1000;
-      unit = "mm";
-    break;
-
-    case 3:
-      unit_of_measure_multiplier = 10000;
-      unit = "cm";
-    break;
-
-  }
-
-  return unit;
-}
-
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  CONTROL VIA SERIAL                                                                                  //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -751,17 +720,15 @@ void stackEnd(){ /* RUN POST STACK CLEANUP THEN GO BACK TO MENU SECTION */
   if (return_to_start){   
     stepperDriverDirection("backwards"); //set the stepper direction for backward travel
     
-    int return_steps = slice_size * slice_counter;
+    float exact_return_steps = slice_size * slice_counter * hardware_calibration_settings[active_hardware_calibration] * unit_of_measure_multipliers[active_unit_of_measure_multiplier] * available_micro_stepping[active_micro_stepping];
+    int rounded_return_steps = (int) exact_return_steps - 0.5;
     
     screenUpdate();
     screen.print("Returning");
-    screen.setPrintPos(0, 4);
-    screen.print (return_steps);
-    screen.print(screenUnitOfMeasure());
     
     stepperDriverEnable();
 
-    for (int i; i < return_steps * hardware_calibration_settings[active_hardware_calibration] * unit_of_measure_multiplier; i++){
+    for (int i; i < rounded_return_steps; i++){
 
       stepperDriverStep();
       if(!stepperDriverInBounds()){
@@ -917,23 +884,43 @@ void stepperDriverMicroStepping(int step_setting){ /* SET DEGREE OF MICROSTEPPIN
 
   switch(step_setting){
 
-    case 1:
+    case 1: //full step (no microstepping)
+
+      mcp.digitalWrite(stepper_driver_ms1, LOW);
+      mcp.digitalWrite(stepper_driver_ms2, LOW);
+      mcp.digitalWrite(stepper_driver_ms3, LOW);
 
       break;
 
-    case 2:
+    case 2: //half step
+
+      mcp.digitalWrite(stepper_driver_ms1, HIGH);
+      mcp.digitalWrite(stepper_driver_ms2, LOW);
+      mcp.digitalWrite(stepper_driver_ms3, LOW);
 
       break;
 
-    case 4:
+    case 4: //quarter step
+
+      mcp.digitalWrite(stepper_driver_ms1, LOW);
+      mcp.digitalWrite(stepper_driver_ms2, HIGH);
+      mcp.digitalWrite(stepper_driver_ms3, LOW);
 
       break;
 
-    case 8:
+    case 8: //eighth step
+
+      mcp.digitalWrite(stepper_driver_ms1, HIGH);
+      mcp.digitalWrite(stepper_driver_ms2, HIGH);
+      mcp.digitalWrite(stepper_driver_ms3, LOW);
 
       break;
 
-    case 16:
+    case 16: //sixteenth step
+
+      mcp.digitalWrite(stepper_driver_ms1, HIGH);
+      mcp.digitalWrite(stepper_driver_ms2, HIGH);
+      mcp.digitalWrite(stepper_driver_ms3, HIGH);
 
       break;
 
@@ -957,8 +944,8 @@ void settingUpdate(int &var, int lower, int upper, int multiplier = 1){ /* CHANG
   
   var = constrain(var, lower, upper); //keep variable value within specified range 
 
-  if(setting_changed){ //first check the encoder for changes
-    var += (multiplier * setting_changed); //add or subtract from variable using number of encoder clicks
+  if(setting_changed){
+    var += (multiplier * setting_changed); //add or subtract from variable
     setting_changed = 0;
     publish_update = true;
   } 
@@ -966,7 +953,35 @@ void settingUpdate(int &var, int lower, int upper, int multiplier = 1){ /* CHANG
 }
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  USER MENUS                                                                                          //       
+//  STRING FUNCTIONS                                                                                    //       
+////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+String stringUnitOfMeasure() { /* GET SELECTED UNIT OF MEASURE FOR PRINTING TO SCREEN */        
+
+  String unit = "";
+
+  switch (active_unit_of_measure_multiplier) {
+    
+    case 0:
+      unit = "mn";
+      break;
+    
+    case 1:
+      unit = "mm";
+    break;
+
+    case 2:
+      unit = "cm";
+    break;
+
+  }
+
+  return unit;
+
+}
+
+/*////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  USER MENUS - CHANGE, SAVE THEN DISPLAY SETTINGS                                                      //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 void menuInteractions(){
@@ -981,7 +996,7 @@ void menuInteractions(){
 
       if (publish_update){ //only write to the screen when a change to the variables has been flagged
         screenUpdate(2, 0, "Set slice size:");
-        screenPrintCentre(String(slice_size + screenUnitOfMeasure()));
+        screenPrintCentre(String(slice_size + stringUnitOfMeasure()));
         publish_update = false;
       }    
 
@@ -1067,13 +1082,13 @@ void menuInteractions(){
     case 7: //this menu items selects the unit of measure to use for focus slices: Microns, Millimimeters or Centimeteres
 
       if (traverse_menus == false) { //press rotary encoder button within this menu item to edit variable
-        settingUpdate(unit_of_measure, 1, 3);
+        settingUpdate(active_unit_of_measure_multiplier, 0, 2);
       }
 
       if (publish_update){ //only write to the screen when a change to the variables has been flagged
 
         screenUpdate(2, 0, "Unit of measure:");
-        screenPrintCentre(String(screenUnitOfMeasure()));  
+        screenPrintCentre(String(stringUnitOfMeasure()));  
         publish_update = false;
 
       }
@@ -1102,14 +1117,14 @@ void menuInteractions(){
     //more microsteps give the best stepping resolution but may require more power for consistency and accuracy
       
       if (traverse_menus == false) { //press rotary encoder button within this menu item to edit variable
-        settingUpdate(selected_micro_stepping, 0, 4);
-        stepperDriverMicroStepping(available_micro_stepping[selected_micro_stepping]);
+        settingUpdate(active_micro_stepping, 0, 4);
+        stepperDriverMicroStepping(available_micro_stepping[active_micro_stepping]);
       }
 
       if (publish_update){ //only write to the screen when a change to the variables has been flagged
 
         screenUpdate(2, 0 , "Microstepping:");
-        String microstepping_string = "1/" + String(available_micro_stepping[selected_micro_stepping]);
+        String microstepping_string = "1/" + String(available_micro_stepping[active_micro_stepping]);
         screenPrintCentre(microstepping_string);  
         publish_update = false;
 
@@ -1219,6 +1234,9 @@ void loop(){
     stepperDriverDisable(); //disable the stepper driver when not in use to save power
     cameraProcessImages(); //take the image(s) for the first slice of the stack
 
+    float exact_steps = slice_size * hardware_calibration_settings[active_hardware_calibration] * unit_of_measure_multipliers[active_unit_of_measure_multiplier] * available_micro_stepping[active_micro_stepping];
+    int rounded_steps = (int) exact_steps - 0.5;
+
     for (int i = 0; i < slices -1; i++){ //for each subsequent focus slice in the stack...
 
       slice_counter++; //count slices made in the stack so far
@@ -1232,7 +1250,7 @@ void loop(){
       screen.setPrintPos(0,4);
       screen.print("Advance ");
       screen.print(slice_size);
-      screen.print(screenUnitOfMeasure());
+      screen.print(stringUnitOfMeasure());
 
       if(stackCancelled()){ //exit early if the stack has been cancelled
        break;
@@ -1242,7 +1260,7 @@ void loop(){
       stepperDriverDirection("forwards"); //set the stepper direction for forward travel
       pause(100);
 
-      for (int i = 0; i < slice_size * hardware_calibration_settings[active_hardware_calibration] * unit_of_measure_multiplier; i++){ 
+      for (int i = 0; i < rounded_steps; i++){ 
 
         stepperDriverStep(); //send a step signal to the stepper driver
               
