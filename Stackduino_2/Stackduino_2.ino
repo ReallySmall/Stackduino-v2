@@ -77,6 +77,25 @@ const byte stepper_driver_sleep = 15; //sleep/wake A4988 stepper driver to conse
 const float hardware_calibration_settings[] = {1, 1}; //hardware calibration settings
 int active_hardware_calibration = 0; //array index of selected hardware calibration setting
 
+//screen menu strings
+const char* menu_strings[] = {"System settings", 
+                              "Set slice size:", 
+                              "Number of slices", 
+                              "Set pause time:", 
+                              "Mirror Lockup:", 
+                              "Set bracketing:", 
+                              "Return to start:", 
+                              "Unit of measure:", 
+                              "Stepper speed:", 
+                              "Microstepping", 
+                              "Linear Stage:", 
+                              "Bluetooth:"};
+                              
+const char* menu_strings_uom[] = {"",
+                                  "mn",
+                                  "mm",
+                                  "cm"};
+
 int bluetooth_enabled = 1; //toggle power to bluetooth port
 boolean bluetooth_connected = false; //whether bluetooth is connected to a device
 
@@ -108,7 +127,7 @@ int slices = 10; //default number of focus slices to make in the stack
 int slice_size = 10; //default depth of each focus slice - used with unit_of_measure
 int slice_counter = 0; //count of number of focus slices made so far in the stack
 int unit_of_measure_multipliers[] = {1, 1000, 10000}; //multiplier for active unit of measure
-int active_unit_of_measure_multiplier = 0; //array index of selected multiplier
+int active_unit_of_measure_multiplier = 1; //array index of selected multiplier
 
 //push buttons
 volatile int button_main_reading, button_rotary_reading; //the current reading from the input pin
@@ -656,8 +675,8 @@ void screenPrintCentre(String text, int print_pos_y = 4, byte text_colour = 0){ 
   } 
 
   //if(!traverse_menus){
-    screen.drawBox(16,48,96,16);
-    screen.setColor(text_colour); //default to black text on white as this is normally printing a selected menu item
+    //screen.drawBox(16,48,96,16);
+    //screen.setColor(text_colour); //default to black text on white as this is normally printing a selected menu item
   //}
   screen.print(text); //finally, print the centered text to the screen
 
@@ -1010,38 +1029,20 @@ void settingUpdate(int &var, int lower, int upper, int multiplier = 1){ /* CHANG
 }
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  STRING FUNCTIONS                                                                                    //       
-////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-
-String stringUnitOfMeasure() { /* GET SELECTED UNIT OF MEASURE FOR PRINTING TO SCREEN */        
-
-  String unit = "";
-
-  switch (active_unit_of_measure_multiplier) {
-    
-    case 0:
-      unit = "mn";
-      break;
-    
-    case 1:
-      unit = "mm";
-    break;
-
-    case 2:
-      unit = "cm";
-    break;
-
-  }
-
-  return unit;
-
-}
-
-/*////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  USER MENUS - CHANGE, SAVE THEN DISPLAY SETTINGS                                                      //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 void menuInteractions(){
+  
+  if (traverse_menus == true) { //use encoder to scroll through menu items
+
+    settingUpdate(menu_item, 0, 12); //display the currently selected menu item
+
+    //create looping navigation
+    if(menu_item == 12) menu_item = 1;
+    if(menu_item == 0) menu_item = 11;
+
+  }
 
   switch (menu_item) { //the menu options
 
@@ -1052,8 +1053,8 @@ void menuInteractions(){
       }
 
       if (publish_update){ //only write to the screen when a change to the variables has been flagged
-        screenUpdate(2, 0, "Set slice size:");
-        screenPrintCentre(String(slice_size + stringUnitOfMeasure()));
+        screenUpdate(2, 0, menu_strings[menu_item]);
+        screenPrintCentre(String(slice_size));
         publish_update = false;
       }    
 
@@ -1066,7 +1067,7 @@ void menuInteractions(){
       }
 
       if (publish_update){ //only write to the screen when a change to the variables has been flagged
-        screenUpdate(2, 0, "Number of slices"); 
+        screenUpdate(2, 0, menu_strings[menu_item]); 
         screenPrintCentre(String(slices));
         publish_update = false;
       } 
@@ -1082,7 +1083,7 @@ void menuInteractions(){
       }
 
       if (publish_update){ //only write to the screen when a change to the variables has been flagged
-        screenUpdate(2, 0, "Set pause time:");
+        screenUpdate(2, 0, menu_strings[menu_item]);
         String camera_pause_string = String(camera_pause) += "s";
         screenPrintCentre(camera_pause_string);
         publish_update = false;
@@ -1097,11 +1098,9 @@ void menuInteractions(){
       }
 
       if (publish_update){ //only write to the screen when a change to the variables has been flagged
-
-        screenUpdate(2, 0, "Mirror Lockup:");
+        screenUpdate(2, 0, menu_strings[menu_item]);
         mirror_lockup == true ? screenPrintCentre("Enabled") : screenPrintCentre("Disabled");          
         publish_update = false;
-
       }      
 
       break;
@@ -1113,11 +1112,9 @@ void menuInteractions(){
       }
 
       if (publish_update){ //only write to the screen when a change to the variables has been flagged
-
-        screenUpdate(2, 0, "Set bracketing:");
+        screenUpdate(2, 0, menu_strings[menu_item]);
         screenPrintCentre(String(camera_bracket));           
         publish_update = false;
-
       }      
 
       break;
@@ -1129,7 +1126,7 @@ void menuInteractions(){
       }
 
       if (publish_update){ //only write to the screen when a change to the variables has been flagged
-        screenUpdate(2, 0 , "Return to start:");
+        screenUpdate(2, 0, menu_strings[menu_item]);
         return_to_start == true ? screenPrintCentre("Enabled") : screenPrintCentre("Disabled");
         publish_update = false;
       }
@@ -1143,11 +1140,9 @@ void menuInteractions(){
       }
 
       if (publish_update){ //only write to the screen when a change to the variables has been flagged
-
-        screenUpdate(2, 0, "Unit of measure:");
-        screenPrintCentre(String(stringUnitOfMeasure()));  
+        screenUpdate(2, 0, menu_strings[menu_item]);
+        screenPrintCentre(String(menu_strings_uom[active_unit_of_measure_multiplier]));  
         publish_update = false;
-
       }
 
       break; 
@@ -1160,12 +1155,10 @@ void menuInteractions(){
       }
 
       if (publish_update){ //only write to the screen when a change to the variables has been flagged
-
-        screenUpdate(2, 0 , "Stepper speed:");
+        screenUpdate(2, 0, menu_strings[menu_item]);
         String step_delay_string = String(step_delay) += "uS";
         screenPrintCentre(step_delay_string);  
         publish_update = false;
-
       }
 
       break; 
@@ -1179,12 +1172,10 @@ void menuInteractions(){
       }
 
       if (publish_update){ //only write to the screen when a change to the variables has been flagged
-
-        screenUpdate(2, 0 , "Microstepping:");
+        screenUpdate(2, 0, menu_strings[menu_item]);
         String microstepping_string = "1/" + String(available_micro_stepping[active_micro_stepping]);
         screenPrintCentre(microstepping_string);  
         publish_update = false;
-
       }
 
       break;
@@ -1197,7 +1188,7 @@ void menuInteractions(){
 
       if (publish_update){ //only write to the screen when a change to the variables has been flagged
 
-        screenUpdate(2, 0, "Linear Stage:");
+        screenUpdate(2, 0, menu_strings[menu_item]);
 
         switch(active_hardware_calibration){
 
@@ -1226,7 +1217,7 @@ void menuInteractions(){
 
       if (publish_update){ //only write to the screen when a change to the variables has been flagged
 
-        screenUpdate(2, 0, "Bluetooth:");
+        screenUpdate(2, 0, menu_strings[menu_item]);
         
         if(bluetooth_enabled){
           bluetooth_connected == true ? screenPrintCentre("Connected") : screenPrintCentre("Unconnected");  
@@ -1265,17 +1256,7 @@ void loop(){
 
     serialCommunications();
 
-    if(mcp_interrupt_fired == true) handleMcpInterrupt(); //if an interrupt fired from the mcp23017, find out which pin fired it and deal with it
-
-    if (traverse_menus == true) { //use encoder to scroll through menu items
-
-      settingUpdate(menu_item, 0, 12); //display the currently selected menu item
-
-      //create looping navigation
-      if(menu_item == 12) menu_item = 1;
-      if(menu_item == 0) menu_item = 11;
-
-    }
+    if(mcp_interrupt_fired) handleMcpInterrupt(); //if an interrupt fired from the mcp23017, find out which pin fired it and deal with it
 
     menuInteractions(); //change menu options and update the screen when changed
     cronJobs(); //run timer driven tasks
@@ -1307,7 +1288,7 @@ void loop(){
       screen.setPrintPos(0,4);
       screen.print("Advance ");
       screen.print(slice_size);
-      screen.print(stringUnitOfMeasure());
+      screen.print(menu_strings_uom[active_unit_of_measure_multiplier]);
 
       if(stackCancelled()){ //exit early if the stack has been cancelled
        break;
