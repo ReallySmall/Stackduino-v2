@@ -19,6 +19,7 @@
 #include "DigoleSerial.h" //https://github.com/chouckz/HVACX10Arduino/blob/master/1.0.1_libraries/DigoleSerial/DigoleSerial.h
 #include "Wire.h"
 #include "Adafruit_MCP23017.h"
+#include "LowPower.h" //https://github.com/rocketscream/Low-Power
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  INSTANTIATE REQUIRED LIBRARY OBJECTS                                                                //       
@@ -92,8 +93,9 @@ boolean publish_update = true; //true whenever functions are called which change
 
 int incoming_serial; //store latest byte from incoming serial stream
 float calculated_voltage_reading = 0; //the actual battery voltage as calculated through the divider
-/*TODO*/int system_timeout_sleep = 10; //minutes of inactivity to wait until controller enters sleep mode - set to 0 to disable
+int system_timeout_sleep = 10; //minutes of inactivity to wait until controller enters sleep mode - set to 0 to disable
 int system_timeout_off = 20; //minutes of inactivity to wait until controller switches itself off - set to 0 to disable
+int minutes_elapsed = 0; //number of 1 minute periods elapsed
 boolean system_idle = true; //true until the controller is interacted with
 
 boolean stepper_driver_disable = true; //whether to disable the A4988 stepper driver when possible to save power and heat
@@ -197,6 +199,47 @@ void setup() {
 }
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  SYSTEM FUNCTIONS                                                                                    //       
+////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+void systemSleep(boolean staged_shutdown = true){ 
+/* SEND TO SLEEP
+ *
+ * uses the lowPower libary
+ *
+ * staged_shutdown => when true controller sleeps for 4 seconds, counting up additional minutes until finally
+ *                    switching the controller off. when false the controller sleeps indefinitely until 
+ *                    woken by an interrupt (any button).
+ */
+  
+  staged_shutdown == true ? LowPower.powerDown(SLEEP_4S, ADC_OFF, BOD_OFF) : LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF); 
+
+}
+
+void systemWake(){ 
+/* RESTART ANY SUSPENDED PERIPHERALS 
+ *
+ * tasks for the controller to do once it wakes up
+ */
+
+  screen.backLightOn();//switch off screen
+  system_idle = true;
+  minutes_elapsed = 0;
+
+}
+
+void systemOff(){ 
+/* POWER OFF 
+ *
+ * controller powers itself off by pulling the enable pin on the voltage regulator low
+ */
+
+  Serial.print("system off");
+  //mcp.digitalWrite(switch_off, LOW);
+
+}
+
+/*////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  UPDATE THE SCREEN IF DATA CHANGES                                                                   //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
@@ -263,6 +306,7 @@ void bluetoothTogglePower(){ /* TOGGLES VCC TO THE BLUETOOTH HEADER */
 
 void buttonMainToggle(){ /* RETURN CURRENT TOGGLE STATE OF MAIN PUSH BUTTON */
 
+  system_idle = false;
   static int button_debounce = 400;
   button_main_reading = digitalRead(button_main);
 
@@ -369,42 +413,60 @@ void cameraShutterSignal() { /* SEND SHUTTER SIGNAL */
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  TASKS WHICH RUN EVERY SO OFTEN ON A TIMER                                                           //
 //  Periodically check the battery level                                                                //
-//  Switch off the controller if it has been unused for n minutes                                      //       
+//  Sleep or switch off the controller if it has been unused for n minutes                              //                                       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/  
 
 void cronJobs(){
 
   static unsigned long a_minute = millis() + 60000; // 1 minute from now
-  static int minutes_elapsed = 0; //number of 1 minute periods elapsed
 
   if(millis() >= a_minute){ //every 1 minute
-    a_minute = millis() + 60000; //reset the timer
+    Serial.println("a minute");
     batteryMonitor(); //check the battery level
     
-    if(system_idle == false){ //if the controller has been used
+    if(!system_idle){ //if the controller has been used in the past minute
       minutes_elapsed = 0; //restart the minutes counter
       system_idle = true; //and reset the system flag
     } else {
       minutes_elapsed++; //keep count of minutes elapsed
+       Serial.println(minutes_elapsed);
     }
+    
+    a_minute = millis() + 60000; //reset the timer again to 1 minute from now
 
   }
 
-  if(system_timeout_sleep && (system_timeout_sleep == minutes_elapsed)){ //every n minutes
-    //put the controller in sleep mode if it has been unused, or restart the instance counter
-    if(system_idle == true){
-      minutes_elapsed = 0;
-      sleep(); //TODO continue counting minutes elapsed when in sleep mode
-    } 
+  //if enabled, after n minutes put the idle controller in sleep mode
+  if(system_timeout_sleep && (system_timeout_sleep < system_timeout_off) && (minutes_elapsed >= system_timeout_sleep)){ 
+    
+    byte naps = 0;
+
+    while(system_idle){
+      
+      systemSleep(); //have a nap for 4 seconds
+      naps++;
+     Serial.println(naps); 
+      
+      if(naps == 15){ 
+        minutes_elapsed++;
+        naps = 0;
+      }
+
+      if(system_timeout_off && (minutes_elapsed >= system_timeout_off)){
+        //systemOff();
+        Serial.print("off");
+      }
+
+    }
+
+    systemWake(); //an interrupt woke the controller
+
   }
 
-  if(system_timeout_off && (system_timeout_off == minutes_elapsed)){ //every n minutes
-    //switch the controller off if it has been unused, or restart the instance counter
-    if(system_idle == true){
-      mcp.digitalWrite(switch_off, LOW);
-    } else {
-      minutes_elapsed = 0;
-    }
+  //if enabled (and sleep mode is disabled) after n minutes switch off the controller 
+  if(system_timeout_off > system_timeout_sleep && (minutes_elapsed >= system_timeout_off)){
+    //systemOff();
+    Serial.print("off-2");
   }
 
 }
@@ -467,6 +529,7 @@ ISR (PCINT1_vect){ //read the encoder if the analogue pin port is interrupted
 void mcpInterrupt(){ /* PROCESS INTERRUPTS FROM THE MCP23017 */
 
   mcp_interrupt_fired = true;
+  system_idle = false;
 
 }
 
@@ -480,7 +543,7 @@ void handleMcpInterrupt(){
 
   //if a switchoff signal was recieved from the pushbutton controller, pull kill pin low to power off
   if(pin == switch_off_flag && val == LOW) {
-    mcp.digitalWrite(switch_off, LOW);
+    systemOff();
   }
   
   //if a manual stage control button was pressed
@@ -581,7 +644,7 @@ void screenPrintBluetooth(){ /* PRINT BLUETOOTH ICONS */
 
 }
 
-void screenPrintCentre(String text, int print_pos_y = 4){ /* PRINT TEXT CENTERED ON SCREEN */
+void screenPrintCentre(String text, int print_pos_y = 4, byte text_colour = 0){ /* PRINT TEXT CENTERED ON SCREEN */
 
   int text_length = text.length();
   int offset = (16 - text_length) / 2; //calculate the offset for the number of characters in the string
@@ -592,6 +655,10 @@ void screenPrintCentre(String text, int print_pos_y = 4){ /* PRINT TEXT CENTERED
     screen.setTextPosOffset(4, 0); //so the text needs to be nudged to the right a bit on a pixel level to centre it properly 
   } 
 
+  //if(!traverse_menus){
+    screen.drawBox(16,48,96,16);
+    screen.setColor(text_colour); //default to black text on white as this is normally printing a selected menu item
+  //}
   screen.print(text); //finally, print the centered text to the screen
 
 }
@@ -672,12 +739,12 @@ void serialCommunications(){
         bluetoothTogglePower();
         break;
 
-      case 'i': //put controller in sleep mode
-        //TODO
-        break;
+      case 'i': //put controller into sleep mode
+        systemSleep(false); //only wake on interrupt
+        break;  
 
       case 'j': //switch off controller
-        mcp.digitalWrite(switch_off, LOW);
+        systemOff();
         break;
 
       default: //unmatched character - send error and pretend the function call never happened
@@ -685,16 +752,6 @@ void serialCommunications(){
         system_idle = true;
     }
   }
-}
-
-/*////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  SEND TO SLEEP TO SAVE POWER                                                                         //       
-////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-
-void sleep(){
-
-  //TODO
-
 }
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1212,7 +1269,7 @@ void loop(){
 
     if (traverse_menus == true) { //use encoder to scroll through menu items
 
-      settingUpdate(menu_item, 0, 10); //display the currently selected menu item
+      settingUpdate(menu_item, 0, 12); //display the currently selected menu item
 
       //create looping navigation
       if(menu_item == 12) menu_item = 1;
