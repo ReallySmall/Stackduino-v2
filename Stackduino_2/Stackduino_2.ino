@@ -13,60 +13,60 @@
 
 
 /* DEFINES AND DEPENDENCIES */
-#define _Digole_Serial_SPI_ //OLED screen - must be configured with solder jumper to run in SPI mode
-#define ENC_A A0 //rotary encoder
-#define ENC_B A1 //rotary encoder
-#define ENC_PORT PINC //rotary encoder
+#define _Digole_Serial_SPI_ // OLED screen configured with solder jumper to run in SPI mode
+#define ENC_A A0 // Rotary encoder
+#define ENC_B A1 // Rotary encoder
+#define ENC_PORT PINC // Rotary encoder
 
-#include "DigoleSerial.h" //https://github.com/chouckz/HVACX10Arduino/blob/master/1.0.1_libraries/DigoleSerial/DigoleSerial.h
-#include "Wire.h"
-#include "Adafruit_MCP23017.h"
-#include "LowPower.h" //https://github.com/rocketscream/Low-Power
+#include "DigoleSerial.h" // https://github.com/chouckz/HVACX10Arduino/blob/master/1.0.1_libraries/DigoleSerial/DigoleSerial.h
+#include "Wire.h" //
+#include "Adafruit_MCP23017.h" //
+#include "LowPower.h" // https://github.com/rocketscream/Low-Power
 
 
 
-/* INSTANTIATE REQUIRED LIBRARY OBJECTS */                                                                       
-Adafruit_MCP23017 mcp; //16 pin port expander
-DigoleSerialDisp screen(8,9,10);  //OLED screen - SPI mode - Pin 8: data, 9:clock, 10: SS
+/* CREATE REQUIRED OBJECTS */                                                                       
+Adafruit_MCP23017 mcp; // 16 pin IO port expander
+DigoleSerialDisp screen(8,9,10);  // Digole 128x64 OLED screen - SPI mode - Pin 8: data, 9:clock, 10: SS
 
 
 
 /* SET UP REMAINING ATMEGA PINS */                                                                          
-const byte mcp_interrupt = 2; //MCP23017 interrupt
-const byte button_main = 3;  //start/ stop stack button
-const byte stepper_driver_direction = 4; //direction pin on A4988 stepper driver
-const byte stepper_driver_do_step = 5; //step pin on A4988 stepper driver
-const byte camera_focus = 6; //camera autofocus
-const byte camera_shutter = 7; //camera shutter
-const byte batt_sense = A2; //analogue read battery sample voltage line
-const byte batt_fet = 17; //connect/ disconnect battery sample voltage line
-const byte ext_analogue_1 = A6; //analogue pin broken out through DB15 - unused (for future functionality)
-const byte ext_analogue_2 = A7; //analogue pin broken out through DB15 - unused (for future functionality)
+const byte mcp_interrupt = 2; // Incoming MCP23017 interrupts
+const byte button_main = 3;  // Main start/ stop stack button
+const byte stepper_driver_direction = 4; // Direction pin on A4988 stepper driver
+const byte stepper_driver_do_step = 5; // Step pin on A4988 stepper driver
+const byte camera_focus = 6; // Camera autofocus signal
+const byte camera_shutter = 7; // Camera shutter signal
+const byte batt_sense = A2; // Battery voltage sampling
+const byte batt_fet = 17; // Connect/ disconnect battery voltage sampling line
+const byte ext_analogue_1 = A6; // Analogue pin (supports analogueRead() only) broken out through DB15 - currently unused
+const byte ext_analogue_2 = A7; // Analogue pin (supports analogueRead() only) broken out through DB15 - currently unused
 
 
 
 /*  SET UP MCP23017 PINS */                                                                                      
-const byte stepper_driver_forward = 0; //for manual positioning
-const byte stepper_driver_backward = 1; //for manual positioning
-const byte power_in_status = 2; //LTC4412 stat pin - indicates whether controller is currently powered by wall adapter or battery
-const byte switch_off_flag = 3; //LTC2950 interrupt pin - signals to the controller that it is about to be switched off
-const byte switch_off = 4; //LTC2950 kill pin - disables 3.3v regulator and switches off controller
-const byte limit_switch_front = 5; //limit switch to stop stepper motor if end of travel is reached
-const byte limit_switch_back = 6; //limit switch to stop stepper motor if end of travel is reached
-const byte bluetooth_toggle = 7; //toggles power to bluetooth breakout board (if attached)
-const byte ext_digital_1 = 8; //digital pin broken out through DB15 - unused (for future functionality)
-const byte ext_digital_2 = 9;//digital pin broken out through DB15 - unused (for future functionality)
-const byte button_rotary = 10; //select/ unselect menu item button
-const byte stepper_driver_ms1 = 11; //toggles A4988 stepper driver MS1 pin to control degree of microstepping
-const byte stepper_driver_ms2 = 12; //toggles A4988 stepper driver MS2 pin to control degree of microstepping
-const byte stepper_driver_ms3 = 13; //toggles A4988 stepper driver MS3 pin to control degree of microstepping
-const byte stepper_driver_enable = 14; //disable/enables A4988 stepper driver to conserve power
-const byte stepper_driver_sleep = 15; //sleep/wake A4988 stepper driver to conserve power
+const byte stepper_driver_forward = 0; // For manual stage positioning
+const byte stepper_driver_backward = 1; // For manual stage positioning
+const byte power_in_status = 2; // LTC4412 stat pin - indicates whether controller is currently powered by wall adapter or battery
+const byte switch_off_flag = 3; // LTC2950 int pin - signals to the controller that it is about to be switched off
+const byte switch_off = 4; // LTC2950 kill pin - disables 3.3v regulator and switches off controller
+const byte limit_switch_front = 5; // Limit switch to stop stepper motor if end of travel is reached
+const byte limit_switch_back = 6; // Limit switch to stop stepper motor if end of travel is reached
+const byte bluetooth_toggle = 7; // Toggles power to bluetooth breakout board header
+const byte ext_digital_1 = 8; // Digital pin broken out through DB15 - currently unused
+const byte ext_digital_2 = 9;// Digital pin broken out through DB15 - currently unused
+const byte button_rotary = 10; // Select/ unselect menu item button
+const byte stepper_driver_ms1 = 11; // Toggles A4988 stepper driver MS1 pin to control degree of microstepping
+const byte stepper_driver_ms2 = 12; // Toggles A4988 stepper driver MS2 pin to control degree of microstepping
+const byte stepper_driver_ms3 = 13; // Toggles A4988 stepper driver MS3 pin to control degree of microstepping
+const byte stepper_driver_enable = 14; // Disable/enables A4988 stepper driver to conserve power
+const byte stepper_driver_sleep = 15; // Sleep/wake A4988 stepper driver to conserve power
 
 
 
 /* SETTINGS */                                                                                                   
-const char* menu_strings[] = {"System settings", //screen menu strings
+const char* menu_strings[] = {"System settings", // Screen menu strings
                               "Slice size", 
                               "Number of slices", 
                               "Pause time", 
@@ -79,9 +79,10 @@ const char* menu_strings[] = {"System settings", //screen menu strings
                               "Linear stage", 
                               "Bluetooth"};
 
-const char* menu_strings_uom[] = {"mn", "mm", "cm"}; // Unit of measure strings for printing
+const char* unit_of_measure_strings[] = {"mn", "mm", "cm"}; // Unit of measure strings for printing
 const int unit_of_measure_multipliers[] = {1, 1000, 10000}; // Multipliers for active unit of measure (mn, mm or cm)
-const int available_micro_stepping[] = {1, 2, 4, 8, 16}; // Degrees of microstepping the a4988 stepper driver can use (1 is full stepping)
+const byte micro_stepping[5][5] = {{1, 2, 4, 8, 16}, // Degrees of microstepping the a4988 stepper driver can use (1 is full stepping)
+                                 {1, 1, 1, 1, 1}};
 
 // The controller relies on the assumption that 1 full step made by the stepper motor will move the 
 // linear stage by 1 (or as close as possible to 1) micron.
@@ -118,13 +119,13 @@ int system_timeout_sleep = 10; // Minutes of inactivity to wait until controller
 int system_timeout_off = 20; // Minutes of inactivity to wait until controller switches itself off - set to 0 to disable
 int minutes_elapsed = 0; // Number of 1 minute periods elapsed
 int step_delay = 2000; // Delay in microseconds between stepper motor steps, governing motor speed - too low may cause missed steps or stalling
-int active_micro_stepping = 4; // Array index of selected micro-stepping setting
-int active_hardware_calibration = 0; // Array index of selected hardware calibration setting
 int return_to_start = 0; // Whether linear stage is returned to its starting position at the end of stack
 int slices = 10; // Default number of focus slices to make in the stack
 int slice_size = 10; // Default depth of each focus slice - used with unit_of_measure
 int slice_counter = 0; // Count of number of focus slices made so far in the stack
-int active_unit_of_measure_multiplier = 0; // Array index of selected multiplier
+int active_hc = 0; // Array index of selected hardware calibration setting
+int active_ms = 4; // Array index of selected micro-stepping setting
+int active_uomm = 0; // Array index of selected unit of measure multiplier
 
 
 
@@ -138,46 +139,39 @@ void setup() {
   pinMode(button_main, INPUT_PULLUP); 
   pinMode(ENC_A, INPUT_PULLUP);  
   pinMode(ENC_B, INPUT_PULLUP);
-  pinMode(stepper_driver_direction, OUTPUT); 
-  digitalWrite(stepper_driver_direction, LOW); 
-  pinMode(stepper_driver_do_step, OUTPUT); 
-  digitalWrite(stepper_driver_do_step, LOW);     
-  pinMode(camera_focus, OUTPUT); 
-  digitalWrite(camera_focus, LOW);
-  pinMode(camera_shutter, OUTPUT); 
-  digitalWrite(camera_shutter, LOW);
-  pinMode(batt_fet, OUTPUT); 
-  digitalWrite(batt_fet, LOW);
+  pinMode(stepper_driver_direction, OUTPUT); digitalWrite(stepper_driver_direction, LOW); 
+  pinMode(stepper_driver_do_step, OUTPUT); digitalWrite(stepper_driver_do_step, LOW);     
+  pinMode(camera_focus, OUTPUT); digitalWrite(camera_focus, LOW);
+  pinMode(camera_shutter, OUTPUT); digitalWrite(camera_shutter, LOW);
+  pinMode(batt_fet, OUTPUT); digitalWrite(batt_fet, LOW);
 
   
 
   /* START MCP23017 AND SET PINMODES AND PULLUPS */       
   mcp.begin(); // Using default address 0
 
-  int mcp_input_pins[] = {0,1,2,3,5,6,10};
+  byte mcp_input_pins[] = {0,1,2,3,5,6,10};
   
-  for(int i=0; i < 7; i++){
+  for(byte i=0; i < 7; i++){
 
     mcp.pinMode(mcp_input_pins[i], INPUT);
     mcp.pullUp(mcp_input_pins[i], HIGH);
 
   }
 
-  int mcp_output_pins[] = {4,7,8,9,11,12,13,14,15};
+  byte mcp_output_pins[] = {4,7,8,9,11,12,13,14,15};
   
-  for(int i=0; i < 9; i++){
+  for(byte i=0; i < 9; i++){
 
     mcp.pinMode(mcp_output_pins[i], OUTPUT);
     mcp.digitalWrite(mcp_output_pins[i], HIGH);
 
   }
-  
-  mcp.digitalWrite(8, LOW); // The currently unused pin needs setting LOW
-  mcp.digitalWrite(9, LOW); // The currently unused pin needs setting LOW
+
   mcp.digitalWrite(14, LOW); // The A4988 enable pin needs setting LOW
 
-  
 
+  
   /* SET UP INTERRUPTS */       
   attachInterrupt(0, mcpInterrupt, FALLING); // ATMega external interrupt 0
   attachInterrupt(1, buttonMainToggle, FALLING); // ATMega external interrupt 1
@@ -185,7 +179,7 @@ void setup() {
   pciSetup(ENC_A); // ATMega pin change interrupt
   pciSetup(ENC_B); // ATMegapin change interrupt 
   
-  mcp.setupInterrupts(true, false, LOW); // MCP23017 interupts
+  mcp.setupInterrupts(true, false, LOW); // MCP23017 interupts (trigger ATMega external interrupt 0)
   mcp.setupInterruptPin(stepper_driver_forward, FALLING);
   mcp.setupInterruptPin(stepper_driver_backward, FALLING);
   mcp.setupInterruptPin(switch_off_flag,FALLING);
@@ -195,11 +189,12 @@ void setup() {
 
 
   /* FINAL PRE-START CHECKS AND SETUP */       
-  Serial.begin(19200); // Start serial
-  stepperDriverMicroStepping(available_micro_stepping[active_micro_stepping]); // Set the degree of microstepping used by the A4988
+  Serial.begin(9600); // Start serial (always initialise at 9600 for compatibility with OLED)
   stepperDriverClearLimitSwitch(); // Make sure neither limit switch is hit on startup - rectify if so
   batteryMonitor(); // Check the battery level
-  bluetoothTogglePower(); // Switch on Bluetooth if the option is enabled by default
+
+  screen.displayStartScreen(0); // FOR TESTING
+  screen.displayConfig(0); // FOR TESTING
   
 }
 
@@ -224,7 +219,7 @@ void systemSleep(){
 
 
 
-/* RESTART ANY SUSPENDED PERIPHERALS 
+/* WAKE UP 
  *
  * Tasks for the controller to do once it wakes up
  *
@@ -271,7 +266,7 @@ void screenUpdate(int print_pos_y = 2, int print_pos_x = 0, String text = ""){ /
   screenPrintPowerSource(); // Display the current power source in top right corner
   screenPrintMenuArrows(); // Print menu arrows (if a stack is not running)
   screen.setPrintPos(print_pos_x, print_pos_y); // Set text position to beginning of content area
-  if(text != ""){
+  if(text){
     screen.print(text); // Print any supplied text string
   }
   system_idle = false; // Flag that the system was recently used
@@ -318,7 +313,9 @@ void batteryMonitor(){
  */      
 void bluetoothTogglePower(){
   
-  bluetooth_enabled == true ? mcp.digitalWrite(bluetooth_toggle, LOW) : mcp.digitalWrite(bluetooth_toggle, HIGH);
+  if(!start_stack){
+    mcp.digitalWrite(bluetooth_toggle, bluetooth_enabled == 1 ? LOW : HIGH);
+  }
 
 }
 
@@ -331,6 +328,7 @@ void bluetoothTogglePower(){
  */ 
 void buttonMainToggle(){
 
+  Serial.print("buttonMainToggle()");
   system_idle = false;
   static int button_debounce = 400;
   button_main_reading = digitalRead(button_main);
@@ -353,6 +351,7 @@ void buttonMainToggle(){
  */ 
 void buttonRotaryToggle(){
 
+  Serial.print("buttonRotaryToggle()");
   static int button_debounce = 400;
   button_rotary_reading = mcp.digitalRead(button_rotary);
   
@@ -402,15 +401,11 @@ void cameraProcessImages(){
       screen.print(camera_pause - i); // Print number of seconds remaining
       screen.print("s");
 
-      if(stackCancelled()){ // Exit early if the stack has been cancelled
-        break; 
-      }
+      if(stackCancelled()) break; // Exit early if the stack has been cancelled
 
     }
 
-    if(stackCancelled()){ //exit early if the stack has been cancelled
-      break; 
-    }
+    if(stackCancelled()) break; // Exit early if the stack has been cancelled
 
   }
 }
@@ -444,24 +439,25 @@ void cameraShutterSignal() {
       screenUpdate();
     }
 
-    if(stackCancelled()){ // Exit early if the stack has been cancelled
-      break; 
-    }
+    if(stackCancelled()) break; // Exit early if the stack has been cancelled 
 
   }
 }
 
 
 
-/* SCHEDULED TASKS
+/* SYSTEM TASKS
  *
+ * Switch Bluetooth on or off
  * Periodically check the battery level
  * Sleep or switch off the controller if it has been unused for n minutes
  *
  */                                       
-void scheduledTasks(){
+void systemTasks(){
 
   static unsigned long a_minute = millis() + 60000; // 1 minute from now
+
+  bluetoothTogglePower(); // Switch Bluetooth port on or off
 
   if(millis() >= a_minute){ // Every 1 minute
     Serial.println("a minute");
@@ -580,6 +576,7 @@ ISR (PCINT1_vect){
 /* FLAG NEW INTERRUPTS FROM THE MCP23017 */
 void mcpInterrupt(){ 
 
+  Serial.print("test");
   mcp_interrupt_fired = true;
   system_idle = false;
 
@@ -589,6 +586,8 @@ void mcpInterrupt(){
 
 /* PROCESS FLAGGED INTERRUPTS FROM THE MCP23017 */
 void handleMcpInterrupt(){
+
+  Serial.print("handleMcpInterrupt()");
   
   detachInterrupt(0); // Detach the interrupt while the current instance is dealt with
 
@@ -603,7 +602,7 @@ void handleMcpInterrupt(){
     stepperDriverManualControl();
   }
 
-  if(pin == limit_switch_front && val == LOW || pin == limit_switch_back && val == LOW){ // If a limit switch was hit, clear it
+  if((pin == limit_switch_front && val == LOW) || (pin == limit_switch_back && val == LOW)){ // If a limit switch was hit, clear it
     stepperDriverClearLimitSwitch();
   }
 
@@ -818,8 +817,7 @@ void serialCommunications(){
         break;
 
       case 'h': // Switch Bluetooth on or off
-        //bluetoothTogglePower();
-        bluetooth_enabled == false;
+        bluetooth_enabled = bluetooth_enabled == true ? false : true;
         break;
 
       case 'i': // Put controller into sleep mode
@@ -831,7 +829,8 @@ void serialCommunications(){
         break;
 
       default: // Unmatched character - send error then pretend the function call never happened
-        Serial.print(incoming_serial + " does not have a matching function");
+        Serial.println(incoming_serial);
+        Serial.print(" does not have a matching function");
         system_idle = true;
     }
   }
@@ -839,7 +838,7 @@ void serialCommunications(){
 
 
 
-/* CHECK IF THE FOCUS STACK HAS BEN CANCELLED */
+/* CHECK IF THE FOCUS STACK HAS BEEN CANCELLED */
 boolean stackCancelled(){ 
 
   if(!start_stack){
@@ -863,7 +862,7 @@ void stepperDriverEnable(boolean enable = true, byte direction = 1) {
   if(enable){
     mcp.digitalWrite(stepper_driver_enable, LOW);
     digitalWrite(stepper_driver_direction, direction);
-    stepperDriverMicroStepping(available_micro_stepping[active_micro_stepping]);
+    stepperDriverMicroStepping();
   } else if(stepper_driver_disable){
     mcp.digitalWrite(stepper_driver_enable, HIGH);
   }
@@ -887,7 +886,7 @@ void stackEnd(){
   if (return_to_start){   
     stepperDriverEnable(true, 1);
     
-    float exact_return_steps = slice_size * slice_counter * hardware_calibration_settings[active_hardware_calibration] * unit_of_measure_multipliers[active_unit_of_measure_multiplier] * available_micro_stepping[active_micro_stepping];
+    float exact_return_steps = slice_size * slice_counter * hardware_calibration_settings[active_hc] * unit_of_measure_multipliers[active_uomm] * micro_stepping[0][active_ms];
     int rounded_return_steps = (int) exact_return_steps - 0.5;
     
     screenUpdate();
@@ -898,17 +897,13 @@ void stackEnd(){
     for (int i; i < rounded_return_steps; i++){
 
       stepperDriverStep();
-      if(!stepperDriverInBounds()){
-       break; 
-      }
+      if(!stepperDriverInBounds()) break; 
 
     }
 
-    if(!stepperDriverInBounds()) {
-      stepperDriverClearLimitSwitch();
-    }
+    if(!stepperDriverInBounds()) stepperDriverClearLimitSwitch();
+    stepperDriverEnable(false);
 
-    stepperDriverEnable(false); 
   }
 
   menu_item = 1; // Set menu to first option screen
@@ -980,6 +975,8 @@ boolean stepperDriverInBounds(){
 /* MOVE STAGE BACKWARD AND FORWARD */
 void stepperDriverManualControl(){ 
 
+  Serial.print("handleMcpInterrupt()");
+
   // Move stage forwards
   if ((mcp.digitalRead(stepper_driver_forward) == LOW || incoming_serial == 'f') && stepperDriverInBounds()) {
     screenUpdate();
@@ -1016,62 +1013,26 @@ void stepperDriverManualControl(){
 
   }
 
-  if(!stepperDriverInBounds()) {
-    stepperDriverClearLimitSwitch();
-  }
-
+  if(!stepperDriverInBounds()) stepperDriverClearLimitSwitch();
   publish_update = true; // Go back to displaying the active menu item once manual control button is no longer pressed
 
 }
 
 
 
-/* SET DEGREE OF MICROSTEPPING FOR A4988 STEPPER DRIVER TO USE */
-void stepperDriverMicroStepping(int step_setting){
+/* SET DEGREE OF MICROSTEPPING FOR A4988 STEPPER DRIVER TO USE 
+ * 
+ * Loops through the active microstepping subarray and writes the A4988's MSx pins HIGH or LOW accordingly
+ * MSx pins are MCP23017 11 - 13 
+ *
+ */
+void stepperDriverMicroStepping(){
 
-  switch(step_setting){
+  //for(byte i=0, byte j=11; i<2; i++, j++){
 
-    case 1: //full step (no microstepping)
+    //mcp.digitalWrite(j, micro_stepping[1][active_ms][i]);
 
-      mcp.digitalWrite(stepper_driver_ms1, LOW);
-      mcp.digitalWrite(stepper_driver_ms2, LOW);
-      mcp.digitalWrite(stepper_driver_ms3, LOW);
-
-      break;
-
-    case 2: //half step
-
-      mcp.digitalWrite(stepper_driver_ms1, HIGH);
-      mcp.digitalWrite(stepper_driver_ms2, LOW);
-      mcp.digitalWrite(stepper_driver_ms3, LOW);
-
-      break;
-
-    case 4: //quarter step
-
-      mcp.digitalWrite(stepper_driver_ms1, LOW);
-      mcp.digitalWrite(stepper_driver_ms2, HIGH);
-      mcp.digitalWrite(stepper_driver_ms3, LOW);
-
-      break;
-
-    case 8: //eighth step
-
-      mcp.digitalWrite(stepper_driver_ms1, HIGH);
-      mcp.digitalWrite(stepper_driver_ms2, HIGH);
-      mcp.digitalWrite(stepper_driver_ms3, LOW);
-
-      break;
-
-    case 16: //sixteenth step
-
-      mcp.digitalWrite(stepper_driver_ms1, HIGH);
-      mcp.digitalWrite(stepper_driver_ms2, HIGH);
-      mcp.digitalWrite(stepper_driver_ms3, HIGH);
-
-      break;
-
-  }
+  //}
 
 }
 
@@ -1173,13 +1134,14 @@ void menuInteractions(){
 
     case 7: // Select the unit of measure to use for focus slices: Microns, Millimimeters or Centimeters
 
-      if (!traverse_menus) settingUpdate(active_unit_of_measure_multiplier, 0, 2);
-      menu_var = String(menu_strings_uom[active_unit_of_measure_multiplier]);
+      if (!traverse_menus) settingUpdate(active_uomm, 0, 2);
+      menu_var = String(unit_of_measure_strings[active_uomm]);
 
       break; 
 
     case 8: // Adjust the stepper motor speed (delay in microseconds between slice_size)
-      // Setting this too low may cause the motor to begin stalling or failing to move at all
+      // A smaller number gives faster motor speed but reduces torque
+      // Setting this too low may cause the motor to miss steps or stall
 
       if (!traverse_menus) settingUpdate(step_delay, 1000, 8000);
       menu_var = String(step_delay) += "uS";
@@ -1189,15 +1151,15 @@ void menuInteractions(){
     case 9: // Adjust the degree of microstepping made by the a4988 stepper driver
     // More microsteps give the best stepping resolution but may require more power for consistency and accuracy
       
-      if (!traverse_menus) settingUpdate(active_micro_stepping, 0, 4);
-      menu_var = "1/" + String(available_micro_stepping[active_micro_stepping]);
+      if (!traverse_menus) settingUpdate(active_ms, 0, 4);
+      menu_var = "1/" + String(micro_stepping[0][active_ms]);
 
       break;
 
     case 10: // Select the active hardware calibration constant
 
-      if (!traverse_menus) settingUpdate(active_hardware_calibration, 0, 1);
-      menu_var = active_hardware_calibration == 0 ? "Studio" : "Field";     
+      if (!traverse_menus) settingUpdate(active_hc, 0, 1);
+      menu_var = active_hc == 0 ? "Studio" : "Field";     
 
       break;
 
@@ -1226,86 +1188,79 @@ void menuInteractions(){
 
 
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  MAIN LOOP - MENU SCREENS AND MANUAL STAGE CONTROL                                                   //                                                                                                     
-//                                                                                                      //
-//  Manual control of linear stage is only enabled when in menu section - prevents running stacks       //
-//  being ruined by accidental button presses                                                           //
-//                                                                                                      //
-//  Menu navigation controlled either by rotary encoder with integral push button, or via serial        //
+//  MAIN LOOP                                                                                           //                                                                                                     
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-
 void loop(){
 
+
+
+  /* MENUS AND STAGE CONTROL
+   *
+   * Manual control of linear stage is only enabled when in this section of the loop 
+   * - prevents running stacks being ruined by accidental button presses
+   * 
+   * Menu navigation controlled either by rotary encoder with integral push button, or via serial
+   *
+   */
   if (!start_stack){ // User settings menus and manual stage control
-
-    if(mcp_interrupt_fired) handleMcpInterrupt(); // Catch interrupts and run any required functions
-
+  
+    if(mcp_interrupt_fired){ 
+      Serial.print("fired");
+      handleMcpInterrupt(); // Catch interrupts and run any required functions
+    }
     serialCommunications();  // Check for commands via serial
-    bluetoothTogglePower(); // Switch Bluetooth port on or off
     menuInteractions(); // Change menu options and update the screen when changed
-    scheduledTasks(); // Run timer driven tasks such as battery level checks and low power modes
+    systemTasks(); // Run timer driven tasks such as battery level checks and sleep mode
 
-  } else { // End of setup menu section
+  } 
 
 
 
-/*////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  MAIN LOOP - FOCUS STACK.                                                                            //
-//                                                                                                      //
-//  The stage is advanced, images are captured, and the process is repeated for as many times as needed //      
-////////////////////////////////////////////////////////////////////////////////////////////////////////*/ 
+  /* FOCUS STACK
+   *
+   * Images are captured, the stage is advanced and the process is repeated for as many times as needed
+   *
+   */
+  else {
 
-    cameraProcessImages(); //take the image(s) for the first slice of the stack
+    slice_counter++; // Register the first image(s) of the stack is being taken
+    cameraProcessImages(); // Take the image(s) for the first slice of the stack
 
-    float exact_steps = slice_size * hardware_calibration_settings[active_hardware_calibration] * unit_of_measure_multipliers[active_unit_of_measure_multiplier] * available_micro_stepping[active_micro_stepping];
+    float exact_steps = slice_size * hardware_calibration_settings[active_hc] * unit_of_measure_multipliers[active_uomm] * micro_stepping[0][active_ms];
     int rounded_steps = (int) exact_steps - 0.5;
 
-    for (int i = 0; i < slices -1; i++){ //for each subsequent focus slice in the stack...
+    for (int i = 1; i < slices; i++){ // For each subsequent focus slice in the stack
 
-      slice_counter++; //count slices made in the stack so far
+      slice_counter++; // Record slices made in the stack so far
 
-      if(stackCancelled()){ //exit early if the stack has been cancelled
-       break;
-      }
+      if(stackCancelled()) break; // Exit early if the stack has been cancelled
 
-      //print the current position in the stack to the screen
-      screenPrintProgress();
+      screenPrintProgress(); // Print the current position in the stack
       screen.setPrintPos(0,4);
       screen.print("Advance ");
       screen.print(slice_size);
-      screen.print(menu_strings_uom[active_unit_of_measure_multiplier]);
+      screen.print(unit_of_measure_strings[active_uomm]);
 
-      if(stackCancelled()){ //exit early if the stack has been cancelled
-       break;
-      }
+      if(stackCancelled()) break; // Exit early if the stack has been cancelled
 
-      stepperDriverEnable(true, 1); //enable the A4988 stepper driver
-      pause(100);
+      stepperDriverEnable(true, 1); // Enable the A4988 stepper driver
 
       for (int i = 0; i < rounded_steps; i++){ 
 
-        stepperDriverStep(); //send a step signal to the stepper driver
-              
-        if(stackCancelled() || !stepperDriverInBounds()){ //exit early if the stack has been cancelled or a limit switch is hit
-          break;
-        }
+        stepperDriverStep(); // Send a step signal to the stepper driver     
+        if(stackCancelled() || !stepperDriverInBounds()) break; // Exit early if the stack has been cancelled or a limit switch is hit
 
       }
 
-      if(!stepperDriverInBounds()) {
-        stepperDriverClearLimitSwitch(); //clear hit limit switch
-      }
+      if(!stepperDriverInBounds()) stepperDriverClearLimitSwitch(); // Clear hit limit switch 
+      if(stackCancelled()) break; // Exit early if the stack has been cancelled
 
-      if(stackCancelled()){ //exit early if the stack has been cancelled
-        break;
-      }
-
-      stepperDriverEnable(false); //disable the stepper driver when not in use to save power  
-      cameraProcessImages(); //take image(s)
+      stepperDriverEnable(false); // Disable the stepper driver when not in use to save power  
+      cameraProcessImages(); // Take image(s)
 
     }
 
-    stackEnd();
+    stackEnd(); // End of focus stack tasks
 
   } 
 }
