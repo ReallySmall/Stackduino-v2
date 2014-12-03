@@ -67,22 +67,22 @@ const byte stepper_driver_sleep = 15; // Sleep/wake A4988 stepper driver to cons
 
 /* SETTINGS */                                                                                                   
 const char* menu_strings[] = {"System settings", // Screen menu strings
-                              "Slice size", 
-                              "Number of slices", 
-                              "Pause time", 
-                              "Mirror lockup", 
-                              "Bracketing", 
-                              "Return to start", 
-                              "Unit of measure", 
-                              "Stepper speed", 
-                              "Microstepping", 
-                              "Linear stage", 
-                              "Bluetooth"};
+"Slice size", 
+"Number of slices", 
+"Pause time", 
+"Mirror lockup", 
+"Bracketing", 
+"Return to start", 
+"Unit of measure", 
+"Stepper speed", 
+"Microstepping", 
+"Linear stage", 
+"Bluetooth"};
 
 const char* unit_of_measure_strings[] = {"mn", "mm", "cm"}; // Unit of measure strings for printing
 const int unit_of_measure_multipliers[] = {1, 1000, 10000}; // Multipliers for active unit of measure (mn, mm or cm)
-const byte micro_stepping[5][5] = {{1, 2, 4, 8, 16}, // Degrees of microstepping the a4988 stepper driver can use (1 is full stepping)
-                                 {1, 1, 1, 1, 1}};
+const byte micro_stepping[2][5][3] = {{{1},       {2},       {4},       {8},       {16}}, // Degrees of microstepping the A4988 stepper driver can use
+                                      {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0}, {1, 1, 1}}}; // HIGH/ LOW combinations to set A4988 MSx pins at
 
 // The controller relies on the assumption that 1 full step made by the stepper motor will move the 
 // linear stage by 1 (or as close as possible to 1) micron.
@@ -132,7 +132,7 @@ int active_uomm = 0; // Array index of selected unit of measure multiplier
 /* SETUP() */                                                                                                      
 void setup() {
 
-  
+
 
   /* SET ATMEGA PINMODES AND PULLUPS */      
   pinMode(mcp_interrupt, INPUT_PULLUP);
@@ -195,6 +195,7 @@ void setup() {
 
   screen.displayStartScreen(0); // FOR TESTING
   screen.displayConfig(0); // FOR TESTING
+  screen.print("STACKDUINO v2.1");
   
 }
 
@@ -207,12 +208,12 @@ void setup() {
 
 
 /* SEND TO SLEEP
- *
- * Uses the lowPower libary
- *
- */
+*
+* Uses the lowPower libary
+*
+*/
 void systemSleep(){ 
-  
+
   LowPower.powerDown(SLEEP_4S, ADC_OFF, BOD_OFF); 
 
 }
@@ -220,10 +221,10 @@ void systemSleep(){
 
 
 /* WAKE UP 
- *
- * Tasks for the controller to do once it wakes up
- *
- */
+*
+* Tasks for the controller to do once it wakes up
+*
+*/
 void systemWake(){ 
 
   system_idle = true;
@@ -234,10 +235,10 @@ void systemWake(){
 
 
 /* POWER OFF 
- *
- * The controller powers itself off by pulling the enable pin on the voltage regulator low
- *
- */
+*
+* The controller powers itself off by pulling the enable pin on the voltage regulator low
+*
+*/
 void systemOff(){ 
 
   Serial.print("system off");
@@ -248,14 +249,14 @@ void systemOff(){
 
 
 /* UPDATE THE SCREEN WHEN DATA CHANGES 
- *
- * Clears the screen then re-outputs it
- *
- * print_pos_y => Which text line to set the initial print position on 
- * print_pos_x => Which character on the text line to set the initial print position on
- * text => Text string to print
- *
- */
+*
+* Clears the screen then re-outputs it
+*
+* print_pos_y => Which text line to set the initial print position on 
+* print_pos_x => Which character on the text line to set the initial print position on
+* text => Text string to print
+*
+*/
 void screenUpdate(int print_pos_y = 2, int print_pos_x = 0, String text = ""){ /* WIPE THE SCREEN, PRINT THE HEADER AND SET THE CURSOR POSITION */
 
   screen.clearScreen(); // Clear the screen
@@ -276,15 +277,15 @@ void screenUpdate(int print_pos_y = 2, int print_pos_x = 0, String text = ""){ /
 
 
 /* BATTERY VOLTAGE READING 
- *
- * Uses a mosfet to connect an analogue pin to the battery through a voltage divider
- * 12v Max input for battery 
- *
- */      
+*
+* Uses a mosfet to connect an analogue pin to the battery through a voltage divider
+* 12v Max input for battery 
+*
+*/      
 void batteryMonitor(){
-  
+
   if(mcp.digitalRead(power_in_status) == HIGH){ // If currently running on battery
-  
+
     static float raw_voltage_reading = 0; // Raw anologue reading of current battery voltage
     static float voltage_denominator = (float)resistor_2 / (resistor_1 + resistor_2);
     static float last_calculated_voltage_reading = 0.00; // The last battery reading
@@ -306,26 +307,30 @@ void batteryMonitor(){
 
 
 /* BLUETOOTH
- *
- * Requires a compatible bluetooth breakout board (e.g. HC-05) connected to header H_1
- * When enabled the VCC pin on H_1 is switched on via mosfet to power the breakout board
- *
- */      
+*
+* Requires a compatible bluetooth breakout board (e.g. HC-05) connected to header H_1
+* When enabled the VCC pin on H_1 is switched on via mosfet to power the breakout board
+*
+*/      
 void bluetoothTogglePower(){
-  
-  if(!start_stack){
+
+  static int last_bluetooth_status;
+
+  if(!start_stack && last_bluetooth_status != bluetooth_enabled){
     mcp.digitalWrite(bluetooth_toggle, bluetooth_enabled == 1 ? LOW : HIGH);
   }
+
+  last_bluetooth_status = bluetooth_enabled;   
 
 }
 
 
 
 /* MAIN BUTTON
- *
- * Starts or stops a focus stack and wakes the controller from sleep    
- *
- */ 
+*
+* Starts or stops a focus stack and wakes the controller from sleep    
+*
+*/ 
 void buttonMainToggle(){
 
   Serial.print("buttonMainToggle()");
@@ -345,10 +350,10 @@ void buttonMainToggle(){
 
 
 /* ROTARY ENCODER BUTTON
- *
- * Toggles between menu navigation and variable editing and wakes the controller from sleep    
- *
- */ 
+*
+* Toggles between menu navigation and variable editing and wakes the controller from sleep    
+*
+*/ 
 void buttonRotaryToggle(){
 
   Serial.print("buttonRotaryToggle()");
@@ -359,7 +364,7 @@ void buttonRotaryToggle(){
     traverse_menus = traverse_menus == true ? false : true;
     button_rotary_time = millis();    
   }
-    
+
   button_rotary_previous = button_rotary_reading;
 
 } 
@@ -367,12 +372,12 @@ void buttonRotaryToggle(){
 
 
 /* SIGNAL CAMERA TO TAKE IMAGE(S) 
- *
- * Optionally sends multiple delay seperated signals for exposure bracketing each focus slice 
- *
- */
+*
+* Optionally sends multiple delay seperated signals for exposure bracketing each focus slice 
+*
+*/
 void cameraProcessImages(){ 
-  
+
   for (int i = 1; i <= camera_bracket; i++){
 
     pause(1000); // Allow vibrations to settle
@@ -393,7 +398,7 @@ void cameraProcessImages(){
     cameraShutterSignal(); // Take the image
 
     for(int i = 1; i <= camera_pause; i++){
-      
+
       pause(1000);
       screenPrintProgress();
       screen.setPrintPos(0,4);
@@ -413,30 +418,31 @@ void cameraProcessImages(){
 
 
 /* TRIGGER THE CAMERA SHUTTER 
- *
- * Optionally sends two delay seperated signals to support mirror lockup
- *
- */
+*
+* Optionally sends two delay seperated signals to support mirror lockup
+*
+*/
 void cameraShutterSignal() { 
 
   for (int i = 0; i <= mirror_lockup; i++){
 
-    if(mirror_lockup && i == 0){
-      screenUpdate(4);
-      screen.print("Mirror up");
+    if(mirror_lockup){
+      screenPrintProgress();
+      screen.setPrintPos(0,4); 
+      screen.print(i == 0 ? "Raise mirror" : "Shutter");
+      pause(500);
     }
-      
+
     digitalWrite(camera_focus, HIGH); // Trigger camera autofocus - camera may not take picture in some modes if this is not triggered first
     digitalWrite(camera_shutter, HIGH); // Trigger camera shutter
 
-    pause(500); //Small delay needed for camera to process above signals
+    pause(200); //Small delay needed for camera to process above signals
 
     digitalWrite(camera_shutter, LOW); // Switch off camera trigger signal
     digitalWrite(camera_focus, LOW); // Switch off camera focus signal
 
     if(mirror_lockup && i == 0){
       pause(2000); // Pause between mirror up and shutter actuation
-      screenUpdate();
     }
 
     if(stackCancelled()) break; // Exit early if the stack has been cancelled 
@@ -447,12 +453,12 @@ void cameraShutterSignal() {
 
 
 /* SYSTEM TASKS
- *
- * Switch Bluetooth on or off
- * Periodically check the battery level
- * Sleep or switch off the controller if it has been unused for n minutes
- *
- */                                       
+*
+* Switch Bluetooth on or off
+* Periodically check the battery level
+* Sleep or switch off the controller if it has been unused for n minutes
+*
+*/                                       
 void systemTasks(){
 
   static unsigned long a_minute = millis() + 60000; // 1 minute from now
@@ -468,24 +474,24 @@ void systemTasks(){
       system_idle = true; // Reset the system flag
     } else {
       minutes_elapsed++; // Keep count of minutes elapsed
-       Serial.println(minutes_elapsed);
+      Serial.println(minutes_elapsed);
     }
-    
+
     a_minute = millis() + 60000; // Reset the timer again to 1 minute from now
 
   }
 
   // If enabled, after n minutes put the idle controller in sleep mode
   if(system_timeout_sleep && (system_timeout_sleep < system_timeout_off) && (minutes_elapsed >= system_timeout_sleep)){ 
-    
+
     byte naps = 0;
 
     while(system_idle){
-      
+
       systemSleep(); // Have a nap for 4 seconds
       naps++;
-     Serial.println(naps); 
-      
+      Serial.println(naps); 
+
       if(naps == 15){ 
         minutes_elapsed++;
         naps = 0;
@@ -513,11 +519,11 @@ void systemTasks(){
 
 
 /* RETURN ANY CHANGE IN ROTARY ENCODER POSITION 
- * 
- * Using work by:
- * http://www.circuitsathome.com/mcu/rotary-encoder-interrupt-service-routine-for-avr-micros
- *
- */
+* 
+* Using work by:
+* http://www.circuitsathome.com/mcu/rotary-encoder-interrupt-service-routine-for-avr-micros
+*
+*/
 int8_t encoderRead(){
 
   const int8_t pulses_between_detents[] = {3, -3}; // Number of pulses between detents  
@@ -526,12 +532,12 @@ int8_t encoderRead(){
     0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0
     //0,1,-1,0,-1,0,0,1,1,0,0,-1,0,-1,1,0 // Use this line instead to increment encoder in the opposite direction 
   };
-  
+
   static uint8_t old_AB = 0;
 
   old_AB <<= 2; // Remember previous state
   old_AB |= ( ENC_PORT & 0x03 ); // Add current state
-  
+
   int8_t encoder_data = ( enc_states[( 0x0f & old_AB )]);
 
   static int8_t encoder_pulse_counter = 0; // Counts pulses from encoder
@@ -544,7 +550,7 @@ int8_t encoderRead(){
     setting_changed++;
     encoder_pulse_counter = 0;
   } 
-  
+
   else if(encoder_pulse_counter < pulses_between_detents[1]) { // Record the encoder was moved by one click (detent) in the opposite direction
     setting_changed--;
     encoder_pulse_counter = 0;
@@ -557,16 +563,16 @@ int8_t encoderRead(){
 /* SET UP ATMEGA PIN CHANGE INTERRUPTS */
 void pciSetup(byte pin)
 {
-    *digitalPinToPCMSK(pin) |= bit (digitalPinToPCMSKbit(pin));  // enable pin
-    PCIFR  |= bit (digitalPinToPCICRbit(pin)); // clear any outstanding interrupt
-    PCICR  |= bit (digitalPinToPCICRbit(pin)); // enable interrupt for the group
+  *digitalPinToPCMSK(pin) |= bit (digitalPinToPCMSKbit(pin));  // enable pin
+  PCIFR  |= bit (digitalPinToPCICRbit(pin)); // clear any outstanding interrupt
+  PCICR  |= bit (digitalPinToPCICRbit(pin)); // enable interrupt for the group
 }
 
 
 
 /* READ THE ENCODER ON ANALOGUE PORT INTERRUPT */
 ISR (PCINT1_vect){
-  
+
   encoderRead();
 
 }  
@@ -588,7 +594,7 @@ void mcpInterrupt(){
 void handleMcpInterrupt(){
 
   Serial.print("handleMcpInterrupt()");
-  
+
   detachInterrupt(0); // Detach the interrupt while the current instance is dealt with
 
   uint8_t pin = mcp.getLastInterruptPin(); // Find out which pin on the mcp created the interrupt
@@ -597,7 +603,7 @@ void handleMcpInterrupt(){
   if(pin == switch_off_flag && val == LOW){ // If a switchoff signal was recieved from the pushbutton controller
     systemOff();
   }
-  
+
   if(((pin == stepper_driver_forward) || (pin == stepper_driver_backward)) && start_stack == false){ // If a manual stage control button was pressed
     stepperDriverManualControl();
   }
@@ -613,7 +619,7 @@ void handleMcpInterrupt(){
   if(pin == button_rotary){ // Check the current state of the rotary encoder button
     buttonRotaryToggle();
   }
-  
+
   EIFR=0x01; // Clear interrupts
   mcp_interrupt_fired = false; // Reset the flag
   attachInterrupt(0, mcpInterrupt, FALLING); // Re-attach the interrupt
@@ -623,37 +629,35 @@ void handleMcpInterrupt(){
 
 
 /* PAUSE
- *
- * Delays are needed throughout the code, but these should be non-blocking
- *        
- */
+*
+* Delays are needed throughout the code, but these should be non-blocking
+*        
+*/
 void pause(int length){
 
-    unsigned long initial_millis = millis(); // Get the current millis
-    unsigned long end_millis = initial_millis + length; // Define when the pause ends
+  unsigned long initial_millis = millis(); // Get the current millis
+  unsigned long end_millis = initial_millis + length; // Define when the pause ends
 
-    while(end_millis > millis()){ // If the end of the pause time hasn't yet been reached
+  while(end_millis > millis()){ // If the end of the pause time hasn't yet been reached
 
-      if(stackCancelled()){ // Check continuously for any reason to end it early
-        break; 
-      }
+    if(stackCancelled()) break; // Check continuously for any reason to end it early
+       
+  }
 
-    }
-    
 }
 
 
 
 /* PRINT MENU NAVIGATION ARROWS ON DIGOLE OLED SCREEN 
- *
- * Assumes the default font is in use (allowing 4 rows of 16 characters) 
- *
- */
+*
+* Assumes the default font is in use (allowing 4 rows of 16 characters) 
+*
+*/
 void screenPrintMenuArrows(){ 
 
   if(!start_stack) {
     if(traverse_menus) { // Move to the next menu item 
-      
+
       screen.drawBox(5,54,1,9); // Left outward arrow
       screen.drawBox(4,55,1,7);
       screen.drawBox(3,56,1,5);
@@ -666,8 +670,8 @@ void screenPrintMenuArrows(){
       screen.drawBox(125,57,1,3);
       screen.drawBox(126,58,1,1);
       
-      } else { // Change the value of the current menu item
-      
+    } else { // Change the value of the current menu item
+
       screen.drawBox(1,54,1,9); // Left inward arrow
       screen.drawBox(2,55,1,7);
       screen.drawBox(3,56,1,5);
@@ -688,10 +692,10 @@ void screenPrintMenuArrows(){
 
 
 /* PRINT BLUETOOTH ICONS ON DIGOLE OLED SCREEN 
- *
- * Assumes the default font is in use (allowing 4 rows of 16 characters) 
- *
- */
+*
+* Assumes the default font is in use (allowing 4 rows of 16 characters) 
+*
+*/
 void screenPrintBluetooth(){ 
 
   if(bluetooth_enabled && !bluetooth_connected){ //if the bluetooth header (H_1) is active but there isn't an active pairing
@@ -707,13 +711,13 @@ void screenPrintBluetooth(){
 
 
 /* PRINT CENTERED TEXT ON DIGOLE OLED SCREEN 
- *
- * Assumes the default font is in use (allowing 4 rows of 16 characters) 
- *
- * text => The string to be centered and printed
- * print_pos_y => The text line to print on
- *
- */
+*
+* Assumes the default font is in use (allowing 4 rows of 16 characters) 
+*
+* text => The string to be centered and printed
+* print_pos_y => The text line to print on
+*
+*/
 void screenPrintCentre(String text, int print_pos_y = 4){ 
 
   int text_length = text.length();
@@ -732,35 +736,35 @@ void screenPrintCentre(String text, int print_pos_y = 4){
 
 
 /* PRINT THE ACTIVE POWER SOURCE ON DIGOLE OLED SCREEN 
- *
- * Assumes the default font is in use (allowing 4 rows of 16 characters) 
- *
- */
+*
+* Assumes the default font is in use (allowing 4 rows of 16 characters) 
+*
+*/
 void screenPrintPowerSource(){ 
 
   if(mcp.digitalRead(power_in_status) == LOW){ // Draw plug symbol (dc adapter connected)
-    screen.drawBox(115,1,3,1);
-    screen.drawBox(112,2,7,1);
-    screen.drawBox(115,3,13,2);
-    screen.drawBox(112,5,7,1);
-    screen.drawBox(115,6,3,1);
-  } else { // Draw battery symbol and print current voltage
-    screen.setPrintPos(7,0);
-    screen.print(calculated_voltage_reading);
-    screen.print("v");
-    screen.drawBox(112,3,2,2);
-    screen.drawBox(114,1,14,6);
-  }
+      screen.drawBox(115,1,3,1);
+      screen.drawBox(112,2,7,1);
+      screen.drawBox(115,3,13,2);
+      screen.drawBox(112,5,7,1);
+      screen.drawBox(115,6,3,1);
+    } else { // Draw battery symbol and print current voltage
+      screen.setPrintPos(7,0);
+      screen.print(calculated_voltage_reading);
+      screen.print("v");
+      screen.drawBox(112,3,2,2);
+      screen.drawBox(114,1,14,6);
+    }
 
-}
+  }
 
 
 
 /* PRINT THE CURRENT POSITION IN A RUNNING FOCUS STACK ON DIGOLE OLED SCREEN 
- *
- * Assumes the default font is in use (allowing 4 rows of 16 characters) 
- *
- */
+*
+* Assumes the default font is in use (allowing 4 rows of 16 characters) 
+*
+*/
 void screenPrintProgress(){
 
   screenUpdate(); 
@@ -774,11 +778,11 @@ void screenPrintProgress(){
 
 
 /* CONTROL VIA SERIAL 
- * 
- * Checks for incoming characters over serial and runs any mtaching functions
- * Allows for remote control via USB or Bluetooth
- *
- */
+* 
+* Checks for incoming characters over serial and runs any mtaching functions
+* Allows for remote control via USB or Bluetooth
+*
+*/
 void serialCommunications(){
 
   if (Serial.available() > 0) {
@@ -789,49 +793,49 @@ void serialCommunications(){
     switch(incoming_serial){
 
       case 'a': // Start or stop stack
-        start_stack = start_stack == true ? false : true;
-        break;
+      start_stack = start_stack == true ? false : true;
+      break;
 
       case 'b': // Toggle menu navigation
-        traverse_menus = traverse_menus == true ? false : true;
-        break;
+      traverse_menus = traverse_menus == true ? false : true;
+      break;
 
       case 'c': // Increment active setting variable
-        setting_changed++;
-        break;
+      setting_changed++;
+      break;
 
       case 'd': // Decrement active setting variable
-        setting_changed--;
-        break;
+      setting_changed--;
+      break;
 
       case 'e': // Move stage forward
-        stepperDriverManualControl();
-        break;
+      stepperDriverManualControl();
+      break;
 
       case 'f': // Move stage backward
-        stepperDriverManualControl();
-        break;
+      stepperDriverManualControl();
+      break;
 
       case 'g': // Take a test image
-        cameraShutterSignal();
-        break;
+      cameraShutterSignal();
+      break;
 
       case 'h': // Switch Bluetooth on or off
-        bluetooth_enabled = bluetooth_enabled == true ? false : true;
-        break;
+      bluetooth_enabled = bluetooth_enabled == 1 ? 0 : 1;
+      break;
 
       case 'i': // Put controller into sleep mode
-        systemSleep();
-        break;  
+      systemSleep();
+      break;  
 
       case 'j': // Switch off controller
-        systemOff();
-        break;
+      systemOff();
+      break;
 
       default: // Unmatched character - send error then pretend the function call never happened
-        Serial.println(incoming_serial);
-        Serial.print(" does not have a matching function");
-        system_idle = true;
+      Serial.println(incoming_serial);
+      Serial.print(" does not have a matching function");
+      system_idle = true;
     }
   }
 }
@@ -844,7 +848,7 @@ boolean stackCancelled(){
   if(!start_stack){
     return true;
   }
-  
+
   return false; 
 
 }
@@ -852,11 +856,11 @@ boolean stackCancelled(){
 
 
 /* ENABLE OR DISABLE THE STEPPER DRIVER AND SET DIRECTION 
- *
- * enable => Enables the stepper driver if true, Disables if false and option set
- * direction => Set as 1 for forward direction, 0 for backward direction
- *
- */
+*
+* enable => Enables the stepper driver if true, Disables if false and option set
+* direction => Set as 1 for forward direction, 0 for backward direction
+*
+*/
 void stepperDriverEnable(boolean enable = true, byte direction = 1) { 
 
   if(enable){
@@ -872,26 +876,28 @@ void stepperDriverEnable(boolean enable = true, byte direction = 1) {
 
 
 /* CLEAN UP AFTER FOCUS STACK COMPLETION 
- *
- * Optionally return the stage to its starting position
- * Reset various variables to inital values
- *
- */
+*
+* Optionally return the stage to its starting position
+* Reset various variables to inital values
+*
+*/
 void stackEnd(){ 
 
   screenUpdate();
   start_stack == false ? screen.print("Stack cancelled") : screen.print("Stack finished"); 
   delay(2000);
 
-  if (return_to_start){   
+  if (return_to_start){
+  
     stepperDriverEnable(true, 1);
-    
-    float exact_return_steps = slice_size * slice_counter * hardware_calibration_settings[active_hc] * unit_of_measure_multipliers[active_uomm] * micro_stepping[0][active_ms];
+
+    float exact_return_steps = slice_size * slice_counter * hardware_calibration_settings[active_hc] * unit_of_measure_multipliers[active_uomm] * micro_stepping[0][active_ms][0];
     int rounded_return_steps = (int) exact_return_steps - 0.5;
-    
+
     screenUpdate();
     screen.print("Returning");
-    
+    delay(2000);
+
     stepperDriverEnable(true, 0);
 
     for (int i; i < rounded_return_steps; i++){
@@ -925,19 +931,19 @@ void stepperDriverClearLimitSwitch(){
 
   if (mcp.digitalRead(limit_switch_front) == LOW){
     stepperDriverEnable(true, 0);
-    
+
     while (mcp.digitalRead(limit_switch_front) == LOW){ //turn stepper motor for as long as  the limit switch remains pressed 
 
       stepperDriverStep();
-    
+
     }
-    
+
     stepperDriverEnable(true, 1); //restore normal stepper motor direction
   }
 
   if (mcp.digitalRead(limit_switch_back) == LOW){
     stepperDriverEnable(true, 1); //reverse stepper motor direction
-    
+
     while (mcp.digitalRead(limit_switch_back) == LOW){ //turn stepper motor for as long as  the limit switch remains pressed 
 
       stepperDriverStep();
@@ -965,7 +971,7 @@ boolean stepperDriverInBounds(){
   if(mcp.digitalRead(limit_switch_front) == HIGH && mcp.digitalRead(limit_switch_back) == HIGH){
     return true;
   }
-  
+
   return false;
 
 }
@@ -974,8 +980,6 @@ boolean stepperDriverInBounds(){
 
 /* MOVE STAGE BACKWARD AND FORWARD */
 void stepperDriverManualControl(){ 
-
-  Serial.print("handleMcpInterrupt()");
 
   // Move stage forwards
   if ((mcp.digitalRead(stepper_driver_forward) == LOW || incoming_serial == 'f') && stepperDriverInBounds()) {
@@ -1002,13 +1006,13 @@ void stepperDriverManualControl(){
     screen.setPrintPos(0,4);
     screen.print("<--<<--<<--<<--<");
     stepperDriverEnable(true, 0);
-    
+
     while ((mcp.digitalRead(stepper_driver_forward) == LOW || incoming_serial == 'g') && stepperDriverInBounds()) {
-    
+
       stepperDriverStep(); 
-      
+
     }
-    
+
     stepperDriverEnable(false);
 
   }
@@ -1021,18 +1025,18 @@ void stepperDriverManualControl(){
 
 
 /* SET DEGREE OF MICROSTEPPING FOR A4988 STEPPER DRIVER TO USE 
- * 
- * Loops through the active microstepping subarray and writes the A4988's MSx pins HIGH or LOW accordingly
- * MSx pins are MCP23017 11 - 13 
- *
- */
+* 
+* Loops through the active microstepping subarray and writes the A4988's MSx pins HIGH or LOW accordingly
+* MSx pins are MCP23017 11 - 13 
+*
+*/
 void stepperDriverMicroStepping(){
 
-  //for(byte i=0, byte j=11; i<2; i++, j++){
+  for(byte i=0, j=11; i<2; i++, j++){
 
-    //mcp.digitalWrite(j, micro_stepping[1][active_ms][i]);
+    mcp.digitalWrite(j, micro_stepping[1][active_ms][i]);
 
-  //}
+  }
 
 }
 
@@ -1050,36 +1054,36 @@ void stepperDriverStep(){
 
 
 /* CHANGE THE ACTIVE MENU VARIABLE'S VALUE
- *
- * May be implemented by either the rotary encoder or a command via serial
- *
- * var => The variable to change the value of
- * lower => The lower bounds for constraining the value of var
- * upper => The upper bounds for constraining the value of var
- * multipler = Factor to multiply the change in value of var by
- *  
- */
+*
+* May be implemented by either the rotary encoder or a command via serial
+*
+* var => The variable to change the value of
+* lower => The lower bounds for constraining the value of var
+* upper => The upper bounds for constraining the value of var
+* multipler = Factor to multiply the change in value of var by
+*  
+*/
 void settingUpdate(int &var, int lower, int upper, int multiplier = 1){ 
-  
+
   var = constrain(var, lower, upper); // Keep variable value within specified range 
 
   if(setting_changed){ // If the variable's value was changed at least once since the last check
-    var += (multiplier * setting_changed); // Add or subtract from variable
-    setting_changed = 0; // Reset for next check
-    publish_update = true; // Update menus
-  } 
+  var += (multiplier * setting_changed); // Add or subtract from variable
+  setting_changed = 0; // Reset for next check
+  publish_update = true; // Update menus
+} 
 
 }
 
 
 
 /* OUTPUT MENUS
- *
- * Publishes menus which refresh whenever the selected variable changes
- * 
- */
+*
+* Publishes menus which refresh whenever the selected variable changes
+* 
+*/
 void menuInteractions(){
-  
+
   if (traverse_menus) { // Move through menu items
     settingUpdate(menu_item, 0, 12); // Display the currently selected menu item
     if(menu_item == 12) menu_item = 1; // Create looping navigation
@@ -1092,83 +1096,83 @@ void menuInteractions(){
 
     case 1: // Change the number of increments to move each time
 
-      if (!traverse_menus) settingUpdate(slice_size, 1, 1000);
-      menu_var = String(slice_size);  
+    if (!traverse_menus) settingUpdate(slice_size, 1, 1000);
+    menu_var = String(slice_size);  
 
-      break;
+    break;
 
     case 2: // Change the number of slices to create in the stack
 
-      if (!traverse_menus) settingUpdate(slices, 10, 5000, 10);
-      menu_var = String(slices); 
+    if (!traverse_menus) settingUpdate(slices, 10, 5000, 10);
+    menu_var = String(slices); 
 
-      break;
+    break;
 
     case 3: // Change the number of seconds to wait for the camera to capture an image before continuing 
 
-      if (!traverse_menus) settingUpdate(camera_pause, 1, 60);
-      menu_var = String(camera_pause) += "s";
+    if (!traverse_menus) settingUpdate(camera_pause, 1, 60);
+    menu_var = String(camera_pause) += "s";
 
-      break;
+    break;
 
     case 4: // Toggle mirror lockup for the camera
 
-      if (!traverse_menus) settingUpdate(mirror_lockup, 0, 1);
-      menu_var = mirror_lockup == true ? "Enabled" : "Disabled";      
+    if (!traverse_menus) settingUpdate(mirror_lockup, 0, 1);
+    menu_var = mirror_lockup == true ? "Enabled" : "Disabled";      
 
-      break;
+    break;
 
     case 5: // Change the number of images to take per focus slice (exposure bracketing)
 
-      if (!traverse_menus) settingUpdate(camera_bracket, 1, 10);
-      menu_var = String(camera_bracket);   
+    if (!traverse_menus) settingUpdate(camera_bracket, 1, 10);
+    menu_var = String(camera_bracket);   
 
-      break;
+    break;
 
     case 6: // Toggle whether camera/subject is returned the starting position at the end of the stack
 
-      if (!traverse_menus) settingUpdate(return_to_start, 0, 1);
-      menu_var = return_to_start == true ? "Enabled" : "Disabled";
+    if (!traverse_menus) settingUpdate(return_to_start, 0, 1);
+    menu_var = return_to_start == true ? "Enabled" : "Disabled";
 
-      break; 
+    break; 
 
     case 7: // Select the unit of measure to use for focus slices: Microns, Millimimeters or Centimeters
 
-      if (!traverse_menus) settingUpdate(active_uomm, 0, 2);
-      menu_var = String(unit_of_measure_strings[active_uomm]);
+    if (!traverse_menus) settingUpdate(active_uomm, 0, 2);
+    menu_var = String(unit_of_measure_strings[active_uomm]);
 
-      break; 
+    break; 
 
     case 8: // Adjust the stepper motor speed (delay in microseconds between slice_size)
-      // A smaller number gives faster motor speed but reduces torque
-      // Setting this too low may cause the motor to miss steps or stall
+    // A smaller number gives faster motor speed but reduces torque
+    // Setting this too low may cause the motor to miss steps or stall
 
-      if (!traverse_menus) settingUpdate(step_delay, 1000, 8000);
-      menu_var = String(step_delay) += "uS";
+    if (!traverse_menus) settingUpdate(step_delay, 1000, 8000);
+    menu_var = String(step_delay) += "uS";
 
-      break; 
+    break; 
 
     case 9: // Adjust the degree of microstepping made by the a4988 stepper driver
     // More microsteps give the best stepping resolution but may require more power for consistency and accuracy
-      
-      if (!traverse_menus) settingUpdate(active_ms, 0, 4);
-      menu_var = "1/" + String(micro_stepping[0][active_ms]);
+    
+    if (!traverse_menus) settingUpdate(active_ms, 0, 4);
+    menu_var = "1/" + String(micro_stepping[0][active_ms][0]);
 
-      break;
+    break;
 
     case 10: // Select the active hardware calibration constant
 
-      if (!traverse_menus) settingUpdate(active_hc, 0, 1);
-      menu_var = active_hc == 0 ? "Studio" : "Field";     
+    if (!traverse_menus) settingUpdate(active_hc, 0, 1);
+    menu_var = active_hc == 0 ? "Studio" : "Field";     
 
-      break;
+    break;
 
     case 11: // Toggle power to an external 3.3v bluetooth board e.g. HC-05
 
-      if (!traverse_menus) settingUpdate(bluetooth_enabled, 0, 1);
-      
-      if(bluetooth_enabled){
-        menu_var = bluetooth_connected == true ? "Connected" : "Unconnected"; 
+    if (!traverse_menus) settingUpdate(bluetooth_enabled, 0, 1);
+    
+    if(bluetooth_enabled){
+      menu_var = bluetooth_connected == true ? "Connected" : "Unconnected"; 
       } else {
         menu_var = "Disabled";
       }     
@@ -1195,15 +1199,15 @@ void loop(){
 
 
   /* MENUS AND STAGE CONTROL
-   *
-   * Manual control of linear stage is only enabled when in this section of the loop 
-   * - prevents running stacks being ruined by accidental button presses
-   * 
-   * Menu navigation controlled either by rotary encoder with integral push button, or via serial
-   *
-   */
+  *
+  * Manual control of linear stage is only enabled when in this section of the loop 
+  * - prevents running stacks being ruined by accidental button presses
+  * 
+  * Menu navigation controlled either by rotary encoder with integral push button, or via serial
+  *
+  */
   if (!start_stack){ // User settings menus and manual stage control
-  
+
     if(mcp_interrupt_fired){ 
       Serial.print("fired");
       handleMcpInterrupt(); // Catch interrupts and run any required functions
@@ -1217,16 +1221,16 @@ void loop(){
 
 
   /* FOCUS STACK
-   *
-   * Images are captured, the stage is advanced and the process is repeated for as many times as needed
-   *
-   */
+  *
+  * Images are captured, the stage is advanced and the process is repeated for as many times as needed
+  *
+  */
   else {
 
     slice_counter++; // Register the first image(s) of the stack is being taken
     cameraProcessImages(); // Take the image(s) for the first slice of the stack
 
-    float exact_steps = slice_size * hardware_calibration_settings[active_hc] * unit_of_measure_multipliers[active_uomm] * micro_stepping[0][active_ms];
+    float exact_steps = slice_size * hardware_calibration_settings[active_hc] * unit_of_measure_multipliers[active_uomm] * micro_stepping[0][active_ms][0];
     int rounded_steps = (int) exact_steps - 0.5;
 
     for (int i = 1; i < slices; i++){ // For each subsequent focus slice in the stack
