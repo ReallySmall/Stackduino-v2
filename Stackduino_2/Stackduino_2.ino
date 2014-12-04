@@ -66,18 +66,17 @@ const byte stepper_driver_sleep = 15; // Sleep/wake A4988 stepper driver to cons
 
 
 /* SETTINGS */                                                                                                   
-const char* menu_strings[] = {"System settings", // Screen menu strings
-"Slice size", 
-"Number of slices", 
-"Pause time", 
-"Mirror lockup", 
-"Bracketing", 
-"Return to start", 
-"Unit of measure", 
-"Stepper speed", 
-"Microstepping", 
-"Linear stage", 
-"Bluetooth"};
+const char* menu_strings[] = {"Slice size", 
+                              "Number of slices", 
+                              "Pause time", 
+                              "Mirror lockup", 
+                              "Bracketing", 
+                              "Return to start", 
+                              "Unit of measure", 
+                              "Stepper speed", 
+                              "Microstepping", 
+                              "Linear stage", 
+                              "Bluetooth"};
 
 const char* unit_of_measure_strings[] = {"mn", "mm", "cm"}; // Unit of measure strings for printing
 const int unit_of_measure_multipliers[] = {1, 1000, 10000}; // Multipliers for active unit of measure (mn, mm or cm)
@@ -108,24 +107,35 @@ boolean publish_update = true; // True whenever functions are called which chang
 
 float calculated_voltage_reading = 0; // The actual battery voltage as calculated through the divider
 
-int camera_bracket = 1; // Number of images to bracket per focus slice
-int camera_pause = 5; // Default time in seconds to wait for camera to take picture and allow any flashes to recharge
-int mirror_lockup = 0; // Set to 1 to enable camera mirror lockup, 0 to disable
-int menu_item = 1; // The active menu item
+// Vars employed by user menu settings
+//
+// Stored in array to facilitate easy retrival and saving to media
+//
+// [0] => Current value of setting 
+// [1] => Lower bound of setting
+// [2] => Upper bound of setting
+// [3] => Multiplier to apply to setting value
+//
+int menu_settings[11][4] = {{10, 1, 1000, 1}, // "Slice size"
+                            {10, 10, 5000, 10}, // "Number of slices"
+                            {5, 1, 60, 1}, // "Pause time"
+                            {0, 0, 1, 1}, // "Mirror lockup"
+                            {1, 1, 10, 1}, // "Bracketing"
+                            {0, 0, 1, 1}, // "Return to start"
+                            {0, 0, 2, 1}, // "Unit of measure"
+                            {2000, 1000, 8000, 1}, // "Stepper speed"
+                            {4, 0, 4, 1}, // "Microstepping"
+                            {0, 0, 1, 1}, // "Linear stage"
+                            {1, 0, 1, 1}}; // "Bluetooth"
+
+// Vars employed by system (not editable in user menus)
+int menu_item = 0; // The active menu item
 int setting_changed = 0; // Count increments the active menu setting should be changed by on the next poll
-int bluetooth_enabled = 1; // Toggle power to bluetooth port
 int incoming_serial; // Store latest byte from incoming serial stream
 int system_timeout_sleep = 10; // Minutes of inactivity to wait until controller enters sleep mode - set to 0 to disable
 int system_timeout_off = 20; // Minutes of inactivity to wait until controller switches itself off - set to 0 to disable
 int minutes_elapsed = 0; // Number of 1 minute periods elapsed
-int step_delay = 2000; // Delay in microseconds between stepper motor steps, governing motor speed - too low may cause missed steps or stalling
-int return_to_start = 0; // Whether linear stage is returned to its starting position at the end of stack
-int slices = 10; // Default number of focus slices to make in the stack
-int slice_size = 10; // Default depth of each focus slice - used with unit_of_measure
 int slice_counter = 0; // Count of number of focus slices made so far in the stack
-int active_hc = 0; // Array index of selected hardware calibration setting
-int active_ms = 4; // Array index of selected micro-stepping setting
-int active_uomm = 0; // Array index of selected unit of measure multiplier
 
 
 
@@ -315,6 +325,7 @@ void batteryMonitor(){
 void bluetoothTogglePower(){
 
   static int last_bluetooth_status;
+  byte bluetooth_enabled = menu_settings[11][0];
 
   if(!start_stack && last_bluetooth_status != bluetooth_enabled){
     mcp.digitalWrite(bluetooth_toggle, bluetooth_enabled == 1 ? LOW : HIGH);
@@ -378,6 +389,9 @@ void buttonRotaryToggle(){
 */
 void cameraProcessImages(){ 
 
+  byte camera_bracket = menu_settings[4][0];
+  byte camera_pause = menu_settings[2][0];
+
   for (int i = 1; i <= camera_bracket; i++){
 
     pause(1000); // Allow vibrations to settle
@@ -423,6 +437,8 @@ void cameraProcessImages(){
 *
 */
 void cameraShutterSignal() { 
+
+  byte mirror_lockup = menu_settings[3][0];
 
   for (int i = 0; i <= mirror_lockup; i++){
 
@@ -698,11 +714,11 @@ void screenPrintMenuArrows(){
 */
 void screenPrintBluetooth(){ 
 
-  if(bluetooth_enabled && !bluetooth_connected){ //if the bluetooth header (H_1) is active but there isn't an active pairing
+  if(menu_settings[10][0] == 1 && !bluetooth_connected){ //if the bluetooth header (H_1) is active but there isn't an active pairing
     //TODO PRINT AN INACTIVE ICON
   }
 
-  if(bluetooth_enabled && bluetooth_connected){ //if the bluetooth header (H_1) is active and there's an active pairing
+  if(menu_settings[10][0] == 1 && bluetooth_connected){ //if the bluetooth header (H_1) is active and there's an active pairing
     //TODO PRINT AN ACTIVE ICON.
   }
 
@@ -718,9 +734,9 @@ void screenPrintBluetooth(){
 * print_pos_y => The text line to print on
 *
 */
-void screenPrintCentre(String text, int print_pos_y = 4){ 
+void screenPrintCentre(char* text, int print_pos_y = 4){ 
 
-  int text_length = text.length();
+  int text_length = sizeof(text);
   int offset = (16 - text_length) / 2; // Calculate the offset for the number of characters in the string
 
   screen.setPrintPos(offset, print_pos_y);
@@ -771,7 +787,7 @@ void screenPrintProgress(){
   screen.print("Slice ");
   screen.print (slice_counter);
   screen.print ("/");
-  screen.print (slices);
+  screen.print (menu_settings[1][0]);
 
 }
 
@@ -821,7 +837,7 @@ void serialCommunications(){
       break;
 
       case 'h': // Switch Bluetooth on or off
-      bluetooth_enabled = bluetooth_enabled == 1 ? 0 : 1;
+      menu_settings[10][0] = menu_settings[10][0] == 1 ? 0 : 1;
       break;
 
       case 'i': // Put controller into sleep mode
@@ -881,7 +897,9 @@ void stepperDriverEnable(boolean enable = true, byte direction = 1) {
 * Reset various variables to inital values
 *
 */
-void stackEnd(){ 
+void stackEnd(){
+
+  byte return_to_start = menu_settings[5][0];
 
   screenUpdate();
   start_stack == false ? screen.print("Stack cancelled") : screen.print("Stack finished"); 
@@ -891,8 +909,13 @@ void stackEnd(){
   
     stepperDriverEnable(true, 1);
 
-    float exact_return_steps = slice_size * slice_counter * hardware_calibration_settings[active_hc] * unit_of_measure_multipliers[active_uomm] * micro_stepping[0][active_ms][0];
-    int rounded_return_steps = (int) exact_return_steps - 0.5;
+    int slice_size = menu_settings[0][0];
+    byte active_uom = menu_settings[6][0];
+    byte active_ms = menu_settings[8][1];
+    byte active_hc = menu_settings[9][0];
+
+    float exact_return_steps = slice_size * slice_counter * hardware_calibration_settings[active_hc] * unit_of_measure_multipliers[active_uom] * micro_stepping[0][active_ms][0];
+    long rounded_return_steps = (long) exact_return_steps - 0.5;
 
     screenUpdate();
     screen.print("Returning");
@@ -1032,6 +1055,8 @@ void stepperDriverManualControl(){
 */
 void stepperDriverMicroStepping(){
 
+  int active_ms = menu_settings[8][1];
+
   for(byte i=0, j=11; i<2; i++, j++){
 
     mcp.digitalWrite(j, micro_stepping[1][active_ms][i]);
@@ -1047,7 +1072,7 @@ void stepperDriverStep(){
 
   digitalWrite(stepper_driver_do_step, LOW); // This LOW to HIGH change is what creates the
   digitalWrite(stepper_driver_do_step, HIGH); // "Rising Edge" so the driver knows when to step
-  delayMicroseconds(step_delay); // Delay time between steps, too short and motor may stall or miss steps
+  delayMicroseconds(menu_settings[7][0]); // Delay time between steps, too short and motor may stall or miss steps
 
 }
 
@@ -1085,106 +1110,99 @@ void settingUpdate(int &var, int lower, int upper, int multiplier = 1){
 void menuInteractions(){
 
   if (traverse_menus) { // Move through menu items
-    settingUpdate(menu_item, 0, 12); // Display the currently selected menu item
-    if(menu_item == 12) menu_item = 1; // Create looping navigation
-    if(menu_item == 0) menu_item = 11; // Create looping navigation
+    settingUpdate(menu_item, -1, 11); // Display the currently selected menu item
+    if(menu_item == 11) menu_item = 0; // Create looping navigation
+    if(menu_item == -1) menu_item = 10; // Create looping navigation
+  } else {
+    settingUpdate(menu_settings[menu_item][0], menu_settings[menu_item][1], menu_settings[menu_item][2], menu_settings[menu_item][3]);
   }
 
-  String menu_var = ""; 
+  if (publish_update){ // Refresh menu content if the active variable has changed
 
-  switch (menu_item) { // The menu options
+    int menu_var = menu_settings[menu_item][0];
+    char print_buffer[16 + 1]; 
 
-    case 1: // Change the number of increments to move each time
+    switch (menu_item) { // The menu options
 
-    if (!traverse_menus) settingUpdate(slice_size, 1, 1000);
-    menu_var = String(slice_size);  
+      case 0: // Change the number of increments to move each time
 
-    break;
+        sprintf(print_buffer, "%d", menu_var);  
 
-    case 2: // Change the number of slices to create in the stack
+        break;
 
-    if (!traverse_menus) settingUpdate(slices, 10, 5000, 10);
-    menu_var = String(slices); 
+      case 1: // Change the number of slices to create in the stack
 
-    break;
+        sprintf(print_buffer, "%d", menu_var); 
 
-    case 3: // Change the number of seconds to wait for the camera to capture an image before continuing 
+        break;
 
-    if (!traverse_menus) settingUpdate(camera_pause, 1, 60);
-    menu_var = String(camera_pause) += "s";
+      case 2: // Change the number of seconds to wait for the camera to capture an image before continuing 
 
-    break;
+        sprintf(print_buffer, "%ds", menu_var);
 
-    case 4: // Toggle mirror lockup for the camera
+        break;
 
-    if (!traverse_menus) settingUpdate(mirror_lockup, 0, 1);
-    menu_var = mirror_lockup == true ? "Enabled" : "Disabled";      
+      case 3: // Toggle mirror lockup for the camera
 
-    break;
+        menu_var == 1 ? sprintf(print_buffer, "Enabled") : sprintf(print_buffer, "Disabled");      
 
-    case 5: // Change the number of images to take per focus slice (exposure bracketing)
+        break;
 
-    if (!traverse_menus) settingUpdate(camera_bracket, 1, 10);
-    menu_var = String(camera_bracket);   
+      case 4: // Change the number of images to take per focus slice (exposure bracketing)
 
-    break;
+        sprintf(print_buffer, "%d", menu_var);   
 
-    case 6: // Toggle whether camera/subject is returned the starting position at the end of the stack
+        break;
 
-    if (!traverse_menus) settingUpdate(return_to_start, 0, 1);
-    menu_var = return_to_start == true ? "Enabled" : "Disabled";
+      case 5: // Toggle whether camera/subject is returned the starting position at the end of the stack
 
-    break; 
+        menu_var == 1 ? sprintf(print_buffer, "Enabled") : sprintf(print_buffer, "Disabled");
 
-    case 7: // Select the unit of measure to use for focus slices: Microns, Millimimeters or Centimeters
+        break; 
 
-    if (!traverse_menus) settingUpdate(active_uomm, 0, 2);
-    menu_var = String(unit_of_measure_strings[active_uomm]);
+      case 6: // Select the unit of measure to use for focus slices: Microns, Millimimeters or Centimeters
 
-    break; 
+        sprintf(print_buffer, "%d", unit_of_measure_strings[menu_var]);
 
-    case 8: // Adjust the stepper motor speed (delay in microseconds between slice_size)
-    // A smaller number gives faster motor speed but reduces torque
-    // Setting this too low may cause the motor to miss steps or stall
+        break; 
 
-    if (!traverse_menus) settingUpdate(step_delay, 1000, 8000);
-    menu_var = String(step_delay) += "uS";
+      case 7: // Adjust the stepper motor speed (delay in microseconds between slice_size)
+              // A smaller number gives faster motor speed but reduces torque
+              // Setting this too low may cause the motor to miss steps or stall
 
-    break; 
+        sprintf(print_buffer, "%duS", menu_var);
 
-    case 9: // Adjust the degree of microstepping made by the a4988 stepper driver
-    // More microsteps give the best stepping resolution but may require more power for consistency and accuracy
-    
-    if (!traverse_menus) settingUpdate(active_ms, 0, 4);
-    menu_var = "1/" + String(micro_stepping[0][active_ms][0]);
+        break; 
 
-    break;
+      case 8: // Adjust the degree of microstepping made by the a4988 stepper driver
+              // More microsteps give the best stepping resolution but may require more power for consistency and accuracy
+      
+        sprintf(print_buffer, "1/%d", micro_stepping[0][menu_var][0]);
 
-    case 10: // Select the active hardware calibration constant
+        break;
 
-    if (!traverse_menus) settingUpdate(active_hc, 0, 1);
-    menu_var = active_hc == 0 ? "Studio" : "Field";     
+      case 9: // Select the active hardware calibration constant
 
-    break;
+        menu_var == 0 ? sprintf(print_buffer, "Studio") : sprintf(print_buffer, "Field");     
 
-    case 11: // Toggle power to an external 3.3v bluetooth board e.g. HC-05
+        break;
 
-    if (!traverse_menus) settingUpdate(bluetooth_enabled, 0, 1);
-    
-    if(bluetooth_enabled){
-      menu_var = bluetooth_connected == true ? "Connected" : "Unconnected"; 
-      } else {
-        menu_var = "Disabled";
-      }     
+      case 10: // Toggle power to an external 3.3v bluetooth board e.g. HC-05
+      
+        if(menu_settings[10][0] == 1){
+          menu_var == 1 ? sprintf(print_buffer, "Connected") : sprintf(print_buffer, "Unconnected");
+        } else {
+          sprintf(print_buffer, "Disabled");
+        }     
 
-      break;
+        break;
 
-  }
+    }
 
-  if (publish_update){ // Refresh menu content is the active variable has changed
     screenUpdate(2, 0, menu_strings[menu_item]);
-    screenPrintCentre(menu_var);
+    screenPrintCentre(print_buffer);
     publish_update = false;
+
   }  
 
 } 
@@ -1208,10 +1226,7 @@ void loop(){
   */
   if (!start_stack){ // User settings menus and manual stage control
 
-    if(mcp_interrupt_fired){ 
-      Serial.print("fired");
-      handleMcpInterrupt(); // Catch interrupts and run any required functions
-    }
+    if(mcp_interrupt_fired) handleMcpInterrupt(); // Catch interrupts and run any required functions
     serialCommunications();  // Check for commands via serial
     menuInteractions(); // Change menu options and update the screen when changed
     systemTasks(); // Run timer driven tasks such as battery level checks and sleep mode
@@ -1230,8 +1245,14 @@ void loop(){
     slice_counter++; // Register the first image(s) of the stack is being taken
     cameraProcessImages(); // Take the image(s) for the first slice of the stack
 
-    float exact_steps = slice_size * hardware_calibration_settings[active_hc] * unit_of_measure_multipliers[active_uomm] * micro_stepping[0][active_ms][0];
-    int rounded_steps = (int) exact_steps - 0.5;
+    int slice_size = menu_settings[0][0];
+    int slices = menu_settings[1][0];
+    byte active_uom = menu_settings[6][0];
+    byte active_ms = menu_settings[8][0];
+    byte active_hc = menu_settings[9][0];
+
+    float exact_steps = slice_size * hardware_calibration_settings[active_hc] * unit_of_measure_multipliers[active_uom] * micro_stepping[0][active_ms][0];
+    long rounded_steps = (long) exact_steps - 0.5;
 
     for (int i = 1; i < slices; i++){ // For each subsequent focus slice in the stack
 
@@ -1243,7 +1264,7 @@ void loop(){
       screen.setPrintPos(0,4);
       screen.print("Advance ");
       screen.print(slice_size);
-      screen.print(unit_of_measure_strings[active_uomm]);
+      screen.print(unit_of_measure_strings[active_uom]);
 
       if(stackCancelled()) break; // Exit early if the stack has been cancelled
 
