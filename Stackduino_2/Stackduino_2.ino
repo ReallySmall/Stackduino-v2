@@ -325,7 +325,7 @@ void batteryMonitor(){
 void bluetoothTogglePower(){
 
   static int last_bluetooth_status;
-  byte bluetooth_enabled = menu_settings[11][0];
+  byte bluetooth_enabled = menu_settings[10][0];
 
   if(!start_stack && last_bluetooth_status != bluetooth_enabled){
     mcp.digitalWrite(bluetooth_toggle, bluetooth_enabled == 1 ? LOW : HIGH);
@@ -373,7 +373,8 @@ void buttonRotaryToggle(){
   
   if (button_rotary_reading == LOW && button_rotary_previous == HIGH && millis() - button_rotary_time > button_debounce) {
     traverse_menus = traverse_menus == true ? false : true;
-    button_rotary_time = millis();    
+    button_rotary_time = millis(); 
+    publish_update = true;   
   }
 
   button_rotary_previous = button_rotary_reading;
@@ -734,14 +735,13 @@ void screenPrintBluetooth(){
 * print_pos_y => The text line to print on
 *
 */
-void screenPrintCentre(char* text, int print_pos_y = 4){ 
+void screenPrintCentre(char* text, byte string_length, int print_pos_y = 4){ 
 
-  int text_length = sizeof(text);
-  int offset = (16 - text_length) / 2; // Calculate the offset for the number of characters in the string
+  byte offset = (16 - string_length) / 2; // Calculate the offset for the number of characters in the string
 
   screen.setPrintPos(offset, print_pos_y);
 
-  if(text_length % 2 != 0){ // Dividing an odd numbered int by 2 discards the remainder, creating an offset which is half a text character width too short
+  if(string_length % 2 != 0){ // Dividing an odd numbered int by 2 discards the remainder, creating an offset which is half a text character width too short
     screen.setTextPosOffset(4, 0); // So the text needs to be nudged to the right a bit on a pixel level to centre it properly 
   } 
 
@@ -1120,49 +1120,50 @@ void menuInteractions(){
   if (publish_update){ // Refresh menu content if the active variable has changed
 
     int menu_var = menu_settings[menu_item][0];
-    char print_buffer[16 + 1]; 
+    char print_buffer[16 + 1];
+    byte string_length; 
 
     switch (menu_item) { // The menu options
 
       case 0: // Change the number of increments to move each time
 
-        sprintf(print_buffer, "%d", menu_var);  
+        string_length = sprintf(print_buffer, "%d", menu_var);  
 
         break;
 
       case 1: // Change the number of slices to create in the stack
 
-        sprintf(print_buffer, "%d", menu_var); 
+        string_length = sprintf(print_buffer, "%d", menu_var); 
 
         break;
 
       case 2: // Change the number of seconds to wait for the camera to capture an image before continuing 
 
-        sprintf(print_buffer, "%ds", menu_var);
+        string_length = sprintf(print_buffer, "%ds", menu_var);
 
         break;
 
       case 3: // Toggle mirror lockup for the camera
 
-        menu_var == 1 ? sprintf(print_buffer, "Enabled") : sprintf(print_buffer, "Disabled");      
+        string_length = menu_var == 1 ? sprintf(print_buffer, "Enabled") : sprintf(print_buffer, "Disabled");      
 
         break;
 
       case 4: // Change the number of images to take per focus slice (exposure bracketing)
 
-        sprintf(print_buffer, "%d", menu_var);   
+        string_length = sprintf(print_buffer, "%d", menu_var);   
 
         break;
 
       case 5: // Toggle whether camera/subject is returned the starting position at the end of the stack
 
-        menu_var == 1 ? sprintf(print_buffer, "Enabled") : sprintf(print_buffer, "Disabled");
+        string_length = menu_var == 1 ? sprintf(print_buffer, "Enabled") : sprintf(print_buffer, "Disabled");
 
         break; 
 
       case 6: // Select the unit of measure to use for focus slices: Microns, Millimimeters or Centimeters
 
-        sprintf(print_buffer, "%d", unit_of_measure_strings[menu_var]);
+        string_length = sprintf(print_buffer, "%s", unit_of_measure_strings[menu_var]);
 
         break; 
 
@@ -1170,29 +1171,29 @@ void menuInteractions(){
               // A smaller number gives faster motor speed but reduces torque
               // Setting this too low may cause the motor to miss steps or stall
 
-        sprintf(print_buffer, "%duS", menu_var);
+        string_length = sprintf(print_buffer, "%duS", menu_var);
 
         break; 
 
       case 8: // Adjust the degree of microstepping made by the a4988 stepper driver
               // More microsteps give the best stepping resolution but may require more power for consistency and accuracy
       
-        sprintf(print_buffer, "1/%d", micro_stepping[0][menu_var][0]);
+        string_length = sprintf(print_buffer, "1/%d", micro_stepping[0][menu_var][0]);
 
         break;
 
       case 9: // Select the active hardware calibration constant
 
-        menu_var == 0 ? sprintf(print_buffer, "Studio") : sprintf(print_buffer, "Field");     
+        string_length = menu_var == 0 ? sprintf(print_buffer, "Studio") : sprintf(print_buffer, "Field");     
 
         break;
 
       case 10: // Toggle power to an external 3.3v bluetooth board e.g. HC-05
       
         if(menu_settings[10][0] == 1){
-          menu_var == 1 ? sprintf(print_buffer, "Connected") : sprintf(print_buffer, "Unconnected");
+          string_length = menu_var == 1 ? sprintf(print_buffer, "Connected") : sprintf(print_buffer, "Unconnected");
         } else {
-          sprintf(print_buffer, "Disabled");
+          string_length = sprintf(print_buffer, "Disabled");
         }     
 
         break;
@@ -1200,7 +1201,7 @@ void menuInteractions(){
     }
 
     screenUpdate(2, 0, menu_strings[menu_item]);
-    screenPrintCentre(print_buffer);
+    screenPrintCentre(print_buffer, string_length);
     publish_update = false;
 
   }  
