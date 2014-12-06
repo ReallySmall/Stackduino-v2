@@ -100,7 +100,7 @@ volatile int button_main_reading, button_rotary_reading; // The current reading 
 volatile int button_main_previous = LOW, button_rotary_previous = LOW; // The previous reading from the button
 volatile long button_main_time = 0, button_rotary_time = 0; // The last time the button was toggled
 
-boolean bluetooth_connected = false; // Whether bluetooth is connected to a device
+boolean application_connected = false; // Whether a remote application is actively communicating with the controller
 boolean stepper_driver_disable = true; // Whether to disable the A4988 stepper driver when possible to save power and heat
 boolean system_idle = true; // True until the controller is interacted with
 boolean publish_update = true; // True whenever functions are called which change a setting's value
@@ -135,6 +135,7 @@ int incoming_serial; // Store latest byte from incoming serial stream
 int system_timeout_sleep = 10; // Minutes of inactivity to wait until controller enters sleep mode - set to 0 to disable
 int system_timeout_off = 20; // Minutes of inactivity to wait until controller switches itself off - set to 0 to disable
 int minutes_elapsed = 0; // Number of 1 minute periods elapsed
+int five_seconds_counter = 0;
 int slice_counter = 0; // Count of number of focus slices made so far in the stack
 
 
@@ -267,7 +268,7 @@ void systemOff(){
 * text => Text string to print
 *
 */
-void screenUpdate(int print_pos_y = 2, int print_pos_x = 0, String text = ""){ /* WIPE THE SCREEN, PRINT THE HEADER AND SET THE CURSOR POSITION */
+void screenUpdate(int print_pos_y = 2, int print_pos_x = 0, const char text[16+1] = ""){ /* WIPE THE SCREEN, PRINT THE HEADER AND SET THE CURSOR POSITION */
 
   screen.clearScreen(); // Clear the screen
   screen.setPrintPos(0,0); // Set text position in top left corner
@@ -316,7 +317,7 @@ void batteryMonitor(){
 
 
 
-/* BLUETOOTH
+/* BLUETOOTH PORT POWER
 *
 * Requires a compatible bluetooth breakout board (e.g. HC-05) connected to header H_1
 * When enabled the VCC pin on H_1 is switched on via mosfet to power the breakout board
@@ -337,14 +338,28 @@ void bluetoothTogglePower(){
 
 
 
+/* BLUETOOTH CONNECTION STATUS
+*
+* Requires a compatible bluetooth breakout board (e.g. HC-05) connected to header H_1
+* Sends a keep-alive character down the stream and expects one back the next time it is called
+* Otherwise assumes the connection with the controlling application has been lost (evene if the devices are still paired)
+*
+*/      
+void bluetoothConnectionStatus(){
+
+  //TODO
+
+}
+
+
+
 /* MAIN BUTTON
 *
 * Starts or stops a focus stack and wakes the controller from sleep    
 *
 */ 
 void buttonMainToggle(){
-
-  Serial.print("buttonMainToggle()");
+  
   system_idle = false;
   static int button_debounce = 400;
   button_main_reading = digitalRead(button_main);
@@ -367,14 +382,12 @@ void buttonMainToggle(){
 */ 
 void buttonRotaryToggle(){
 
-  Serial.print("buttonRotaryToggle()");
   static int button_debounce = 400;
   button_rotary_reading = mcp.digitalRead(button_rotary);
   
   if (button_rotary_reading == LOW && button_rotary_previous == HIGH && millis() - button_rotary_time > button_debounce) {
     traverse_menus = traverse_menus == true ? false : true;
-    button_rotary_time = millis(); 
-    publish_update = true;   
+    button_rotary_time = millis();   
   }
 
   button_rotary_previous = button_rotary_reading;
@@ -478,12 +491,18 @@ void cameraShutterSignal() {
 */                                       
 void systemTasks(){
 
-  static unsigned long a_minute = millis() + 60000; // 1 minute from now
-
+  static unsigned long five_seconds = millis() + 5000; // 5 seconds from now
+  
   bluetoothTogglePower(); // Switch Bluetooth port on or off
+  
+  if(millis() >= five_seconds){
+    five_seconds_counter++;
+    bluetoothConnectionStatus();
+  }
 
-  if(millis() >= a_minute){ // Every 1 minute
+  if(five_seconds_counter == 12){ // Every 1 minute
     Serial.println("a minute");
+    five_seconds_counter = 0;
     batteryMonitor(); // Check the battery level
     
     if(!system_idle){ // If the controller has been used in the past minute
@@ -494,7 +513,7 @@ void systemTasks(){
       Serial.println(minutes_elapsed);
     }
 
-    a_minute = millis() + 60000; // Reset the timer again to 1 minute from now
+    five_seconds = millis() + 5000; // Reset the timer again to 1 minute from now
 
   }
 
@@ -599,7 +618,6 @@ ISR (PCINT1_vect){
 /* FLAG NEW INTERRUPTS FROM THE MCP23017 */
 void mcpInterrupt(){ 
 
-  Serial.print("test");
   mcp_interrupt_fired = true;
   system_idle = false;
 
@@ -609,8 +627,6 @@ void mcpInterrupt(){
 
 /* PROCESS FLAGGED INTERRUPTS FROM THE MCP23017 */
 void handleMcpInterrupt(){
-
-  Serial.print("handleMcpInterrupt()");
 
   detachInterrupt(0); // Detach the interrupt while the current instance is dealt with
 
@@ -708,18 +724,29 @@ void screenPrintMenuArrows(){
 
 
 
-/* PRINT BLUETOOTH ICONS ON DIGOLE OLED SCREEN 
+/* PRINT BLUETOOTH ICON ON DIGOLE OLED SCREEN 
 *
 * Assumes the default font is in use (allowing 4 rows of 16 characters) 
 *
 */
 void screenPrintBluetooth(){ 
 
-  if(menu_settings[10][0] == 1 && !bluetooth_connected){ //if the bluetooth header (H_1) is active but there isn't an active pairing
+  if(menu_settings[10][0] == 1){ //if the bluetooth header (H_1) is active
     //TODO PRINT AN INACTIVE ICON
   }
 
-  if(menu_settings[10][0] == 1 && bluetooth_connected){ //if the bluetooth header (H_1) is active and there's an active pairing
+}
+
+
+
+/* PRINT APPLICATION CONNECTION ICON ON DIGOLE OLED SCREEN 
+*
+* Assumes the default font is in use (allowing 4 rows of 16 characters) 
+*
+*/
+void screenPrintConnection(){ 
+
+  if(application_connected){ //if the bluetooth header (H_1) is active and there's an active pairing
     //TODO PRINT AN ACTIVE ICON.
   }
 
@@ -732,6 +759,7 @@ void screenPrintBluetooth(){
 * Assumes the default font is in use (allowing 4 rows of 16 characters) 
 *
 * text => The string to be centered and printed
+* string_length => The length of the string in the char buffer
 * print_pos_y => The text line to print on
 *
 */
@@ -809,44 +837,48 @@ void serialCommunications(){
     switch(incoming_serial){
 
       case 'a': // Start or stop stack
-      start_stack = start_stack == true ? false : true;
-      break;
+        start_stack = start_stack == true ? false : true;
+        break;
 
       case 'b': // Toggle menu navigation
-      traverse_menus = traverse_menus == true ? false : true;
-      break;
+        traverse_menus = traverse_menus == true ? false : true;
+        break;
 
       case 'c': // Increment active setting variable
-      setting_changed++;
-      break;
+        setting_changed++;
+        break;
 
       case 'd': // Decrement active setting variable
-      setting_changed--;
-      break;
+        setting_changed--;
+        break;
 
       case 'e': // Move stage forward
-      stepperDriverManualControl();
-      break;
+        stepperDriverManualControl();
+        break;
 
       case 'f': // Move stage backward
-      stepperDriverManualControl();
-      break;
+        stepperDriverManualControl();
+        break;
 
       case 'g': // Take a test image
-      cameraShutterSignal();
-      break;
+        cameraShutterSignal();
+        break;
 
       case 'h': // Switch Bluetooth on or off
-      menu_settings[10][0] = menu_settings[10][0] == 1 ? 0 : 1;
-      break;
+        menu_settings[10][0] = menu_settings[10][0] == 1 ? 0 : 1;
+        break;
 
       case 'i': // Put controller into sleep mode
-      systemSleep();
-      break;  
+        systemSleep();
+        break;  
 
       case 'j': // Switch off controller
-      systemOff();
-      break;
+        systemOff();
+        break;
+        
+      case 'k': // Keep connection alive
+        application_connected = true;
+        break;
 
       default: // Unmatched character - send error then pretend the function call never happened
       Serial.println(incoming_serial);
@@ -1126,76 +1158,54 @@ void menuInteractions(){
     switch (menu_item) { // The menu options
 
       case 0: // Change the number of increments to move each time
-
         string_length = sprintf(print_buffer, "%d", menu_var);  
-
         break;
 
       case 1: // Change the number of slices to create in the stack
-
         string_length = sprintf(print_buffer, "%d", menu_var); 
-
         break;
 
       case 2: // Change the number of seconds to wait for the camera to capture an image before continuing 
-
         string_length = sprintf(print_buffer, "%ds", menu_var);
-
         break;
 
       case 3: // Toggle mirror lockup for the camera
-
         string_length = menu_var == 1 ? sprintf(print_buffer, "Enabled") : sprintf(print_buffer, "Disabled");      
-
         break;
 
       case 4: // Change the number of images to take per focus slice (exposure bracketing)
-
         string_length = sprintf(print_buffer, "%d", menu_var);   
-
         break;
 
       case 5: // Toggle whether camera/subject is returned the starting position at the end of the stack
-
         string_length = menu_var == 1 ? sprintf(print_buffer, "Enabled") : sprintf(print_buffer, "Disabled");
-
         break; 
 
       case 6: // Select the unit of measure to use for focus slices: Microns, Millimimeters or Centimeters
-
         string_length = sprintf(print_buffer, "%s", unit_of_measure_strings[menu_var]);
-
         break; 
 
       case 7: // Adjust the stepper motor speed (delay in microseconds between slice_size)
               // A smaller number gives faster motor speed but reduces torque
               // Setting this too low may cause the motor to miss steps or stall
-
         string_length = sprintf(print_buffer, "%duS", menu_var);
-
         break; 
 
       case 8: // Adjust the degree of microstepping made by the a4988 stepper driver
               // More microsteps give the best stepping resolution but may require more power for consistency and accuracy
-      
         string_length = sprintf(print_buffer, "1/%d", micro_stepping[0][menu_var][0]);
-
         break;
 
       case 9: // Select the active hardware calibration constant
-
         string_length = menu_var == 0 ? sprintf(print_buffer, "Studio") : sprintf(print_buffer, "Field");     
-
         break;
 
       case 10: // Toggle power to an external 3.3v bluetooth board e.g. HC-05
-      
         if(menu_settings[10][0] == 1){
           string_length = menu_var == 1 ? sprintf(print_buffer, "Connected") : sprintf(print_buffer, "Unconnected");
         } else {
           string_length = sprintf(print_buffer, "Disabled");
         }     
-
         break;
 
     }
