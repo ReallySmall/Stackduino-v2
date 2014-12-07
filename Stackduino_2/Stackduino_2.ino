@@ -79,6 +79,16 @@ const char* menu_strings[] = {"Slice size",
                               "Bluetooth"};
 
 const char* unit_of_measure_strings[] = {"mn", "mm", "cm"}; // Unit of measure strings for printing
+
+// Current chars just fot testing, to be replaced with system fonts
+char* system_icons[] = {"BO", // Bluetooth on
+                              "AC", // Application connected
+                              "AU", // Application unconnected
+                              "NL", // Navigate left
+                              "NR", // Navigate right
+                              "SI", // Setting increment
+                              "SD"}; // Setting decrement
+
 const int unit_of_measure_multipliers[] = {1, 1000, 10000}; // Multipliers for active unit of measure (mn, mm or cm)
 const byte micro_stepping[2][5][3] = {{{1},       {2},       {4},       {8},       {16}}, // Degrees of microstepping the A4988 stepper driver can use
                                       {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0}, {1, 1, 1}}}; // HIGH/ LOW combinations to set A4988 MSx pins at
@@ -134,9 +144,10 @@ int setting_changed = 0; // Count increments the active menu setting should be c
 int incoming_serial; // Store latest byte from incoming serial stream
 int system_timeout_sleep = 10; // Minutes of inactivity to wait until controller enters sleep mode - set to 0 to disable
 int system_timeout_off = 20; // Minutes of inactivity to wait until controller switches itself off - set to 0 to disable
-int minutes_elapsed = 0; // Number of 1 minute periods elapsed
-int five_seconds_counter = 0;
+int minutes_elapsed = 0; // Number of minutes elapsed
+int seconds_counter = 0; // Number of seconds elapsed
 int slice_counter = 0; // Count of number of focus slices made so far in the stack
+char* application_connection_icon = "";
 
 
 
@@ -265,16 +276,18 @@ void systemOff(){
 *
 * print_pos_y => Which text line to set the initial print position on 
 * print_pos_x => Which character on the text line to set the initial print position on
-* text => Text string to print
+* text => Optional text string to print
 *
 */
 void screenUpdate(int print_pos_y = 2, int print_pos_x = 0, const char text[16+1] = ""){ /* WIPE THE SCREEN, PRINT THE HEADER AND SET THE CURSOR POSITION */
 
   screen.clearScreen(); // Clear the screen
   screen.setPrintPos(0,0); // Set text position in top left corner
-  start_stack == true ? screen.print("Stack") : screen.print("Menu"); // Display whether menu or stack is active
-  screen.drawBox(1,15,128,1); // Draw a horizontal line to mark out a header section
+  //start_stack == true ? screen.print("Stack") : screen.print("Menu"); // Display whether menu or stack is active
+  screen.print(application_connection_icon);
+  screen.setPrintPos(3,0); // Set text position in top left corner
   screenPrintBluetooth(); // Display an icon for current bluetooth connection state
+  screen.drawBox(1,15,128,1); // Draw a horizontal line to mark out a header section
   screenPrintPowerSource(); // Display the current power source in top right corner
   screenPrintMenuArrows(); // Print menu arrows (if a stack is not running)
   screen.setPrintPos(print_pos_x, print_pos_y); // Set text position to beginning of content area
@@ -338,16 +351,26 @@ void bluetoothTogglePower(){
 
 
 
-/* BLUETOOTH CONNECTION STATUS
+/* APPLICATION CONNECTION STATUS
 *
-* Requires a compatible bluetooth breakout board (e.g. HC-05) connected to header H_1
-* Sends a keep-alive character down the stream and expects one back the next time it is called
-* Otherwise assumes the connection with the controlling application has been lost (evene if the devices are still paired)
+* Sends a keep-alive token and expects one back the next time it is called
+* Otherwise assumes the connection with the remote application has been lost
+* Also sets the icon for current connection status
 *
 */      
-void bluetoothConnectionStatus(){
+void applicationConnectionStatus(){
 
-  //TODO
+  static boolean last_application_connection_status;
+
+  application_connection_icon = application_connected == true ? system_icons[1]: system_icons[2];
+
+  if(application_connected != last_application_connection_status){
+    publish_update = true;
+  }
+
+  last_application_connection_status = application_connected;
+
+  Serial.print("k"); // Send token
 
 }
 
@@ -485,35 +508,43 @@ void cameraShutterSignal() {
 /* SYSTEM TASKS
 *
 * Switch Bluetooth on or off
+* Check connection status of external applications
 * Periodically check the battery level
 * Sleep or switch off the controller if it has been unused for n minutes
 *
 */                                       
 void systemTasks(){
 
-  static unsigned long five_seconds = millis() + 5000; // 5 seconds from now
+  static unsigned long one_second = millis() + 1000; // 1 second from now
+  static boolean connection_status_polled = true;
   
   bluetoothTogglePower(); // Switch Bluetooth port on or off
   
-  if(millis() >= five_seconds){
-    five_seconds_counter++;
-    bluetoothConnectionStatus();
+  if(millis() >= one_second){ // Count each second
+    seconds_counter++;
+    one_second = millis() + 1000;
+    connection_status_polled = false;
+    Serial.print("1 second");
   }
 
-  if(five_seconds_counter == 12){ // Every 1 minute
-    Serial.println("a minute");
-    five_seconds_counter = 0;
+  if(seconds_counter % 5 == 0){ // Every 5 seconds
+    if(!connection_status_polled){
+      applicationConnectionStatus();
+      connection_status_polled = true;
+    }
+  }
+
+  if(seconds_counter == 60){ // Every 1 minute
+    
+    seconds_counter = 0; // Reset to count another minute
     batteryMonitor(); // Check the battery level
     
     if(!system_idle){ // If the controller has been used in the past minute
       minutes_elapsed = 0; // Restart the minutes counter
       system_idle = true; // Reset the system flag
-    } else {
+    } else { //Otherwise a minute has passd with no activity
       minutes_elapsed++; // Keep count of minutes elapsed
-      Serial.println(minutes_elapsed);
     }
-
-    five_seconds = millis() + 5000; // Reset the timer again to 1 minute from now
 
   }
 
@@ -525,8 +556,7 @@ void systemTasks(){
     while(system_idle){
 
       systemSleep(); // Have a nap for 4 seconds
-      naps++;
-      Serial.println(naps); 
+      naps++; 
 
       if(naps == 15){ 
         minutes_elapsed++;
@@ -534,20 +564,19 @@ void systemTasks(){
       }
 
       if(system_timeout_off && (minutes_elapsed >= system_timeout_off)){
-        //systemOff();
-        Serial.print("off");
+        systemOff();
       }
 
     }
 
+    naps = 0;
     systemWake(); // An interrupt woke the controller
 
   }
 
   // If enabled (and sleep mode is disabled) after n minutes switch off the controller 
   if(system_timeout_off > system_timeout_sleep && (minutes_elapsed >= system_timeout_off)){
-    //systemOff();
-    Serial.print("off-2");
+    systemOff();
   }
 
 }
@@ -732,7 +761,7 @@ void screenPrintMenuArrows(){
 void screenPrintBluetooth(){ 
 
   if(menu_settings[10][0] == 1){ //if the bluetooth header (H_1) is active
-    //TODO PRINT AN INACTIVE ICON
+    screen.print(system_icons[0]);
   }
 
 }
@@ -746,9 +775,7 @@ void screenPrintBluetooth(){
 */
 void screenPrintConnection(){ 
 
-  if(application_connected){ //if the bluetooth header (H_1) is active and there's an active pairing
-    //TODO PRINT AN ACTIVE ICON.
-  }
+  screen.print(application_connected == true ? system_icons[1] : system_icons[2]);
 
 }
 
@@ -939,7 +966,7 @@ void stackEnd(){
 
   if (return_to_start){
   
-    stepperDriverEnable(true, 1);
+    stepperDriverEnable(true, 0);
 
     int slice_size = menu_settings[0][0];
     byte active_uom = menu_settings[6][0];
@@ -953,7 +980,7 @@ void stackEnd(){
     screen.print("Returning");
     delay(2000);
 
-    stepperDriverEnable(true, 0);
+    stepperDriverEnable(true, 1);
 
     for (int i; i < rounded_return_steps; i++){
 
@@ -985,7 +1012,7 @@ void stepperDriverClearLimitSwitch(){
   screen.print("Returning...");
 
   if (mcp.digitalRead(limit_switch_front) == LOW){
-    stepperDriverEnable(true, 0);
+    stepperDriverEnable(true, 0); //reverse stepper motor direction
 
     while (mcp.digitalRead(limit_switch_front) == LOW){ //turn stepper motor for as long as  the limit switch remains pressed 
 
@@ -997,7 +1024,7 @@ void stepperDriverClearLimitSwitch(){
   }
 
   if (mcp.digitalRead(limit_switch_back) == LOW){
-    stepperDriverEnable(true, 1); //reverse stepper motor direction
+    stepperDriverEnable(true, 1); 
 
     while (mcp.digitalRead(limit_switch_back) == LOW){ //turn stepper motor for as long as  the limit switch remains pressed 
 
@@ -1050,8 +1077,6 @@ void stepperDriverManualControl(){
 
     }
 
-    stepperDriverEnable(false);
-
   }
 
   // Move stage backwards
@@ -1068,9 +1093,9 @@ void stepperDriverManualControl(){
 
     }
 
-    stepperDriverEnable(false);
-
   }
+
+  stepperDriverEnable(false);
 
   if(!stepperDriverInBounds()) stepperDriverClearLimitSwitch();
   publish_update = true; // Go back to displaying the active menu item once manual control button is no longer pressed
@@ -1125,10 +1150,10 @@ void settingUpdate(int &var, int lower, int upper, int multiplier = 1){
   var = constrain(var, lower, upper); // Keep variable value within specified range 
 
   if(setting_changed){ // If the variable's value was changed at least once since the last check
-  var += (multiplier * setting_changed); // Add or subtract from variable
-  setting_changed = 0; // Reset for next check
-  publish_update = true; // Update menus
-} 
+    var += (multiplier * setting_changed); // Add or subtract from variable
+    setting_changed = 0; // Reset for next check
+    publish_update = true; // Update menus
+  } 
 
 }
 
@@ -1145,7 +1170,7 @@ void menuInteractions(){
     settingUpdate(menu_item, -1, 11); // Display the currently selected menu item
     if(menu_item == 11) menu_item = 0; // Create looping navigation
     if(menu_item == -1) menu_item = 10; // Create looping navigation
-  } else {
+  } else { // Otherwise change the value of the current menu item
     settingUpdate(menu_settings[menu_item][0], menu_settings[menu_item][1], menu_settings[menu_item][2], menu_settings[menu_item][3]);
   }
 
