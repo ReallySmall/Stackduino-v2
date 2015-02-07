@@ -13,7 +13,7 @@
 
 
 /* DEFINES AND DEPENDENCIES */
-#define _Digole_Serial_SPI_ // OLED screen configured with solder jumper to run in SPI mode
+#define _Digole_Serial_I2C_ // OLED screen configured with solder jumper to run in I2C mode
 #define ENC_A A0 // Rotary encoder
 #define ENC_B A1 // Rotary encoder
 #define ENC_PORT PINC // Rotary encoder
@@ -21,13 +21,10 @@
 #include "DigoleSerial.h" // https://github.com/chouckz/HVACX10Arduino/blob/master/1.0.1_libraries/DigoleSerial/DigoleSerial.h
 #include "Wire.h" //
 #include "Adafruit_MCP23017.h" //
-#include "LowPower.h" // https://github.com/rocketscream/Low-Power
-
-
 
 /* CREATE REQUIRED OBJECTS */                                                                       
 Adafruit_MCP23017 mcp; // 16 pin IO port expander
-DigoleSerialDisp screen(8,9,10);  // Digole 128x64 OLED screen - SPI mode - Pin 8: data, 9:clock, 10: SS
+DigoleSerialDisp screen(&Wire,'\x27');
 
 
 
@@ -142,7 +139,6 @@ int menu_settings[11][4] = {{10, 1, 1000, 1}, // "Slice size"
 int menu_item = 0; // The active menu item
 int setting_changed = 0; // Count increments the active menu setting should be changed by on the next poll
 int incoming_serial; // Store latest byte from incoming serial stream
-int system_timeout_sleep = 10; // Minutes of inactivity to wait until controller enters sleep mode - set to 0 to disable
 int system_timeout_off = 20; // Minutes of inactivity to wait until controller switches itself off - set to 0 to disable
 int minutes_elapsed = 0; // Number of minutes elapsed
 int seconds_counter = 0; // Number of seconds elapsed
@@ -215,8 +211,8 @@ void setup() {
   stepperDriverClearLimitSwitch(); // Make sure neither limit switch is hit on startup - rectify if so
   batteryMonitor(); // Check the battery level
 
-  screen.displayStartScreen(0); // FOR TESTING
-  screen.displayConfig(0); // FOR TESTING
+  //screen.displayStartScreen(0); // FOR TESTING
+  //screen.displayConfig(0); // FOR TESTING
   screen.print("STACKDUINO v2.1");
   
 }
@@ -226,34 +222,6 @@ void setup() {
 /*////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FUNCTIONS                                                                                            //       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-
-
-
-/* SEND TO SLEEP
-*
-* Uses the lowPower libary
-*
-*/
-void systemSleep(){ 
-
-  LowPower.powerDown(SLEEP_4S, ADC_OFF, BOD_OFF); 
-
-}
-
-
-
-/* WAKE UP 
-*
-* Tasks for the controller to do once it wakes up
-*
-*/
-void systemWake(){ 
-
-  system_idle = true;
-  minutes_elapsed = 0;
-
-}
-
 
 
 /* POWER OFF 
@@ -378,7 +346,7 @@ void applicationConnectionStatus(){
 
 /* MAIN BUTTON
 *
-* Starts or stops a focus stack and wakes the controller from sleep    
+* Starts or stops a focus stack
 *
 */ 
 void buttonMainToggle(){
@@ -400,7 +368,7 @@ void buttonMainToggle(){
 
 /* ROTARY ENCODER BUTTON
 *
-* Toggles between menu navigation and variable editing and wakes the controller from sleep    
+* Toggles between menu navigation and variable editing
 *
 */ 
 void buttonRotaryToggle(){
@@ -510,7 +478,7 @@ void cameraShutterSignal() {
 * Switch Bluetooth on or off
 * Check connection status of external applications
 * Periodically check the battery level
-* Sleep or switch off the controller if it has been unused for n minutes
+* Switch off the controller if it has been unused for n minutes
 *
 */                                       
 void systemTasks(){
@@ -524,7 +492,6 @@ void systemTasks(){
     seconds_counter++;
     one_second = millis() + 1000;
     connection_status_polled = false;
-    Serial.print("1 second");
   }
 
   if(seconds_counter % 5 == 0){ // Every 5 seconds
@@ -548,34 +515,8 @@ void systemTasks(){
 
   }
 
-  // If enabled, after n minutes put the idle controller in sleep mode
-  if(system_timeout_sleep && (system_timeout_sleep < system_timeout_off) && (minutes_elapsed >= system_timeout_sleep)){ 
-
-    byte naps = 0;
-
-    while(system_idle){
-
-      systemSleep(); // Have a nap for 4 seconds
-      naps++; 
-
-      if(naps == 15){ 
-        minutes_elapsed++;
-        naps = 0;
-      }
-
-      if(system_timeout_off && (minutes_elapsed >= system_timeout_off)){
-        systemOff();
-      }
-
-    }
-
-    naps = 0;
-    systemWake(); // An interrupt woke the controller
-
-  }
-
-  // If enabled (and sleep mode is disabled) after n minutes switch off the controller 
-  if(system_timeout_off > system_timeout_sleep && (minutes_elapsed >= system_timeout_off)){
+  // If enabled after n minutes switch off the controller 
+  if(system_timeout_off && (minutes_elapsed >= system_timeout_off)){
     systemOff();
   }
 
@@ -895,8 +836,8 @@ void serialCommunications(){
         menu_settings[10][0] = menu_settings[10][0] == 1 ? 0 : 1;
         break;
 
-      case 'i': // Put controller into sleep mode
-        systemSleep();
+      case 'i': // 
+        
         break;  
 
       case 'j': // Switch off controller
@@ -1064,14 +1005,14 @@ boolean stepperDriverInBounds(){
 void stepperDriverManualControl(){ 
 
   // Move stage forwards
-  if ((mcp.digitalRead(stepper_driver_forward) == LOW || incoming_serial == 'f') && stepperDriverInBounds()) {
+  if ((mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
     screenUpdate();
     screen.print("Moving forwards");
     screen.setPrintPos(0,4);
     screen.print(">-->>-->>-->>-->");
     stepperDriverEnable(true, 1);
 
-    while ((mcp.digitalRead(stepper_driver_forward) == LOW || incoming_serial == 'f') && stepperDriverInBounds()) {
+    while ((mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
 
       stepperDriverStep(); 
 
@@ -1080,14 +1021,14 @@ void stepperDriverManualControl(){
   }
 
   // Move stage backwards
-  if ((mcp.digitalRead(stepper_driver_forward) == LOW || incoming_serial == 'g') && stepperDriverInBounds()) {
+  if ((mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
     screenUpdate();
     screen.print("Moving backwards");
     screen.setPrintPos(0,4);
     screen.print("<--<<--<<--<<--<");
     stepperDriverEnable(true, 0);
 
-    while ((mcp.digitalRead(stepper_driver_forward) == LOW || incoming_serial == 'g') && stepperDriverInBounds()) {
+    while ((mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
 
       stepperDriverStep(); 
 
@@ -1265,7 +1206,7 @@ void loop(){
     if(mcp_interrupt_fired) handleMcpInterrupt(); // Catch interrupts and run any required functions
     serialCommunications();  // Check for commands via serial
     menuInteractions(); // Change menu options and update the screen when changed
-    systemTasks(); // Run timer driven tasks such as battery level checks and sleep mode
+    systemTasks(); // Run timer driven tasks such as battery level checks and auto switch off
 
   } 
 
