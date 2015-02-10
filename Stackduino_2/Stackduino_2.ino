@@ -21,6 +21,9 @@
 #include "DigoleSerial.h" // https://github.com/chouckz/HVACX10Arduino/blob/master/1.0.1_libraries/DigoleSerial/DigoleSerial.h
 #include "Wire.h" //
 #include "Adafruit_MCP23017.h" //
+#include "ArduinoJson.h"
+#include "SPI.h"
+#include "SD.h"
 
 /* CREATE REQUIRED OBJECTS */                                                                       
 Adafruit_MCP23017 mcp; // 16 pin IO port expander
@@ -35,6 +38,7 @@ const byte stepper_driver_direction = 4; // Direction pin on A4988 stepper drive
 const byte stepper_driver_do_step = 5; // Step pin on A4988 stepper driver
 const byte camera_focus = 6; // Camera autofocus signal
 const byte camera_shutter = 7; // Camera shutter signal
+const byte sd_ss =10; // SPI slave select for SD card slot
 const byte batt_sense = A2; // Battery voltage sampling
 const byte batt_fet = 17; // Connect/ disconnect battery voltage sampling line
 const byte ext_analogue_1 = A6; // Analogue pin (supports analogueRead() only) broken out through DB15 - currently unused
@@ -144,6 +148,7 @@ int minutes_elapsed = 0; // Number of minutes elapsed
 int seconds_counter = 0; // Number of seconds elapsed
 int slice_counter = 0; // Count of number of focus slices made so far in the stack
 char* application_connection_icon = "";
+File settings_file;
 
 
 
@@ -162,6 +167,7 @@ void setup() {
   pinMode(camera_focus, OUTPUT); digitalWrite(camera_focus, LOW);
   pinMode(camera_shutter, OUTPUT); digitalWrite(camera_shutter, LOW);
   pinMode(batt_fet, OUTPUT); digitalWrite(batt_fet, LOW);
+  pinMode(sd_ss, OUTPUT);
 
   
 
@@ -208,12 +214,14 @@ void setup() {
 
   /* FINAL PRE-START CHECKS AND SETUP */       
   Serial.begin(9600); // Start serial (always initialise at 9600 for compatibility with OLED)
+  if (!SD.begin(sd_ss)) {
+    Serial.println("Card failed, or not present");
+    // don't do anything more:
+    return;
+  }
+  loadSettings(); // Attempt to load settings from SD card
   stepperDriverClearLimitSwitch(); // Make sure neither limit switch is hit on startup - rectify if so
   batteryMonitor(); // Check the battery level
-
-  //screen.displayStartScreen(0); // FOR TESTING
-  //screen.displayConfig(0); // FOR TESTING
-  screen.print("STACKDUINO v2.1");
   
 }
 
@@ -224,6 +232,81 @@ void setup() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 
+/* SAVED SETTINGS
+*
+* Load settings from SD card/ save settings to SD card
+* Stored in JSON format
+*
+*/
+void loadSettings(){
+  
+  // Get the JSON settings string from the SD card
+  settings_file = SD.open("settings.txt");
+  if (settings_file) {
+    char json_settings[400];
+    while (settings_file.available()) {
+        json_settings += settings_file.read());
+    }
+    // close the file:
+    settings_file.close();
+    
+    StaticJsonBuffer<400> jsonBuffer;
+
+  // Hardcoded JSON string for testing
+  char json_settings[] = "{\"Slice size\":[20, 1, 1000, 1], \"Number of slices\":[30, 10, 5000, 10], \"Pause time\":[1, 1, 60, 1], \"Mirror lockup\":[1, 1, 0, 1], \"Bracketing\":[3, 1, 10, 1]], \"Return to start\":[1, 0, 1, 1], \"Unit of measure\":[1, 0, 2, 1]], \"Stepper speed\":[4000, 1000, 8000, 1], \"Microstepping\":[3, 0, 4, 1], \"Linear stage\":[1, 0, 1, 1], \"Bluetooth\"}:[0, 0, 1, 1]}";
+
+  // Attempt to create a parseable object from the JSON string
+  JsonObject& load_root = jsonBuffer.parseObject(json_settings);
+
+  if (!load_root.success()) {
+    Serial.println("parseObject() failed");
+    return;
+  } else {
+
+    // If successful, loop through menu settings and assign variable values from parsed JSON object
+    for(int i = 0; i < 11; i++){
+      for(int j = 0; j < 4; j++){
+        menu_settings[i][j] = load_root[menu_strings[i]][j];
+      }
+    }
+    
+    Serial.print("done");
+    //saveSettings();
+
+  }
+  
+  } else {
+    // if the file didn't open, print an error:
+    Serial.println("error opening settings.txt");
+  } 
+
+}
+
+void saveSettings(){
+  
+    StaticJsonBuffer<50> jsonBuffer;
+  
+    // Create a JSON object to save settings into
+    JsonObject& save_root = jsonBuffer.createObject();
+
+    // Loop through menu settings and populate JSON object
+    for(int i = 0; i < 11; i++){
+      JsonArray& data = save_root.createNestedArray(menu_strings[i]);
+      for(int j = 0; j < 4; j++){
+        data.add(menu_settings[i][j]);
+      }
+    }
+
+    save_root.prettyPrintTo(Serial);
+
+
+    // Write JSON string to SD card
+    // TODO
+
+}
+
+
+
 /* POWER OFF 
 *
 * The controller powers itself off by pulling the enable pin on the voltage regulator low
@@ -231,7 +314,6 @@ void setup() {
 */
 void systemOff(){ 
 
-  Serial.print("system off");
   //mcp.digitalWrite(switch_off, LOW);
 
 }
@@ -338,7 +420,7 @@ void applicationConnectionStatus(){
 
   last_application_connection_status = application_connected;
 
-  Serial.print("k"); // Send token
+  Serial.print(F("k")); // Send token
 
 }
 
@@ -394,36 +476,33 @@ void buttonRotaryToggle(){
 */
 void cameraProcessImages(){ 
 
-  byte camera_bracket = menu_settings[4][0];
-  byte camera_pause = menu_settings[2][0];
-
-  for (int i = 1; i <= camera_bracket; i++){
+  for (int i = 1; i <= menu_settings[4][0]; i++){
 
     pause(1000); // Allow vibrations to settle
 
-    if(camera_bracket > 1){ // If more than one image is being taken, display the current position in the bracket
+    if(menu_settings[4][0] > 1){ // If more than one image is being taken, display the current position in the bracket
       screenPrintProgress();
       screen.setPrintPos(0,4);
-      screen.print("Bracket ");
+      screen.print(F("Bracket "));
       screen.print(i);
-      screen.print("/");
-      screen.print(camera_bracket);
+      screen.print(F("/"));
+      screen.print(menu_settings[4][0]);
     }
 
     screenPrintProgress();
     screen.setPrintPos(0,4);
-    screen.print("Pause for camera");
+    screen.print(F("Pause for camera"));
 
     cameraShutterSignal(); // Take the image
 
-    for(int i = 1; i <= camera_pause; i++){
+    for(int i = 1; i <= menu_settings[2][0]; i++){
 
       pause(1000);
       screenPrintProgress();
       screen.setPrintPos(0,4);
-      screen.print("Resume in ");
-      screen.print(camera_pause - i); // Print number of seconds remaining
-      screen.print("s");
+      screen.print(F("Resume in "));
+      screen.print(menu_settings[2][0] - i); // Print number of seconds remaining
+      screen.print(F("s"));
 
       if(stackCancelled()) break; // Exit early if the stack has been cancelled
 
@@ -443,14 +522,12 @@ void cameraProcessImages(){
 */
 void cameraShutterSignal() { 
 
-  byte mirror_lockup = menu_settings[3][0];
+  for (int i = 0; i <= menu_settings[3][0]; i++){
 
-  for (int i = 0; i <= mirror_lockup; i++){
-
-    if(mirror_lockup){
+    if(menu_settings[3][0]){
       screenPrintProgress();
       screen.setPrintPos(0,4); 
-      screen.print(i == 0 ? "Raise mirror" : "Shutter");
+      screen.print(i == 0 ? F("Raise mirror") : F("Shutter"));
       pause(500);
     }
 
@@ -462,7 +539,7 @@ void cameraShutterSignal() {
     digitalWrite(camera_shutter, LOW); // Switch off camera trigger signal
     digitalWrite(camera_focus, LOW); // Switch off camera focus signal
 
-    if(mirror_lockup && i == 0){
+    if(menu_settings[3][0] && i == 0){
       pause(2000); // Pause between mirror up and shutter actuation
     }
 
@@ -483,42 +560,42 @@ void cameraShutterSignal() {
 */                                       
 void systemTasks(){
 
-  static unsigned long one_second = millis() + 1000; // 1 second from now
-  static boolean connection_status_polled = true;
-  
-  bluetoothTogglePower(); // Switch Bluetooth port on or off
-  
-  if(millis() >= one_second){ // Count each second
-    seconds_counter++;
-    one_second = millis() + 1000;
-    connection_status_polled = false;
-  }
-
-  if(seconds_counter % 5 == 0){ // Every 5 seconds
-    if(!connection_status_polled){
-      applicationConnectionStatus();
-      connection_status_polled = true;
-    }
-  }
-
-  if(seconds_counter == 60){ // Every 1 minute
-    
-    seconds_counter = 0; // Reset to count another minute
-    batteryMonitor(); // Check the battery level
-    
-    if(!system_idle){ // If the controller has been used in the past minute
-      minutes_elapsed = 0; // Restart the minutes counter
-      system_idle = true; // Reset the system flag
-    } else { //Otherwise a minute has passd with no activity
-      minutes_elapsed++; // Keep count of minutes elapsed
-    }
-
-  }
-
-  // If enabled after n minutes switch off the controller 
-  if(system_timeout_off && (minutes_elapsed >= system_timeout_off)){
-    systemOff();
-  }
+//  static unsigned long one_second = millis() + 1000; // 1 second from now
+//  static boolean connection_status_polled = true;
+//  
+//  bluetoothTogglePower(); // Switch Bluetooth port on or off
+//  
+//  if(millis() >= one_second){ // Count each second
+//    seconds_counter++;
+//    one_second = millis() + 1000;
+//    connection_status_polled = false;
+//  }
+//
+//  if(seconds_counter % 5 == 0){ // Every 5 seconds
+//    if(!connection_status_polled){
+//      applicationConnectionStatus();
+//      connection_status_polled = true;
+//    }
+//  }
+//
+//  if(seconds_counter == 60){ // Every 1 minute
+//    
+//    seconds_counter = 0; // Reset to count another minute
+//    batteryMonitor(); // Check the battery level
+//    
+//    if(!system_idle){ // If the controller has been used in the past minute
+//      minutes_elapsed = 0; // Restart the minutes counter
+//      system_idle = true; // Reset the system flag
+//    } else { //Otherwise a minute has passd with no activity
+//      minutes_elapsed++; // Keep count of minutes elapsed
+//    }
+//
+//  }
+//
+//  // If enabled after n minutes switch off the controller 
+//  if(system_timeout_off && (minutes_elapsed >= system_timeout_off)){
+//    systemOff();
+//  }
 
 }
 
@@ -607,7 +684,11 @@ void handleMcpInterrupt(){
     systemOff();
   }
 
-  if(((pin == stepper_driver_forward) || (pin == stepper_driver_backward)) && start_stack == false){ // If a manual stage control button was pressed
+  if(pin == stepper_driver_forward && start_stack == false){ // If a manual stage control button was pressed
+    stepperDriverManualControl();
+  }
+  
+  if(pin == stepper_driver_backward && start_stack == false){ // If a manual stage control button was pressed
     stepperDriverManualControl();
   }
 
@@ -658,37 +739,37 @@ void pause(int length){
 */
 void screenPrintMenuArrows(){ 
 
-  if(!start_stack) {
-    if(traverse_menus) { // Move to the next menu item 
-
-      screen.drawBox(5,54,1,9); // Left outward arrow
-      screen.drawBox(4,55,1,7);
-      screen.drawBox(3,56,1,5);
-      screen.drawBox(2,57,1,3);
-      screen.drawBox(1,58,1,1);
-
-      screen.drawBox(122,54,1,9); // Right outward arrow
-      screen.drawBox(123,55,1,7);
-      screen.drawBox(124,56,1,5);
-      screen.drawBox(125,57,1,3);
-      screen.drawBox(126,58,1,1);
-      
-    } else { // Change the value of the current menu item
-
-      screen.drawBox(1,54,1,9); // Left inward arrow
-      screen.drawBox(2,55,1,7);
-      screen.drawBox(3,56,1,5);
-      screen.drawBox(4,57,1,3);
-      screen.drawBox(5,58,1,1);
-
-      screen.drawBox(122,58,1,1); // Right inward arrow
-      screen.drawBox(123,57,1,3);
-      screen.drawBox(124,56,1,5);
-      screen.drawBox(125,55,1,7);
-      screen.drawBox(126,54,1,9);
-
-    }
-  }
+//  if(!start_stack) {
+//    if(traverse_menus) { // Move to the next menu item 
+//
+//      screen.drawBox(5,54,1,9); // Left outward arrow
+//      screen.drawBox(4,55,1,7);
+//      screen.drawBox(3,56,1,5);
+//      screen.drawBox(2,57,1,3);
+//      screen.drawBox(1,58,1,1);
+//
+//      screen.drawBox(122,54,1,9); // Right outward arrow
+//      screen.drawBox(123,55,1,7);
+//      screen.drawBox(124,56,1,5);
+//      screen.drawBox(125,57,1,3);
+//      screen.drawBox(126,58,1,1);
+//      
+//    } else { // Change the value of the current menu item
+//
+//      screen.drawBox(1,54,1,9); // Left inward arrow
+//      screen.drawBox(2,55,1,7);
+//      screen.drawBox(3,56,1,5);
+//      screen.drawBox(4,57,1,3);
+//      screen.drawBox(5,58,1,1);
+//
+//      screen.drawBox(122,58,1,1); // Right inward arrow
+//      screen.drawBox(123,57,1,3);
+//      screen.drawBox(124,56,1,5);
+//      screen.drawBox(125,55,1,7);
+//      screen.drawBox(126,54,1,9);
+//
+//    }
+//  }
 
 }
 
@@ -754,19 +835,19 @@ void screenPrintCentre(char* text, byte string_length, int print_pos_y = 4){
 */
 void screenPrintPowerSource(){ 
 
-  if(mcp.digitalRead(power_in_status) == LOW){ // Draw plug symbol (dc adapter connected)
-      screen.drawBox(115,1,3,1);
-      screen.drawBox(112,2,7,1);
-      screen.drawBox(115,3,13,2);
-      screen.drawBox(112,5,7,1);
-      screen.drawBox(115,6,3,1);
-    } else { // Draw battery symbol and print current voltage
-      screen.setPrintPos(7,0);
-      screen.print(calculated_voltage_reading);
-      screen.print("v");
-      screen.drawBox(112,3,2,2);
-      screen.drawBox(114,1,14,6);
-    }
+//  if(mcp.digitalRead(power_in_status) == LOW){ // Draw plug symbol (dc adapter connected)
+//      screen.drawBox(115,1,3,1);
+//      screen.drawBox(112,2,7,1);
+//      screen.drawBox(115,3,13,2);
+//      screen.drawBox(112,5,7,1);
+//      screen.drawBox(115,6,3,1);
+//    } else { // Draw battery symbol and print current voltage
+//      screen.setPrintPos(7,0);
+//      screen.print(calculated_voltage_reading);
+//      screen.print(F("v"));
+//      screen.drawBox(112,3,2,2);
+//      screen.drawBox(114,1,14,6);
+//    }
 
   }
 
@@ -780,9 +861,9 @@ void screenPrintPowerSource(){
 void screenPrintProgress(){
 
   screenUpdate(); 
-  screen.print("Slice ");
+  screen.print(F("Slice "));
   screen.print (slice_counter);
-  screen.print ("/");
+  screen.print (F("/"));
   screen.print (menu_settings[1][0]);
 
 }
@@ -850,7 +931,7 @@ void serialCommunications(){
 
       default: // Unmatched character - send error then pretend the function call never happened
       Serial.println(incoming_serial);
-      Serial.print(" does not have a matching function");
+      Serial.print(" is not a recognised command");
       system_idle = true;
     }
   }
@@ -899,26 +980,19 @@ void stepperDriverEnable(boolean enable = true, byte direction = 1) {
 */
 void stackEnd(){
 
-  byte return_to_start = menu_settings[5][0];
-
   screenUpdate();
-  start_stack == false ? screen.print("Stack cancelled") : screen.print("Stack finished"); 
+  start_stack == false ? screen.print(F("Stack cancelled")) : screen.print(F("Stack finished")); 
   delay(2000);
 
-  if (return_to_start){
+  if (menu_settings[5][0]){
   
     stepperDriverEnable(true, 0);
 
-    int slice_size = menu_settings[0][0];
-    byte active_uom = menu_settings[6][0];
-    byte active_ms = menu_settings[8][1];
-    byte active_hc = menu_settings[9][0];
-
-    float exact_return_steps = slice_size * slice_counter * hardware_calibration_settings[active_hc] * unit_of_measure_multipliers[active_uom] * micro_stepping[0][active_ms][0];
+    float exact_return_steps = menu_settings[0][0] * slice_counter * hardware_calibration_settings[menu_settings[9][0]] * unit_of_measure_multipliers[menu_settings[6][0]] * micro_stepping[0][menu_settings[8][1]][0];
     long rounded_return_steps = (long) exact_return_steps - 0.5;
 
     screenUpdate();
-    screen.print("Returning");
+    screen.print(F("Returning"));
     delay(2000);
 
     stepperDriverEnable(true, 1);
@@ -948,9 +1022,9 @@ void stackEnd(){
 void stepperDriverClearLimitSwitch(){ 
 
   screenUpdate();
-  screen.print("End of travel!");
+  screen.print(F("End of travel!"));
   screen.setPrintPos(0,4);
-  screen.print("Returning...");
+  screen.print(F("Returning..."));
 
   if (mcp.digitalRead(limit_switch_front) == LOW){
     stepperDriverEnable(true, 0); //reverse stepper motor direction
@@ -982,7 +1056,7 @@ void stepperDriverClearLimitSwitch(){
   if(start_stack){ // If a stack was in progress, cancel it
     start_stack = false;
     stackCancelled();
-  }
+  } 
 
 }
 
@@ -1005,14 +1079,14 @@ boolean stepperDriverInBounds(){
 void stepperDriverManualControl(){ 
 
   // Move stage forwards
-  if ((mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
+  if (mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
     screenUpdate();
-    screen.print("Moving forwards");
+    screen.print(F("Moving forwards"));
     screen.setPrintPos(0,4);
-    screen.print(">-->>-->>-->>-->");
+    screen.print(F(">-->>-->>-->>-->"));
     stepperDriverEnable(true, 1);
 
-    while ((mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
+    while (mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
 
       stepperDriverStep(); 
 
@@ -1021,14 +1095,14 @@ void stepperDriverManualControl(){
   }
 
   // Move stage backwards
-  if ((mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
+  if (mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
     screenUpdate();
-    screen.print("Moving backwards");
+    screen.print(F("Moving backwards"));
     screen.setPrintPos(0,4);
-    screen.print("<--<<--<<--<<--<");
+    screen.print(F("<--<<--<<--<<--<"));
     stepperDriverEnable(true, 0);
 
-    while ((mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
+    while (mcp.digitalRead(stepper_driver_forward) == LOW && stepperDriverInBounds()) {
 
       stepperDriverStep(); 
 
@@ -1119,7 +1193,7 @@ void menuInteractions(){
 
     int menu_var = menu_settings[menu_item][0];
     char print_buffer[16 + 1];
-    byte string_length; 
+    byte string_length;
 
     switch (menu_item) { // The menu options
 
@@ -1176,6 +1250,7 @@ void menuInteractions(){
 
     }
 
+    //saveSettings();
     screenUpdate(2, 0, menu_strings[menu_item]);
     screenPrintCentre(print_buffer, string_length);
     publish_update = false;
@@ -1222,16 +1297,10 @@ void loop(){
     slice_counter++; // Register the first image(s) of the stack is being taken
     cameraProcessImages(); // Take the image(s) for the first slice of the stack
 
-    int slice_size = menu_settings[0][0];
-    int slices = menu_settings[1][0];
-    byte active_uom = menu_settings[6][0];
-    byte active_ms = menu_settings[8][0];
-    byte active_hc = menu_settings[9][0];
-
-    float exact_steps = slice_size * hardware_calibration_settings[active_hc] * unit_of_measure_multipliers[active_uom] * micro_stepping[0][active_ms][0];
+    float exact_steps = menu_settings[0][0] * hardware_calibration_settings[menu_settings[9][0]] * unit_of_measure_multipliers[menu_settings[6][0]] * micro_stepping[0][menu_settings[8][0]][0];
     long rounded_steps = (long) exact_steps - 0.5;
 
-    for (int i = 1; i < slices; i++){ // For each subsequent focus slice in the stack
+    for (int i = 1; i < menu_settings[1][0]; i++){ // For each subsequent focus slice in the stack
 
       slice_counter++; // Record slices made in the stack so far
 
@@ -1239,9 +1308,9 @@ void loop(){
 
       screenPrintProgress(); // Print the current position in the stack
       screen.setPrintPos(0,4);
-      screen.print("Advance ");
-      screen.print(slice_size);
-      screen.print(unit_of_measure_strings[active_uom]);
+      screen.print(F("Advance "));
+      screen.print(menu_settings[0][0]);
+      screen.print(unit_of_measure_strings[menu_settings[6][0]]);
 
       if(stackCancelled()) break; // Exit early if the stack has been cancelled
 
