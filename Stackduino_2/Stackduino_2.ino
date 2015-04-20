@@ -200,9 +200,8 @@ void setup() {
   /* FINAL PRE-START CHECKS AND SETUP */
   Serial.begin(9600); // Start serial (always initialise at 9600 for compatibility with OLED)
   battMonitor(); // Check the battery level
-  getHardware(); // Get the type of the attached stacker
-  //saveSettings();
   loadSettings(); // Attempt to load settings from SD card
+  getHardware(); // Get the type of the attached stacker
 
   stepperDriverClearLimitSwitch(); // Make sure neither limit switch is hit on startup - rectify if so
 }
@@ -273,17 +272,11 @@ void screenPrintCentre(char* text, byte string_length, byte print_pos_y = 4) {
 *
 */
 void getHardware() {
-  screenUpdate();
-  screen.print(F(" Hardware mode: "));
-  screen.setPrintPos(0, 4);
   if (mcp.digitalRead(connected_hardware) == HIGH) {
     active_hardware_calibration_setting = 1;
-    screen.print(F("     Studio     "));
   } else {
     active_hardware_calibration_setting = 1.5; // TODO: This is a random example number, work out the actual one
-    screen.print(F("    Portable    "));
   }
-  delay(2500);
 }
 
 
@@ -373,6 +366,7 @@ void loadSettings() {
     }
     
     settings_file.close(); // Close the file:
+    progressBar();
     
   } else {
     // if the file didn't open, print an error:
@@ -399,27 +393,27 @@ void saveSettings() {
   for (byte i = 0; i < settings_count; i++) {
     stringConstants thisSettingTitle; //Retrieve the setting title from progmem
     memcpy_P (&thisSettingTitle, &settings_titles[i], sizeof thisSettingTitle);
-    settings_file.write(thisSettingTitle.title);
+    //settings_file.write(thisSettingTitle.title);
     Serial.print(thisSettingTitle.title);
-    settings_file.write(" = {");
+    //settings_file.write(" = {");
     Serial.print(" = {");
-    settings_file.write(settings[i].value);
+    //settings_file.write(settings[i].value);
     Serial.print(settings[i].value);
-    settings_file.write(",");
+    //settings_file.write(",");
     Serial.print(",");
-    settings_file.write(settings[i].lower);
+    //settings_file.write(settings[i].lower);
     Serial.print(settings[i].lower);
-    settings_file.write(",");
+    //settings_file.write(",");
     Serial.print(",");
-    settings_file.write(settings[i].upper);
+    //settings_file.write(settings[i].upper);
     Serial.print(settings[i].upper);
-    settings_file.write(",");
+    //settings_file.write(",");
     Serial.print(",");
-    settings_file.write(settings[i].multiplier);
+    //settings_file.write(settings[i].multiplier);
     Serial.print(settings[i].multiplier);
-    settings_file.write("};");
+    //settings_file.write("};");
     Serial.print("};");
-    settings_file.println();
+    //settings_file.println();
     Serial.println();
   }
 
@@ -428,6 +422,24 @@ void saveSettings() {
 }
 
 
+
+/* PROGRESS BAR
+*
+* Visual confirmation that a non-instant process has completed (not updated in real time)
+* 
+*/
+void progressBar(){
+ 
+  screen.drawFrame(1, 46, 126, 16); // Draw a frame
+    
+  for(byte i = 0, j = 3; i < 121; i++, j+=1){
+    screen.drawBox(j, 48, 1, 11);
+    delay(8);  
+  }
+  
+  delay(1000);
+  
+}
 
 /* POWER OFF
 *
