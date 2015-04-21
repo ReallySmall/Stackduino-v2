@@ -17,6 +17,7 @@
 #define ENC_A A0 // Rotary encoder
 #define ENC_B A1 // Rotary encoder
 #define ENC_PORT PINC // Rotary encoder
+#define settings_elements 4 // Number of struct elements in Settings
 
 #include "DigoleSerial.h" // https://github.com/chouckz/HVACX10Arduino/blob/master/1.0.1_libraries/DigoleSerial/DigoleSerial.h
 #include "Wire.h" //
@@ -69,7 +70,7 @@ struct Settings { // A struct type for storing settings
   {0, 0, 2, 1}, // "Unit of measure"
   {2, 1, 8, 1}, // "Stepper speed"
   {4, 0, 4, 1}, // "Microstepping"
-  {1, 0, 1, 1} // "Bluetooth"
+  {0, 0, 1, 1} // "Bluetooth"
 };
 
 byte settings_count = sizeof(settings) / sizeof(Settings); // The number of settings
@@ -307,6 +308,7 @@ void loadSettings() {
   if (settings_file) {
 
     byte setting_index = 0; // Index of the menu setting to populate
+    byte progress = 0; // How far through the loading progress it is
     byte property_index = 0; // Index of the menu setting property to populate
     char file_string[4]; // A string container to fill with characters from the sd read buffer
     byte file_string_index = 0; // Position in string container to add next character from the sd read buffer
@@ -347,6 +349,10 @@ void loadSettings() {
               break;
           }
 
+          progress++;
+          progressBar((settings_count * settings_elements), progress);
+          delay(15); //Short pause for change in progress to be visible on the screen
+
           if (file_character == '}') { // If at the end of a settings line
             file_string[0] = '\0'; // Clear the temporary string array
             file_string_index = 0; // Reset the file string indexer
@@ -366,7 +372,7 @@ void loadSettings() {
     }
     
     settings_file.close(); // Close the file:
-    progressBar();
+    delay(300);
     
   } else {
     // if the file didn't open, print an error:
@@ -425,19 +431,19 @@ void saveSettings() {
 
 /* PROGRESS BAR
 *
-* Visual confirmation that a non-instant process has completed (not updated in real time)
+* Pretty self explanatory
 * 
 */
-void progressBar(){
+void progressBar(byte width, byte progress){
  
-  screen.drawFrame(1, 46, 126, 16); // Draw a frame
-    
-  for(byte i = 0, j = 3; i < 121; i++, j+=1){
-    screen.drawBox(j, 48, 1, 11);
-    delay(8);  
-  }
+  // Default bar width in pixels equals number of steps to complete passed by calling function
+  // But make the bar as wide as possible within the space available (with a bit of padding either side)
+  byte progress_multiplier = 120 / width;
   
-  delay(1000);
+  byte leftPos = (128 - (width * progress_multiplier)) / 2; //Start position from left for centred bar
+  
+  screen.drawFrame(leftPos, 46, (width * progress_multiplier) + 4, 16); // Draw a horizontally centred frame
+  screen.drawBox(leftPos + 3, 48, (progress * progress_multiplier), 11); // Draw the progress bar  
   
 }
 
