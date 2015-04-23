@@ -54,10 +54,10 @@ char uom_chars[3] = {'u', 'm', 'c'};
 
 struct Settings { // A struct type for storing settings
 
-  int value; // The setting value
-  int lower; // The lowest value the setting may have
-  int upper; // The highest value the setting may have
-  int multiplier; // Any multiplier to apply when the setting is incremented
+  char value; // The setting value
+  char lower; // The lowest value the setting may have
+  char upper; // The highest value the setting may have
+  char multiplier; // Any multiplier to apply when the setting is incremented
 
 } settings[] = { // A struct of user menu settings
   {}, // The home screen - not actually used by any functions but the placeholder array must exist
@@ -137,8 +137,8 @@ boolean previous_direction;
 
 float calc_volts = 0.00; // The actual battery voltage as calculated through the divider
 
-int menu_item = 0; // The active menu item
-int increments = 0; // Count increments the active menu setting should be changed by on the next poll
+char menu_item = 0; // The active menu item
+char increments = 0; // Count increments the active menu setting should be changed by on the next poll
 int serial_in; // Store latest byte from incoming serial stream
 
 byte sys_off = 20; // Minutes of inactivity to wait until controller switches itself off - set to 0 to disable
@@ -257,9 +257,24 @@ void screenPrintCentre(char* text, byte string_length, byte print_pos_y = 4) {
   }
 
   screen.print(text); // Finally, print the centered text to the screen
+  
+  //sprintf(print_buffer, "");
 
 }
 
+void screenPrintCentre(const __FlashStringHelper* text, byte string_length, byte print_pos_y = 4) {
+
+  byte offset = (16 - string_length) / 2; // Calculate the offset for the number of characters in the string
+
+  screen.setPrintPos(offset, print_pos_y);
+
+  if (string_length % 2 != 0) { // Dividing an odd numbered int by 2 discards the remainder, creating an offset which is half a text character width too short
+    screen.setTextPosOffset(4, -2); // So the text needs to be nudged to the right a bit on a pixel level to centre it properly
+  }
+
+  screen.print(text); // Finally, print the centered text to the screen
+
+}
 
 
 
@@ -294,12 +309,10 @@ void loadSettings() {
   screen.print(F("Loading settings"));
 
   if (!SD.begin(sd_ss)) {
-    screen.setPrintPos(0, 4);
-    screen.print(F(" SD card error! "));
-    delay(2000);
-    screen.setPrintPos(0, 4);
-    screen.print(F(" Using defaults "));
-    delay(2000);
+    screenPrintCentre(F("SD card error"), 13);
+    delay(1000);
+    screenPrintCentre(F("Using defaults"), 14);
+    delay(1000);
     return;
   }
 
@@ -336,16 +349,16 @@ void loadSettings() {
         if (file_character == ',' || file_character == '}') {
           switch (property_index) { // The index of the current setting sub-item
             case 0:
-              settings[setting_index].value = atoi(file_string);
+              settings[setting_index].value = char(atoi(file_string));
               break;
             case 1:
-              settings[setting_index].lower = atoi(file_string);
+              settings[setting_index].lower = char(atoi(file_string));
               break;
             case 2:
-              settings[setting_index].upper = atoi(file_string);
+              settings[setting_index].upper = char(atoi(file_string));
               break;
             case 3:
-              settings[setting_index].multiplier = atoi(file_string);
+              settings[setting_index].multiplier = char(atoi(file_string));
               break;
           }
 
@@ -376,12 +389,10 @@ void loadSettings() {
     
   } else {
     // if the file didn't open, print an error:
-    screen.setPrintPos(0, 4);
-    screen.print(F(" SD file error! "));
-    delay(2000);
-    screen.setPrintPos(0, 4);
-    screen.print(F(" Using defaults "));
-    delay(2000);
+    screenPrintCentre(F("SD file error"), 13);
+    delay(1000);
+    screenPrintCentre(F("Using defaults"), 14);
+    delay(1000);
   }
 
 }
@@ -392,6 +403,10 @@ void saveSettings() {
 
   //Open and empty the settings file if it exists, otherwise create it
   settings_file = SD.open("settings.txt", O_WRITE | O_CREAT | O_TRUNC);
+  
+  screenUpdate();
+  screenPrintCentre(F("Saving settings"), 15);
+  byte progress = 0;
 
   char progmem_buffer[16 + 1]; // make sure this is large enough for the largest string it must hold
 
@@ -399,28 +414,31 @@ void saveSettings() {
   for (byte i = 0; i < settings_count; i++) {
     stringConstants thisSettingTitle; //Retrieve the setting title from progmem
     memcpy_P (&thisSettingTitle, &settings_titles[i], sizeof thisSettingTitle);
-    //settings_file.write(thisSettingTitle.title);
+    settings_file.write(thisSettingTitle.title);
     Serial.print(thisSettingTitle.title);
-    //settings_file.write(" = {");
+    settings_file.write(" = {");
     Serial.print(" = {");
-    //settings_file.write(settings[i].value);
+    settings_file.write(settings[i].value);
     Serial.print(settings[i].value);
-    //settings_file.write(",");
+    settings_file.write(",");
     Serial.print(",");
-    //settings_file.write(settings[i].lower);
+    settings_file.write(settings[i].lower);
     Serial.print(settings[i].lower);
-    //settings_file.write(",");
+    settings_file.write(",");
     Serial.print(",");
-    //settings_file.write(settings[i].upper);
+    settings_file.write(settings[i].upper);
     Serial.print(settings[i].upper);
-    //settings_file.write(",");
+    settings_file.write(",");
     Serial.print(",");
-    //settings_file.write(settings[i].multiplier);
+    settings_file.write(settings[i].multiplier);
     Serial.print(settings[i].multiplier);
-    //settings_file.write("};");
+    settings_file.write("};");
     Serial.print("};");
-    //settings_file.println();
+    settings_file.println();
     Serial.println();
+    
+    progressBar((settings_count * settings_elements), progress);
+    
   }
 
   settings_file.close(); // Save the file
@@ -438,7 +456,7 @@ void progressBar(byte width, byte progress){
  
   // Default bar width in pixels equals number of steps to complete passed by calling function
   // But make the bar as wide as possible within the space available (with a bit of padding either side)
-  byte progress_multiplier = 120 / width;
+  byte progress_multiplier = 100 / width;
   
   byte leftPos = (128 - (width * progress_multiplier)) / 2; //Start position from left for centred bar
   
@@ -456,7 +474,7 @@ void sysOff() {
 
   screenUpdate();
   //saveSettings();
-  screen.print(F("   System off   "));
+  screenPrintCentre(F("System off"),10);
   delay(2000);
   mcp.digitalWrite(switch_off, LOW);
 
@@ -603,7 +621,6 @@ void captureImages() {
 
     if (settings[5].value > 1) { // If more than one image is being taken, display the current position in the bracket
       screenPrintProgress();
-      screen.setPrintPos(0, 4);
       screen.print(F("Bracket "));
       screen.print(i);
       screen.print(F("/"));
@@ -612,16 +629,14 @@ void captureImages() {
 
     screenPrintProgress();
     shutter(); // Take the image
-    screen.print(F("Pause"));
+    screenPrintProgress();
+    screenPrintCentre(F("Pause"),5);
+    screenPrintProgress();
 
-    for (byte i = 1; i <= settings[3].value; i++) {
+    for (byte i = 0; i <= settings[3].value; i++) {
 
       pause(1000);
-      screenPrintProgress();
-      screen.setPrintPos(0, 4);
-      screen.print(F("Resume in "));
-      screen.print(settings[3].value - i); // Print number of seconds remaining
-      screen.print(F("s"));
+      progressBar(settings[3].value, i);
 
       if (stackCancelled()) break; // Exit early if the stack has been cancelled
 
@@ -641,17 +656,19 @@ void captureImages() {
 */
 void shutter() {
 
-  screenUpdate();
-  screen.setPrintPos(0, 4);
-  screen.print(F("  Taking image  "));
+  screenPrintProgress();
+  screenPrintCentre(F("Taking image"),12);
   pause(1000);
 
   for (byte i = 0; i <= settings[4].value; i++) {
 
     if (settings[4].value) {
       screenPrintProgress();
-      screen.setPrintPos(0, 4);
-      screen.print(i == 0 ? F("Mirror up") : F("Shutter"));
+      if(i == 0){
+        screenPrintCentre(F("Mirror up"),9);
+      } else {
+        screenPrintCentre(F("Shutter"),7);
+      }
       pause(500);
     }
 
@@ -956,7 +973,8 @@ void screenPrintProgress() {
   screen.print(F("Slice "));
   screen.print (slice_count);
   screen.print (F("/"));
-  screen.print (settings[1].value);
+  screen.print (int(settings[2].value));
+  screen.setPrintPos(0, 4);
 
 }
 
@@ -1011,7 +1029,7 @@ void serialCommunications() {
         break;
 
       case 'i': //
-
+        saveSettings();
         break;
 
       case 'j': // Switch off controller
@@ -1080,8 +1098,12 @@ void stepperDriverEnable(boolean enable = true, byte direction = 1, boolean togg
 void stackEnd() {
 
   screenUpdate();
-  screen.print(F("Stack "));
-  start_stack == false ? screen.print(F("cancelled")) : screen.print(F("finished"));
+  if(start_stack == false){
+    screenPrintCentre(F("Stack cancelled"), 15);
+  } else {
+    screenPrintCentre(F("Stack completed"), 15);
+  }
+
   delay(2000);
 
   if (settings[5].value) {
@@ -1097,7 +1119,7 @@ void stackEnd() {
     unsigned int rounded_return_steps = (slice_size * slice_count * hardware * unit_of_measure * micro_steps) - 0.5;
 
     screenUpdate();
-    screen.print(F("Returning"));
+    screenPrintCentre(F("Returning"),9);
     delay(2000);
 
     stepperDriverEnable(true, 1);
@@ -1128,9 +1150,10 @@ void stackEnd() {
 void stepperDriverClearLimitSwitch() {
 
   screenUpdate();
-  screen.print(F("Limit hit"));
-  screen.setPrintPos(0, 4);
-  screen.print(F("Returning"));
+  
+  screenPrintCentre(F("Limit hit"),9,2);
+  screenPrintCentre(F("Returning"),9);
+
   stepperDriverEnable(true, 0, true); //reverse stepper motor direction
 
   while (mcp.digitalRead(limit_switch_front) == LOW || mcp.digitalRead(limit_switch_back) == LOW) { //turn stepper motor for as long as  the limit switch remains pressed
@@ -1239,7 +1262,7 @@ void stepperDriverStep() {
 * multipler = Factor to multiply the change in value of var by
 *
 */
-void settingUpdate(int &var, int lower, int upper, int multiplier = 1) {
+void settingUpdate(char &var, char lower, char upper, char multiplier = 1) {
 
   var = constrain(var, lower, upper); // Keep variable value within specified range
 
@@ -1278,8 +1301,8 @@ void menuInteractions() {
 
   if (update) { // Refresh menu content if the active variable has changed
 
-    int menu_var = settings[menu_item].value;
     char print_buffer[16 + 1];
+    char menu_var = settings[menu_item].value;
     byte string_length;
     screenUpdate();
     screenPrintMenuArrows(); // Print menu arrows
@@ -1410,7 +1433,6 @@ void loop() {
 
     slice_count = 1; // Register the first image(s) of the stack is being taken
     screenPrintProgress(); // Print the current position in the stack
-    screen.setPrintPos(0, 4);
     screen.print(F("Advance "));
     screen.print(slice_size);
     screen.print(uom_chars[settings[7].value]);
@@ -1427,7 +1449,6 @@ void loop() {
       if (stackCancelled()) break; // Exit early if the stack has been cancelled
 
       screenPrintProgress(); // Print the current position in the stack
-      screen.setPrintPos(0, 4);
       screen.print(F("Advance "));
       screen.print(slice_size);
       screen.print(uom_chars[settings[7].value]);
