@@ -50,6 +50,32 @@ const stringConstants settings_titles[] PROGMEM = { // A struct of char arrays s
   {"Bluetooth"}
 };
 
+const stringConstants display_text[] PROGMEM = { // A struct of char arrays stored in Flash
+  {"En"},
+  {"Dis"},
+  {"abled"},
+  {"umc"},
+  {"Load"},
+  {"Sav"},
+  {"ing settings"},
+  {"SD card"},
+  {"SD file"},
+  {"error"},
+  {"Using defaults"},
+  {"System off"},
+  {"Pause"},
+  {"Bracket"},
+  {"Mirror up"},
+  {"Shutter"}, 
+  {"Stack"},
+  {"Started"},
+  {"Completed"},
+  {"Cancelled"},
+  {"End of travel"},
+  {"Returning"},
+  {"Advancing"}
+};
+
 char uom_chars[3] = {'u', 'm', 'c'};
 
 struct Settings { // A struct type for storing settings
@@ -1359,22 +1385,22 @@ void menuInteractions() {
 
     }
 
-    stringConstants thisSettingTitle; //Retrieve the setting title from progmem
-    memcpy_P(&thisSettingTitle, &settings_titles[menu_item], sizeof thisSettingTitle);
+    stringConstants flashString; //Retrieve the setting title from progmem
+    memcpy_P(&flashString, &settings_titles[menu_item], sizeof flashString);
 
     //Loop through retrieved title and count characters
     //TODO - there has to be a more efficient way of doing this...
     byte string_len = 0;
 
-    for (byte i = 0; i < sizeof thisSettingTitle; i++) {
-      if (thisSettingTitle.title[i] != '\0') {
+    for (byte i = 0; i < sizeof flashString; i++) {
+      if (flashString.title[i] != '\0') {
         string_len = i + 1;
       } else {
         break;
       }
     }
 
-    screenPrintCentre(thisSettingTitle.title, string_len, 2); // Print the menu setting title
+    screenPrintCentre(flashString.title, string_len, 2); // Print the menu setting title
     if (!traverse_menus) { // Invert the colour of the current menu item to indicate it is editable
       byte boxWidth = (string_length * 8) + 2;
       byte leftPos = ((128 - boxWidth) / 2);
