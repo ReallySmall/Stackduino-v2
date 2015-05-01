@@ -50,40 +50,14 @@ const stringConstants settings_titles[] PROGMEM = { // A struct of char arrays s
   {"Bluetooth"}
 };
 
-const stringConstants display_text[] PROGMEM = { // A struct of char arrays stored in Flash
-  {"En"},
-  {"Dis"},
-  {"abled"},
-  {"umc"},
-  {"Load"},
-  {"Sav"},
-  {"ing settings"},
-  {"SD card"},
-  {"SD file"},
-  {"error"},
-  {"Using defaults"},
-  {"System off"},
-  {"Pause"},
-  {"Bracket"},
-  {"Mirror up"},
-  {"Shutter"}, 
-  {"Stack"},
-  {"Started"},
-  {"Completed"},
-  {"Cancelled"},
-  {"End of travel"},
-  {"Returning"},
-  {"Advancing"}
-};
-
 char uom_chars[3] = {'u', 'm', 'c'};
 
 struct Settings { // A struct type for storing settings
 
-  char value; // The setting value
-  char lower; // The lowest value the setting may have
-  char upper; // The highest value the setting may have
-  char multiplier; // Any multiplier to apply when the setting is incremented
+  int value; // The setting value
+  int lower; // The lowest value the setting may have
+  int upper; // The highest value the setting may have
+  int multiplier; // Any multiplier to apply when the setting is incremented
 
 } settings[] = { // A struct of user menu settings
   {}, // The home screen - not actually used by any functions but the placeholder array must exist
@@ -100,6 +74,7 @@ struct Settings { // A struct type for storing settings
 };
 
 byte settings_count = sizeof(settings) / sizeof(Settings); // The number of settings
+char char_buffer[16 + 1]; // make sure this is large enough for the largest string it must hold
 
 
 
@@ -163,8 +138,8 @@ boolean previous_direction;
 
 float calc_volts = 0.00; // The actual battery voltage as calculated through the divider
 
-char menu_item = 0; // The active menu item
-char increments = 0; // Count increments the active menu setting should be changed by on the next poll
+int menu_item = 0; // The active menu item
+int increments = 0; // Count increments the active menu setting should be changed by on the next poll
 int serial_in; // Store latest byte from incoming serial stream
 
 byte sys_off = 20; // Minutes of inactivity to wait until controller switches itself off - set to 0 to disable
@@ -226,10 +201,9 @@ void setup() {
 
   /* FINAL PRE-START CHECKS AND SETUP */
   Serial.begin(9600); // Start serial (always initialise at 9600 for compatibility with OLED)
+  getHardware(); // Get the type of the attached stacker
   battMonitor(); // Check the battery level
   loadSettings(); // Attempt to load settings from SD card
-  getHardware(); // Get the type of the attached stacker
-
   stepperDriverClearLimitSwitch(); // Make sure neither limit switch is hit on startup - rectify if so
 }
 
@@ -245,17 +219,13 @@ void setup() {
 *
 * Clears the screen then re-outputs it
 *
-* print_pos_y => Which text line to set the initial print position on
-* print_pos_x => Which character on the text line to set the initial print position on
-* text => Optional text string to print
-*
 */
 void screenUpdate() { /* WIPE THE SCREEN, PRINT THE HEADER AND SET THE CURSOR POSITION */
 
-  screen.clearScreen();
+  screen.clearScreen(); // Repaints the screen blank
   screenPrintBluetooth(); // Display an icon for current bluetooth connection state
   screenPrintPowerSource(); // Display the current power source in top right corner
-  screen.drawBox(1, 15, 128, 1); // Draw a horizontal line to mark out a header section
+  screen.drawBox(1, 15, 128, 1); // Draw a horizontal line to mark out the header section
   screen.setPrintPos(0, 2); // Set text position to beginning of content area
   idle = false; // Flag that the system was recently used
 
@@ -284,12 +254,24 @@ void screenPrintCentre(char* text, byte string_length, byte print_pos_y = 4) {
 
   screen.print(text); // Finally, print the centered text to the screen
   
-  //sprintf(print_buffer, "");
-
 }
 
-void screenPrintCentre(const __FlashStringHelper* text, byte string_length, byte print_pos_y = 4) {
+void screenPrintCentre(const __FlashStringHelper* text, byte print_pos_y = 4) {
 
+  sprintf_P(char_buffer, PSTR("Ha Ha %S") , text);
+  
+  //Loop through retrieved title and count characters
+  //TODO - there has to be a more efficient way of doing this...
+  byte string_length = 0;
+
+  for (byte i = 0; i < sizeof char_buffer; i++) {
+    if (char_buffer[i] != '\0') {
+      string_length = i + 1;
+    } else {
+      break;
+    }
+  }
+  
   byte offset = (16 - string_length) / 2; // Calculate the offset for the number of characters in the string
 
   screen.setPrintPos(offset, print_pos_y);
@@ -298,7 +280,7 @@ void screenPrintCentre(const __FlashStringHelper* text, byte string_length, byte
     screen.setTextPosOffset(4, -2); // So the text needs to be nudged to the right a bit on a pixel level to centre it properly
   }
 
-  screen.print(text); // Finally, print the centered text to the screen
+  screen.print(char_buffer); // Finally, print the centered text to the screen
 
 }
 
@@ -326,7 +308,6 @@ void getHardware() {
 /* LOAD AND SAVE SETTINGS
 *
 * load settings from SD card/ save settings to SD card
-* Stored in JSON format
 *
 */
 void loadSettings() {
@@ -334,91 +315,95 @@ void loadSettings() {
   screenUpdate();
   screen.print(F("Loading settings"));
 
+  // If a connection to the SD card couldn't be established
   if (!SD.begin(sd_ss)) {
-    screenPrintCentre(F("SD card error"), 13);
+    screenPrintCentre(F("SD card error"));
     delay(1000);
-    screenPrintCentre(F("Using defaults"), 14);
+    screenPrintCentre(F("Using defaults"));
     delay(1000);
     return;
   }
 
-  // Get the settings string from the SD card
+  // Otherwise attempt to get the settings string from the SD card
   settings_file = SD.open("settings.txt", FILE_READ);
-  if (settings_file) {
+  
+  // If there was an issue attempting to open the file
+  if (!settings_file) {
 
-    byte setting_index = 0; // Index of the menu setting to populate
-    byte progress = 0; // How far through the loading progress it is
-    byte property_index = 0; // Index of the menu setting property to populate
-    char file_string[4]; // A string container to fill with characters from the sd read buffer
-    byte file_string_index = 0; // Position in string container to add next character from the sd read buffer
+    screenPrintCentre(F("SD file error"));
+    delay(1000);
+    screenPrintCentre(F("Using defaults"));
+    delay(1000);
+    
+  // Otherwise start copying the settings from the file into memory  
+  } else {
+    
+    byte setting_index = 0; // Which menu setting to populate
+    byte progress = 0; // Number of setting properties copied so far
+    byte property_index = 0; // Index of the menu setting property to populate next
+    byte char_buffer_index = 0; // Index of the char buffer to add next character from the sd read buffer
     char file_character; // The character currently in the sd read buffer
-    boolean start_recording = false; // Whether to store or ignore incoming characters
-    byte loading = 0;
+    boolean record_chars = false; // Whether to copy or ignore incoming characters
 
-    while (settings_file.available()) { // Until the end of the file is reached
+    while (settings_file.available()) { // Until the end of the file is reached, read it one character at a time
 
       file_character = settings_file.read(); // Current character in the file
 
-      // Don't bother trying to process anything on the settings line until reaching an opening brace
-      // The preceeding content is just to make the file human readable
-      if (start_recording) { // If in a section of the file containing settings data
+      // Don't bother trying to process anything on the settings line until reaching an '{' 
+      // The preceeding content is to make the file human readable and not used by the controller
+      if (record_chars) { // If in a section of the file containing settings data
 
-        // A ',' marks the end of a setting sub-item and a '}' marks the end of the parent setting
+        // Example of a settings line from file:
+        //
+        // Slice size = {15,10,250,1};
+        //
+        // A ',' marks the end of a setting property and a '}' marks the end of the parent setting
         // If the current character is neither of these then it's part of, or the whole of a setting property and should be processed
         if (file_character != ',' && file_character != '}') {
-          file_string[file_string_index] = file_character; // Add character to temporary string
-          file_string_index++; // Advance to next index of temporary string to store any subsequent character for this seting property
-          file_string[file_string_index] = '\0'; // Null terminate the string 
+          char_buffer[char_buffer_index] = file_character; // Add character to char buffer
+          char_buffer_index++; // Advance to next index of char buffer to store any subsequent character for this setting property
+          char_buffer[char_buffer_index] = '\0'; // Null terminate the string 
         }
 
-        // When all the characters for the current setting property have been captured, copy the temporary string contents to the settings struct in memory
+        // When all the characters for the current setting property have been captured, copy the char buffer contents to the settings struct in memory
         if (file_character == ',' || file_character == '}') {
-          switch (property_index) { // The index of the current setting sub-item
-            case 0:
-              settings[setting_index].value = char(atoi(file_string));
+          switch (property_index) { // The index of the current setting property
+            case 0: // Setting value
+              settings[setting_index].value = atoi(char_buffer);
               break;
-            case 1:
-              settings[setting_index].lower = char(atoi(file_string));
+            case 1: // Setting value lower limit
+              settings[setting_index].lower = atoi(char_buffer);
               break;
-            case 2:
-              settings[setting_index].upper = char(atoi(file_string));
+            case 2: // Setting value upper limit
+              settings[setting_index].upper = atoi(char_buffer);
               break;
-            case 3:
-              settings[setting_index].multiplier = char(atoi(file_string));
+            case 3: // Any multiplier that functions should apply to the setting value
+              settings[setting_index].multiplier = atoi(char_buffer);
               break;
           }
 
-          progress++;
-          progressBar((settings_count * settings_elements), progress);
-          delay(15); //Short pause for change in progress to be visible on the screen
+          memset(char_buffer, 0, sizeof(char_buffer)); // Clear the char buffer for the next property
+          char_buffer_index = 0; // Reset the char buffer indexer
+          property_index++; // Move to the next property of the current setting
+          progressBar((settings_count * settings_elements), progress++); // Update the progress bar
 
-          if (file_character == '}') { // If at the end of a settings line
-            file_string[0] = '\0'; // Clear the temporary string array
-            file_string_index = 0; // Reset the file string indexer
+          // Once all properties of a setting have been copied
+          if (file_character == '}') { 
+            record_chars = false; // Stop recording from the sd read buffer
             property_index = 0; // Reset the setting property indexer
-            start_recording = false; // And stop recording from the sd read buffer
-            setting_index++; // Move to the next setting
-          } else {
-            property_index++; // Otherwise move to the next property of the current setting
+            setting_index++; // And move to the next setting
           }
 
         }
       }
       // Start recording from the next recieved character onwards
       if(file_character == '{'){
-        start_recording = true;
+        record_chars = true;
       }
     }
     
-    settings_file.close(); // Close the file:
-    delay(300);
+    settings_file.close(); // Close the file once it has been read
     
-  } else {
-    // if the file didn't open, print an error:
-    screenPrintCentre(F("SD file error"), 13);
-    delay(1000);
-    screenPrintCentre(F("Using defaults"), 14);
-    delay(1000);
   }
 
 }
@@ -431,40 +416,43 @@ void saveSettings() {
   settings_file = SD.open("settings.txt", O_WRITE | O_CREAT | O_TRUNC);
   
   screenUpdate();
-  screenPrintCentre(F("Saving settings"), 15);
+  screenPrintCentre(F("Saving settings"));
   byte progress = 0;
 
-  char progmem_buffer[16 + 1]; // make sure this is large enough for the largest string it must hold
-
-  // Loop through settings and write to file
+  // Loop through settings in memory and write back to the file
   for (byte i = 0; i < settings_count; i++) {
+    
+    
     stringConstants thisSettingTitle; //Retrieve the setting title from progmem
     memcpy_P (&thisSettingTitle, &settings_titles[i], sizeof thisSettingTitle);
     settings_file.write(thisSettingTitle.title);
     Serial.print(thisSettingTitle.title);
+    
     settings_file.write(" = {");
     Serial.print(" = {");
     settings_file.write(settings[i].value);
     Serial.print(settings[i].value);
+    progressBar((settings_count * settings_elements), progress++); // Register that a property has been copied
     settings_file.write(",");
     Serial.print(",");
     settings_file.write(settings[i].lower);
     Serial.print(settings[i].lower);
+    progressBar((settings_count * settings_elements), progress++); // Register that a property has been copied
     settings_file.write(",");
     Serial.print(",");
     settings_file.write(settings[i].upper);
+    progressBar((settings_count * settings_elements), progress++); // Register that a property has been copied
     Serial.print(settings[i].upper);
     settings_file.write(",");
     Serial.print(",");
     settings_file.write(settings[i].multiplier);
+    progressBar((settings_count * settings_elements), progress++); // Register that a property has been copied
     Serial.print(settings[i].multiplier);
     settings_file.write("};");
     Serial.print("};");
     settings_file.println();
     Serial.println();
-    
-    progressBar((settings_count * settings_elements), progress);
-    
+        
   }
 
   settings_file.close(); // Save the file
@@ -482,12 +470,14 @@ void progressBar(byte width, byte progress){
  
   // Default bar width in pixels equals number of steps to complete passed by calling function
   // But make the bar as wide as possible within the space available (with a bit of padding either side)
-  byte progress_multiplier = 100 / width;
+  byte progress_segment_width = 100 / width;
   
-  byte leftPos = (128 - (width * progress_multiplier)) / 2; //Start position from left for centred bar
+  byte leftPos = (128 - (width * progress_segment_width)) / 2; //Start position from left for centred bar
   
-  screen.drawFrame(leftPos, 46, (width * progress_multiplier) + 4, 16); // Draw a horizontally centred frame
-  screen.drawBox(leftPos + 3, 48, (progress * progress_multiplier), 11); // Draw the progress bar  
+  screen.drawFrame(leftPos, 46, (width * progress_segment_width) + 4, 16); // Draw a horizontally centred frame
+  screen.drawBox(leftPos + 3, 48, (progress * progress_segment_width), 11); // Draw the progress bar  
+  
+  delay(15); //Short pause for change in progress to be visible on the screen
   
 }
 
@@ -500,7 +490,7 @@ void sysOff() {
 
   screenUpdate();
   //saveSettings();
-  screenPrintCentre(F("System off"),10);
+  screenPrintCentre(F("System off"));
   delay(2000);
   mcp.digitalWrite(switch_off, LOW);
 
@@ -656,7 +646,7 @@ void captureImages() {
     screenPrintProgress();
     shutter(); // Take the image
     screenPrintProgress();
-    screenPrintCentre(F("Pause"),5);
+    screenPrintCentre(F("Pause"));
     screenPrintProgress();
 
     for (byte i = 0; i <= settings[3].value; i++) {
@@ -683,7 +673,7 @@ void captureImages() {
 void shutter() {
 
   screenPrintProgress();
-  screenPrintCentre(F("Taking image"),12);
+  screenPrintCentre(F("Taking image"));
   pause(1000);
 
   for (byte i = 0; i <= settings[4].value; i++) {
@@ -691,9 +681,9 @@ void shutter() {
     if (settings[4].value) {
       screenPrintProgress();
       if(i == 0){
-        screenPrintCentre(F("Mirror up"),9);
+        screenPrintCentre(F("Mirror up"));
       } else {
-        screenPrintCentre(F("Shutter"),7);
+        screenPrintCentre(F("Shutter"));
       }
       pause(500);
     }
@@ -1125,9 +1115,9 @@ void stackEnd() {
 
   screenUpdate();
   if(start_stack == false){
-    screenPrintCentre(F("Stack cancelled"), 15);
+    screenPrintCentre(F("Stack cancelled"));
   } else {
-    screenPrintCentre(F("Stack completed"), 15);
+    screenPrintCentre(F("Stack completed"));
   }
 
   delay(2000);
@@ -1145,7 +1135,7 @@ void stackEnd() {
     unsigned int rounded_return_steps = (slice_size * slice_count * hardware * unit_of_measure * micro_steps) - 0.5;
 
     screenUpdate();
-    screenPrintCentre(F("Returning"),9);
+    screenPrintCentre(F("Returning"));
     delay(2000);
 
     stepperDriverEnable(true, 1);
@@ -1177,8 +1167,8 @@ void stepperDriverClearLimitSwitch() {
 
   screenUpdate();
   
-  screenPrintCentre(F("Limit hit"),9,2);
-  screenPrintCentre(F("Returning"),9);
+  screenPrintCentre(F("Limit hit"),2);
+  screenPrintCentre(F("Returning"));
 
   stepperDriverEnable(true, 0, true); //reverse stepper motor direction
 
@@ -1216,7 +1206,7 @@ boolean stepperDriverInBounds() {
 
 
 /* MOVE STAGE BACKWARD AND FORWARD */
-void stepperDriverManualControl(int direction) {
+void stepperDriverManualControl(byte direction) {
 
   char* manual_ctl_strings[2][2] = {{"Back", "<"}, {"For", ">"}};
 
@@ -1278,22 +1268,22 @@ void stepperDriverStep() {
 
 
 
-/* CHANGE THE ACTIVE MENU VARIABLE'S VALUE
+/* CHANGE THE ACTIVE MENU SETTING'S VALUE
 *
 * May be implemented by either the rotary encoder or a command via serial
 *
-* var => The variable to change the value of
-* lower => The lower bounds for constraining the value of var
-* upper => The upper bounds for constraining the value of var
-* multipler = Factor to multiply the change in value of var by
+* setting_value => The variable to change the value of
+* setting_lower => The lower bounds for constraining the value of var
+* setting_upper => The upper bounds for constraining the value of var
+* setting_multipler = Factor to multiply the change in value of var by
 *
 */
-void settingUpdate(char &var, char lower, char upper, char multiplier = 1) {
+void settingUpdate(int &setting_value, int setting_lower, int setting_upper, int setting_multiplier = 1) {
 
-  var = constrain(var, lower, upper); // Keep variable value within specified range
+  setting_value = constrain(setting_value, setting_lower, setting_upper); // Keep variable value within specified range
 
   if (increments != 0) { // If the variable's value was changed at least once since the last check
-    var += (multiplier * increments); // Add or subtract from variable
+    setting_value += (setting_multiplier * increments); // Add or subtract from variable
     increments = 0; // Reset for next check
     update = true; // Update menus
   }
@@ -1327,8 +1317,7 @@ void menuInteractions() {
 
   if (update) { // Refresh menu content if the active variable has changed
 
-    char print_buffer[16 + 1];
-    char menu_var = settings[menu_item].value;
+    int menu_var = settings[menu_item].value;
     byte string_length;
     screenUpdate();
     screenPrintMenuArrows(); // Print menu arrows
@@ -1336,51 +1325,51 @@ void menuInteractions() {
     switch (menu_item) { // The menu options
 
       case 0:
-        string_length = sprintf(print_buffer, "%s", "Setup");
+        string_length = sprintf(char_buffer, "%s", "Setup");
         break;
 
       case 1: // Change the number of increments to move each time
-        string_length = sprintf(print_buffer, "%d", menu_var);
+        string_length = sprintf(char_buffer, "%d", menu_var);
         break;
 
       case 2: // Change the number of slices to create in the stack
-        string_length = sprintf(print_buffer, "%d", menu_var);
+        string_length = sprintf(char_buffer, "%d", menu_var);
         break;
 
       case 3: // Change the number of seconds to wait for the camera to capture an image before continuing
-        string_length = sprintf(print_buffer, "%ds", menu_var);
+        string_length = sprintf(char_buffer, "%ds", menu_var);
         break;
 
       case 4: // Toggle mirror lockup for the camera
-        string_length = menu_var == 1 ? sprintf(print_buffer, repeated_strings[0]) : sprintf(print_buffer, repeated_strings[1]);
+        string_length = menu_var == 1 ? sprintf(char_buffer, repeated_strings[0]) : sprintf(char_buffer, repeated_strings[1]);
         break;
 
       case 5: // Change the number of images to take per focus slice (exposure bracketing)
-        string_length = menu_var == 1 ? sprintf(print_buffer, "%s", repeated_strings[1]) : sprintf(print_buffer, "%d", menu_var);
+        string_length = menu_var == 1 ? sprintf(char_buffer, "%s", repeated_strings[1]) : sprintf(char_buffer, "%d", menu_var);
         break;
 
       case 6: // Toggle whether camera/subject is returned the starting position at the end of the stack
-        string_length = menu_var == 1 ? sprintf(print_buffer, repeated_strings[0]) : sprintf(print_buffer, repeated_strings[1]);
+        string_length = menu_var == 1 ? sprintf(char_buffer, repeated_strings[0]) : sprintf(char_buffer, repeated_strings[1]);
         break;
 
       case 7: // Select the unit of measure to use for focus slices: Microns, Millimimeters or Centimeters
-        string_length = sprintf(print_buffer, "%c%c", uom_chars[menu_var], uom_chars[1]);
+        string_length = sprintf(char_buffer, "%c%c", uom_chars[menu_var], uom_chars[1]);
         break;
 
       case 8: // Adjust the stepper motor speed (delay in microseconds between slice_size)
         // A smaller number gives faster motor speed but reduces torque
         // Setting this too low may cause the motor to miss steps or stall
-        string_length = sprintf(print_buffer, "%d000uS", menu_var);
+        string_length = sprintf(char_buffer, "%d000uS", menu_var);
         break;
 
       case 9: // Adjust the degree of microstepping made by the a4988 stepper driver
         // More microsteps give the best stepping resolution but may require more power for consistency and accuracy
-        string_length = sprintf(print_buffer, "1/%d", micro_stepping[0][menu_var][0]);
+        string_length = sprintf(char_buffer, "1/%d", micro_stepping[0][menu_var][0]);
         break;
 
       case 10: // Toggle power to an external 3.3v bluetooth board e.g. HC-05
         menu_var = !menu_var;
-        string_length = sprintf(print_buffer, repeated_strings[menu_var]);
+        string_length = sprintf(char_buffer, repeated_strings[menu_var]);
         break;
 
     }
@@ -1406,10 +1395,11 @@ void menuInteractions() {
       byte leftPos = ((128 - boxWidth) / 2);
       screen.setMode('~');
       screen.drawBox(leftPos, 50, boxWidth, 20);
-      screenPrintCentre(print_buffer, string_length); // Print the menu setting value
+      screenPrintCentre(char_buffer, string_length); // Print the menu setting value
     } else {
-      screenPrintCentre(print_buffer, string_length); // Print the menu setting value
+      screenPrintCentre(char_buffer, string_length); // Print the menu setting value
     }
+    memset(char_buffer, 0, sizeof(char_buffer)); // Clear the char buffer
     update = false;
 
   }
