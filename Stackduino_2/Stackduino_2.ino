@@ -203,8 +203,7 @@ void setup() {
   Serial.begin(9600); // Start serial (always initialise at 9600 for compatibility with OLED)
   getHardware(); // Get the type of the attached stacker
   battMonitor(); // Check the battery level
-  loadSettings(); // Attempt to load settings from SD card
-  stepperDriverClearLimitSwitch(); // Make sure neither limit switch is hit on startup - rectify if so
+  loadSettings(); // Attempt to load settings from SD card  
 }
 
 
@@ -225,6 +224,7 @@ void screenUpdate() { /* WIPE THE SCREEN, PRINT THE HEADER AND SET THE CURSOR PO
   screen.clearScreen(); // Repaints the screen blank
   screenPrintBluetooth(); // Display an icon for current bluetooth connection state
   screenPrintPowerSource(); // Display the current power source in top right corner
+
   screen.drawBox(1, 15, 128, 1); // Draw a horizontal line to mark out the header section
   screen.setPrintPos(0, 2); // Set text position to beginning of content area
   idle = false; // Flag that the system was recently used
@@ -233,7 +233,7 @@ void screenUpdate() { /* WIPE THE SCREEN, PRINT THE HEADER AND SET THE CURSOR PO
 
 
 
-/* PRINT CENTERED TEXT ON DIGOLE OLED SCREEN
+/* PRINT TEXT ON DIGOLE OLED SCREEN
 *
 * Assumes the default font is in use (allowing 4 rows of 16 characters)
 *
@@ -242,46 +242,24 @@ void screenUpdate() { /* WIPE THE SCREEN, PRINT THE HEADER AND SET THE CURSOR PO
 * print_pos_y => The text line to print on
 *
 */
-void screenPrintCentre(char* text, byte string_length, byte print_pos_y = 4) {
+void screenPrint(byte char_length, char* text, byte print_pos_y = 4) {
+  
+  // Clear the selected text line of previous characters
+  screen.setPrintPos(1, print_pos_y);
+  screen.print("                ");
 
-  byte offset = (16 - string_length) / 2; // Calculate the offset for the number of characters in the string
+  // Calculate the start point on x axis for the number of characters in the string to print it centrally
+  byte print_pos_x = (16 - char_length) / 2;
+  
+  screen.setPrintPos(print_pos_x, print_pos_y); // Set the start point for printing
+  
+  byte offset_x = char_length % 2 != 0 ? 4 : 0; // If the string to print is an odd number in length, apply an offse to centralise it
+  byte offset_y = print_pos_y == 4 ? -2 : 0; // If printing on line 4, nudge upwards a bit to prevent lower parts of characters like 'g' being cut off
 
-  screen.setPrintPos(offset, print_pos_y);
-
-  if (string_length % 2 != 0) { // Dividing an odd numbered int by 2 discards the remainder, creating an offset which is half a text character width too short
-    screen.setTextPosOffset(4, -2); // So the text needs to be nudged to the right a bit on a pixel level to centre it properly
-  }
-
+  screen.setTextPosOffset(offset_x, offset_y); // So the text needs to be nudged to the right a bit on a pixel level to centre it properly
+  
   screen.print(text); // Finally, print the centered text to the screen
   
-}
-
-void screenPrintCentre(const __FlashStringHelper* text, byte print_pos_y = 4) {
-
-  sprintf_P(char_buffer, PSTR("Ha Ha %S") , text);
-  
-  //Loop through retrieved title and count characters
-  //TODO - there has to be a more efficient way of doing this...
-  byte string_length = 0;
-
-  for (byte i = 0; i < sizeof char_buffer; i++) {
-    if (char_buffer[i] != '\0') {
-      string_length = i + 1;
-    } else {
-      break;
-    }
-  }
-  
-  byte offset = (16 - string_length) / 2; // Calculate the offset for the number of characters in the string
-
-  screen.setPrintPos(offset, print_pos_y);
-
-  if (string_length % 2 != 0) { // Dividing an odd numbered int by 2 discards the remainder, creating an offset which is half a text character width too short
-    screen.setTextPosOffset(4, -2); // So the text needs to be nudged to the right a bit on a pixel level to centre it properly
-  }
-
-  screen.print(char_buffer); // Finally, print the centered text to the screen
-
 }
 
 
@@ -313,13 +291,13 @@ void getHardware() {
 void loadSettings() {
 
   screenUpdate();
-  screen.print(F("Loading settings"));
+  screenPrint(sprintf_P(char_buffer, PSTR("Loading settings")), char_buffer);
 
   // If a connection to the SD card couldn't be established
   if (!SD.begin(sd_ss)) {
-    screenPrintCentre(F("SD card error"));
+    screenPrint(sprintf_P(char_buffer, PSTR("SD card error")), char_buffer);
     delay(1000);
-    screenPrintCentre(F("Using defaults"));
+    screenPrint(sprintf_P(char_buffer, PSTR("Using defaults")), char_buffer);
     delay(1000);
     return;
   }
@@ -330,9 +308,9 @@ void loadSettings() {
   // If there was an issue attempting to open the file
   if (!settings_file) {
 
-    screenPrintCentre(F("SD file error"));
+    screenPrint(sprintf_P(char_buffer, PSTR("SD file error")), char_buffer);
     delay(1000);
-    screenPrintCentre(F("Using defaults"));
+    screenPrint(sprintf_P(char_buffer, PSTR("Using defaults")), char_buffer);
     delay(1000);
     
   // Otherwise start copying the settings from the file into memory  
@@ -416,7 +394,7 @@ void saveSettings() {
   settings_file = SD.open("settings.txt", O_WRITE | O_CREAT | O_TRUNC);
   
   screenUpdate();
-  screenPrintCentre(F("Saving settings"));
+  screenPrint(sprintf_P(char_buffer, PSTR("Saving settings")), char_buffer);
   byte progress = 0;
 
   // Loop through settings in memory and write back to the file
@@ -490,7 +468,7 @@ void sysOff() {
 
   screenUpdate();
   //saveSettings();
-  screenPrintCentre(F("System off"));
+  screenPrint(sprintf_P(char_buffer, PSTR("System off")), char_buffer);
   delay(2000);
   mcp.digitalWrite(switch_off, LOW);
 
@@ -637,19 +615,17 @@ void captureImages() {
 
     if (settings[5].value > 1) { // If more than one image is being taken, display the current position in the bracket
       screenPrintProgress();
-      screen.print(F("Bracket "));
-      screen.print(i);
-      screen.print(F("/"));
-      screen.print(settings[5].value);
+      screenPrint(sprintf_P(char_buffer, PSTR("Bracket %d/%d"), i, settings[5].value), char_buffer);
     }
 
     screenPrintProgress();
     shutter(); // Take the image
     screenPrintProgress();
-    screenPrintCentre(F("Pause"));
+    screenPrint(sprintf_P(char_buffer, PSTR("Pause for camera")), char_buffer);
+    pause(1000);
     screenPrintProgress();
 
-    for (byte i = 0; i <= settings[3].value; i++) {
+    for (byte i = 0; i <= settings[3].value - 1; i++) {
 
       pause(1000);
       progressBar(settings[3].value, i);
@@ -673,7 +649,7 @@ void captureImages() {
 void shutter() {
 
   screenPrintProgress();
-  screenPrintCentre(F("Taking image"));
+  screenPrint(sprintf_P(char_buffer, PSTR("Taking image")), char_buffer);
   pause(1000);
 
   for (byte i = 0; i <= settings[4].value; i++) {
@@ -681,9 +657,9 @@ void shutter() {
     if (settings[4].value) {
       screenPrintProgress();
       if(i == 0){
-        screenPrintCentre(F("Mirror up"));
+        screenPrint(sprintf_P(char_buffer, PSTR("Mirror up")), char_buffer);
       } else {
-        screenPrintCentre(F("Shutter"));
+        screenPrint(sprintf_P(char_buffer, PSTR("Shutter")), char_buffer);
       }
       pause(500);
     }
@@ -986,10 +962,7 @@ void screenPrintPowerSource() {
 void screenPrintProgress() {
 
   screenUpdate();
-  screen.print(F("Slice "));
-  screen.print (slice_count);
-  screen.print (F("/"));
-  screen.print (int(settings[2].value));
+  screenPrint(sprintf_P(char_buffer, PSTR("Slice %d/%d"), slice_count, settings[2].value), char_buffer, 2);
   screen.setPrintPos(0, 4);
 
 }
@@ -1115,9 +1088,9 @@ void stackEnd() {
 
   screenUpdate();
   if(start_stack == false){
-    screenPrintCentre(F("Stack cancelled"));
+    screenPrint(sprintf_P(char_buffer, PSTR("Stack cancelled")), char_buffer);
   } else {
-    screenPrintCentre(F("Stack completed"));
+    screenPrint(sprintf_P(char_buffer, PSTR("Stack completed")), char_buffer);
   }
 
   delay(2000);
@@ -1135,7 +1108,7 @@ void stackEnd() {
     unsigned int rounded_return_steps = (slice_size * slice_count * hardware * unit_of_measure * micro_steps) - 0.5;
 
     screenUpdate();
-    screenPrintCentre(F("Returning"));
+    screenPrint(sprintf_P(char_buffer, PSTR("Returning")), char_buffer);
     delay(2000);
 
     stepperDriverEnable(true, 1);
@@ -1167,8 +1140,8 @@ void stepperDriverClearLimitSwitch() {
 
   screenUpdate();
   
-  screenPrintCentre(F("Limit hit"),2);
-  screenPrintCentre(F("Returning"));
+  screenPrint(sprintf_P(char_buffer, PSTR("Limit hit")), char_buffer);
+  screenPrint(sprintf_P(char_buffer, PSTR("Returning")), char_buffer);
 
   stepperDriverEnable(true, 0, true); //reverse stepper motor direction
 
@@ -1212,9 +1185,7 @@ void stepperDriverManualControl(byte direction) {
 
   if (mcp.digitalRead(direction) == LOW && stepperDriverInBounds()) {
     screenUpdate();
-    screen.print(F("Moving "));
-    screen.print(manual_ctl_strings[direction][0]);
-    screen.print(F("ward"));
+    screenPrint(sprintf_P(char_buffer, PSTR("Moving %cward"), manual_ctl_strings[direction][0]), char_buffer);
     screen.setPrintPos(0, 4);
     for (byte i = 0; i < 16; i++) {
       screen.print(manual_ctl_strings[direction][1]);
@@ -1389,17 +1360,16 @@ void menuInteractions() {
       }
     }
 
-    screenPrintCentre(flashString.title, string_len, 2); // Print the menu setting title
+    screenPrint(string_len, flashString.title, 2); // Print the menu setting title
     if (!traverse_menus) { // Invert the colour of the current menu item to indicate it is editable
       byte boxWidth = (string_length * 8) + 2;
       byte leftPos = ((128 - boxWidth) / 2);
       screen.setMode('~');
       screen.drawBox(leftPos, 50, boxWidth, 20);
-      screenPrintCentre(char_buffer, string_length); // Print the menu setting value
+      screenPrint(string_length, char_buffer); // Print the menu setting value
     } else {
-      screenPrintCentre(char_buffer, string_length); // Print the menu setting value
+      screenPrint(string_length, char_buffer); // Print the menu setting value
     }
-    memset(char_buffer, 0, sizeof(char_buffer)); // Clear the char buffer
     update = false;
 
   }
@@ -1449,10 +1419,7 @@ void loop() {
 
     slice_count = 1; // Register the first image(s) of the stack is being taken
     screenPrintProgress(); // Print the current position in the stack
-    screen.print(F("Advance "));
-    screen.print(slice_size);
-    screen.print(uom_chars[settings[7].value]);
-    screen.print(uom_chars[1]);
+    screenPrint(sprintf_P(char_buffer, PSTR("Advance %d%c%c"), uom_chars[settings[7].value], uom_chars[1]), char_buffer);
     captureImages(); // Take the image(s) for the first slice of the stack
 
     //TODO Check this figure is correct
@@ -1465,10 +1432,7 @@ void loop() {
       if (stackCancelled()) break; // Exit early if the stack has been cancelled
 
       screenPrintProgress(); // Print the current position in the stack
-      screen.print(F("Advance "));
-      screen.print(slice_size);
-      screen.print(uom_chars[settings[7].value]);
-      screen.print(uom_chars[1]);
+      screenPrint(sprintf_P(char_buffer, PSTR("Advance %d%c%c"), uom_chars[settings[7].value], uom_chars[1]), char_buffer);
 
       if (stackCancelled()) break; // Exit early if the stack has been cancelled
 
