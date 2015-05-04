@@ -243,10 +243,6 @@ void screenUpdate() { /* WIPE THE SCREEN, PRINT THE HEADER AND SET THE CURSOR PO
 *
 */
 void screenPrint(byte char_length, char* text, byte print_pos_y = 4) {
-  
-  // Clear the selected text line of previous characters
-  screen.setPrintPos(1, print_pos_y);
-  screen.print("                ");
 
   // Calculate the start point on x axis for the number of characters in the string to print it centrally
   byte print_pos_x = (16 - char_length) / 2;
@@ -289,6 +285,8 @@ void getHardware() {
 *
 */
 void loadSettings() {
+  
+  boolean tmp_data_present = false;
 
   screenUpdate();
   screenPrint(sprintf_P(char_buffer, PSTR("Loading settings")), char_buffer);
@@ -303,7 +301,12 @@ void loadSettings() {
   }
 
   // Otherwise attempt to get the settings string from the SD card
-  settings_file = SD.open("settings.txt", FILE_READ);
+  if(SD.exists("tmpdata.txt")){
+    tmp_data_present = true;
+    settings_file = SD.open("tmpdata.txt", FILE_READ); // The system has resumed from sleep and should use the settings it saved before shutting down
+  } else {
+    settings_file = SD.open("settings.txt", FILE_READ); // The system has started normally and should use the default saved settings
+  }
   
   // If there was an issue attempting to open the file
   if (!settings_file) {
@@ -381,6 +384,9 @@ void loadSettings() {
     }
     
     settings_file.close(); // Close the file once it has been read
+    if(tmp_data_present){
+      SD.remove("tmpdata.txt"); // Delete the temporary settings file  
+    }
     
   }
 
@@ -388,10 +394,14 @@ void loadSettings() {
 
 
 
-void saveSettings() {
+void saveSettings(boolean sleep = false) {
 
   //Open and empty the settings file if it exists, otherwise create it
-  settings_file = SD.open("settings.txt", O_WRITE | O_CREAT | O_TRUNC);
+  if(sleep){
+    settings_file = SD.open("tmpdata.txt", O_WRITE | O_CREAT | O_TRUNC);
+  } else {
+    settings_file = SD.open("settings.txt", O_WRITE | O_CREAT | O_TRUNC);
+  }
   
   screenUpdate();
   screenPrint(sprintf_P(char_buffer, PSTR("Saving settings")), char_buffer);
@@ -450,10 +460,10 @@ void progressBar(byte width, byte progress){
   // But make the bar as wide as possible within the space available (with a bit of padding either side)
   byte progress_segment_width = 100 / width;
   
-  byte leftPos = (128 - (width * progress_segment_width)) / 2; //Start position from left for centred bar
+  byte leftPos = ((128 - (width * progress_segment_width)) / 2) - 1; //Start position from left for centred bar
   
-  screen.drawFrame(leftPos, 46, (width * progress_segment_width) + 4, 16); // Draw a horizontally centred frame
-  screen.drawBox(leftPos + 3, 48, (progress * progress_segment_width), 11); // Draw the progress bar  
+  screen.drawFrame(leftPos, 46, (width * progress_segment_width) + 6, 16); // Draw a horizontally centred frame
+  screen.drawBox(leftPos + 3, 48, (progress * progress_segment_width), 11); // Draw the progress bar 
   
   delay(15); //Short pause for change in progress to be visible on the screen
   
@@ -467,9 +477,8 @@ void progressBar(byte width, byte progress){
 void sysOff() {
 
   screenUpdate();
-  //saveSettings();
   screenPrint(sprintf_P(char_buffer, PSTR("System off")), char_buffer);
-  delay(2000);
+  delay(1000);
   mcp.digitalWrite(switch_off, LOW);
 
 }
@@ -614,18 +623,19 @@ void captureImages() {
     pause(1000); // Allow vibrations to settle
 
     if (settings[5].value > 1) { // If more than one image is being taken, display the current position in the bracket
-      screenPrintProgress();
+      screenPrintPositionInStack();
       screenPrint(sprintf_P(char_buffer, PSTR("Bracket %d/%d"), i, settings[5].value), char_buffer);
+      pause(1500);
     }
 
-    screenPrintProgress();
+    screenPrintPositionInStack();
     shutter(); // Take the image
-    screenPrintProgress();
-    screenPrint(sprintf_P(char_buffer, PSTR("Pause for camera")), char_buffer);
+    screenPrintPositionInStack();
+    screenPrint(sprintf_P(char_buffer, PSTR("Pause")), char_buffer);
     pause(1000);
-    screenPrintProgress();
+    screenPrintPositionInStack();
 
-    for (byte i = 0; i <= settings[3].value - 1; i++) {
+    for (byte i = 1; i <= settings[3].value; i++) {
 
       pause(1000);
       progressBar(settings[3].value, i);
@@ -633,6 +643,7 @@ void captureImages() {
       if (stackCancelled()) break; // Exit early if the stack has been cancelled
 
     }
+    pause(250);
 
     if (stackCancelled()) break; // Exit early if the stack has been cancelled
 
@@ -648,19 +659,20 @@ void captureImages() {
 */
 void shutter() {
 
-  screenPrintProgress();
-  screenPrint(sprintf_P(char_buffer, PSTR("Taking image")), char_buffer);
-  pause(1000);
+  screenPrintPositionInStack();
 
   for (byte i = 0; i <= settings[4].value; i++) {
 
     if (settings[4].value) {
-      screenPrintProgress();
+      screenPrintPositionInStack();
       if(i == 0){
         screenPrint(sprintf_P(char_buffer, PSTR("Mirror up")), char_buffer);
       } else {
         screenPrint(sprintf_P(char_buffer, PSTR("Shutter")), char_buffer);
       }
+      pause(500);
+    } else {
+      screenPrint(sprintf_P(char_buffer, PSTR("Shutter")), char_buffer);
       pause(500);
     }
 
@@ -691,13 +703,18 @@ void shutter() {
 * Switch off the controller if it has been unused for n minutes
 *
 */
-void sysTasks() {
+void sysTasks(reset = false) {
 
   static byte seconds = 0; // Number of seconds elapsed
   static unsigned long one_second = millis() + 1000; // 1 second from now
   static byte minutes = 0; // Number of minutes elapsed
   static boolean conn_stat_polled = true;
 
+  if(reset){
+    seconds = 0;
+    minutes = 0;
+  }
+  
   blueToothPower(); // Switch Bluetooth port on or off
 
   if (millis() >= one_second) { // Count each second
@@ -721,8 +738,8 @@ void sysTasks() {
 
   // If enabled after n minutes switch off the controller
   if (sys_off && (minutes >= sys_off)) {
-    //saveSettings();
-    //sysOff();
+    saveSettings(true); // Save current settings to a temp file to resume when controller is switched on again
+    sysOff();
   }
 
 }
@@ -959,7 +976,7 @@ void screenPrintPowerSource() {
 * Assumes the default font is in use (allowing 4 rows of 16 characters)
 *
 */
-void screenPrintProgress() {
+void screenPrintPositionInStack() {
 
   screenUpdate();
   screenPrint(sprintf_P(char_buffer, PSTR("Slice %d/%d"), slice_count, settings[2].value), char_buffer, 2);
@@ -1418,8 +1435,7 @@ void loop() {
     byte micro_steps = micro_stepping[0][settings[9].value][0];
 
     slice_count = 1; // Register the first image(s) of the stack is being taken
-    screenPrintProgress(); // Print the current position in the stack
-    screenPrint(sprintf_P(char_buffer, PSTR("Advance %d%c%c"), uom_chars[settings[7].value], uom_chars[1]), char_buffer);
+    screenPrintPositionInStack(); // Print the current position in the stack
     captureImages(); // Take the image(s) for the first slice of the stack
 
     //TODO Check this figure is correct
@@ -1431,8 +1447,9 @@ void loop() {
 
       if (stackCancelled()) break; // Exit early if the stack has been cancelled
 
-      screenPrintProgress(); // Print the current position in the stack
-      screenPrint(sprintf_P(char_buffer, PSTR("Advance %d%c%c"), uom_chars[settings[7].value], uom_chars[1]), char_buffer);
+      screenPrintPositionInStack(); // Print the current position in the stack
+      // Print that the stage is being advanced by x units
+      screenPrint(sprintf_P(char_buffer, PSTR("Advance %d%c%c"), slice_size, uom_chars[settings[7].value], uom_chars[1]), char_buffer);
 
       if (stackCancelled()) break; // Exit early if the stack has been cancelled
 
