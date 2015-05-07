@@ -40,13 +40,13 @@ const stringConstants settings_titles[] PROGMEM = { // A struct of char arrays s
   {"Stackduino v2.2"},
   {"Slice size"},
   {"Slices"},
-  {"Pause time"},
+  {"Pause for"},
   {"Mirror lockup"},
   {"Bracketing"},
   {"Return to home"},
   {"Units"},
-  {"Stepper speed"},
-  {"Microstepping"},
+  {"Motor speed"},
+  {"Microsteps"},
   {"Bluetooth"}
 };
 
@@ -249,7 +249,7 @@ void screenPrint(byte char_length, char* text, byte print_pos_y = 4) {
   
   screen.setPrintPos(print_pos_x, print_pos_y); // Set the start point for printing
   
-  byte offset_x = char_length % 2 != 0 ? 4 : 0; // If the string to print is an odd number in length, apply an offse to centralise it
+  byte offset_x = char_length % 2 != 0 ? 4 : 0; // If the string to print is an odd number in length, apply an offset to centralise it
   byte offset_y = print_pos_y == 4 ? -2 : 0; // If printing on line 4, nudge upwards a bit to prevent lower parts of characters like 'g' being cut off
 
   screen.setTextPosOffset(offset_x, offset_y); // So the text needs to be nudged to the right a bit on a pixel level to centre it properly
@@ -289,13 +289,11 @@ void loadSettings() {
   boolean tmp_data_present = false;
 
   screenUpdate();
-  screenPrint(sprintf_P(char_buffer, PSTR("Loading settings")), char_buffer);
+  screenPrint(sprintf_P(char_buffer, PSTR("Loading settings")), char_buffer, 2);
 
   // If a connection to the SD card couldn't be established
   if (!SD.begin(sd_ss)) {
-    screenPrint(sprintf_P(char_buffer, PSTR("SD card error")), char_buffer);
-    delay(1000);
-    screenPrint(sprintf_P(char_buffer, PSTR("Using defaults")), char_buffer);
+    screenPrint(sprintf_P(char_buffer, PSTR("SD error")), char_buffer);
     delay(1000);
     return;
   }
@@ -404,7 +402,7 @@ void saveSettings(boolean sleep = false) {
   }
   
   screenUpdate();
-  screenPrint(sprintf_P(char_buffer, PSTR("Saving settings")), char_buffer);
+  screenPrint(sprintf_P(char_buffer, PSTR("Saving settings")), char_buffer, 2);
   byte progress = 0;
 
   // Loop through settings in memory and write back to the file
@@ -413,33 +411,21 @@ void saveSettings(boolean sleep = false) {
     
     stringConstants thisSettingTitle; //Retrieve the setting title from progmem
     memcpy_P (&thisSettingTitle, &settings_titles[i], sizeof thisSettingTitle);
-    settings_file.write(thisSettingTitle.title);
-    Serial.print(thisSettingTitle.title);
-    
+    settings_file.write(thisSettingTitle.title);    
     settings_file.write(" = {");
-    Serial.print(" = {");
     settings_file.write(settings[i].value);
-    Serial.print(settings[i].value);
     progressBar((settings_count * settings_elements), progress++); // Register that a property has been copied
     settings_file.write(",");
-    Serial.print(",");
     settings_file.write(settings[i].lower);
-    Serial.print(settings[i].lower);
     progressBar((settings_count * settings_elements), progress++); // Register that a property has been copied
     settings_file.write(",");
-    Serial.print(",");
     settings_file.write(settings[i].upper);
     progressBar((settings_count * settings_elements), progress++); // Register that a property has been copied
-    Serial.print(settings[i].upper);
     settings_file.write(",");
-    Serial.print(",");
     settings_file.write(settings[i].multiplier);
     progressBar((settings_count * settings_elements), progress++); // Register that a property has been copied
-    Serial.print(settings[i].multiplier);
     settings_file.write("};");
-    Serial.print("};");
     settings_file.println();
-    Serial.println();
         
   }
 
@@ -695,6 +681,84 @@ void shutter() {
 
 
 
+/* ENABLE OR DISABLE THE STEPPER DRIVER AND SET DIRECTION
+*
+* enable => Enables the stepper driver if true, Disables if false and option set
+* direction => Set as 1 for forward direction, 0 for backward direction
+*
+*/
+void stepperDriverEnable(boolean enable = true, byte direction = 1, boolean toggle_direction = false) {
+
+  if (enable) {
+    mcp.digitalWrite(step_enable, LOW);
+    if (toggle_direction) {
+      direction = previous_direction;
+    }
+    digitalWrite(step_dir, direction);
+    stepperDriverMicroStepping();
+    previous_direction = direction;
+  } else if (step_disabled) {
+    mcp.digitalWrite(step_enable, HIGH);
+  }
+
+}
+
+
+
+/* MOVE STAGE BACKWARD AND FORWARD */
+void stepperDriverManualControl(byte direction, boolean serial_control = false, boolean short_press = false) {
+
+  static boolean stepper_active = false;
+  unsigned long button_down = millis();
+
+  if(!stepper_active){
+
+    stepper_active = true;
+    char* manual_ctl_strings[2][2] = {{"Back", "<"}, {"For", ">"}};
+
+    if ((mcp.digitalRead(direction) == LOW || serial_control == true) && stepperDriverInBounds()) {
+      screenUpdate();
+      screenPrint(sprintf_P(char_buffer, PSTR("Moving %cward"), manual_ctl_strings[direction][0]), char_buffer, 2);
+      screen.setPrintPos(0, 4);
+      for (byte i = 0; i < 16; i++) {
+        screen.print(manual_ctl_strings[direction][1]);
+      }
+
+      if(!short_press){
+        while(millis() < button_down + 500){
+          if(mcp.digitalRead(direction) == HIGH){
+            short_press = true;
+            break;
+          }
+        }
+      }
+
+      stepperDriverEnable(true, direction);
+      
+      if(short_press){ // Move the stage by one focus slice
+        stepperMoveOneSlice();
+      } else { // Move the stage for as long as the control button is pressed
+        while ((mcp.digitalRead(direction) == LOW || serial_control == true) && stepperDriverInBounds()) {
+          stepperDriverStep();
+        }
+      }
+
+    }
+
+    stepperDriverEnable(false);
+
+    if (!stepperDriverInBounds()) stepperDriverClearLimitSwitch();
+
+    update = true; // Go back to displaying the active menu item once manual control button is no longer pressed
+    stepper_active = false;
+
+  }
+
+}
+
+
+
+
 /* SYSTEM TASKS
 *
 * Switch Bluetooth on or off
@@ -703,7 +767,7 @@ void shutter() {
 * Switch off the controller if it has been unused for n minutes
 *
 */
-void sysTasks(reset = false) {
+void sysTasks(boolean reset = false) {
 
   static byte seconds = 0; // Number of seconds elapsed
   static unsigned long one_second = millis() + 1000; // 1 second from now
@@ -724,6 +788,7 @@ void sysTasks(reset = false) {
   }
 
   if (seconds % 5 == 0) { // Every 5 seconds
+    update = true;
     if (!conn_stat_polled) {
       appConnection();
       conn_stat_polled = true;
@@ -828,7 +893,7 @@ void handleMcpInterrupt() {
   }
 
   if ((pin == step_bwd || pin == step_fwd) && start_stack == false) { // If a manual stage control button was pressed
-    stepperDriverManualControl(pin);
+    //stepperDriverManualControl(pin);
   }
 
   if (pin == btn_rotary) { // Check the current state of the rotary encoder button
@@ -1017,40 +1082,47 @@ void serialCommunications() {
         increments--;
         break;
 
-      case 'e': // Move stage backward
-        stepperDriverManualControl(0);
+      case 'e': // Move stage backward by one slice
+        stepperDriverManualControl(0, true, true);
         break;
 
-      case 'f': // Move stage forward
-        stepperDriverManualControl(1);
+      case 'f': // Move stage backward until another character is sent
+        stepperDriverManualControl(0, true, false);
         break;
 
-      case 'g': // Take a test image
+      case 'g': // Move stage forward by one slice
+        stepperDriverManualControl(1, true, true);
+        break;
+
+      case 'h': // Move stage forward until another character is sent
+        stepperDriverManualControl(1, true, false);
+        break;
+
+      case 'i': // Take a test image
         shutter();
         break;
 
-      case 'h': // Switch Bluetooth on or off
+      case 'j': // Switch Bluetooth on or off
         settings[10].value = settings[10].value == 1 ? 0 : 1;
         update = true;
         break;
 
-      case 'i': //
+      case 'k':
         saveSettings();
         break;
 
-      case 'j': // Switch off controller
+      case 'l': // Switch off controller
         sysOff();
         break;
 
-      case 'k': // Keep connection alive
+      case 'm': // Keep connection alive
         app_connected = true;
         break;
 
       default: // Unmatched character - send error then pretend the function call never happened
         Serial.println("");
-        Serial.print(F("Command code <"));
+        Serial.print(F("Invalid character: "));
         Serial.print(serial_in);
-        Serial.print(F("> not recognised"));
         idle = true;
     }
   }
@@ -1071,30 +1143,6 @@ boolean stackCancelled() {
 
 
 
-/* ENABLE OR DISABLE THE STEPPER DRIVER AND SET DIRECTION
-*
-* enable => Enables the stepper driver if true, Disables if false and option set
-* direction => Set as 1 for forward direction, 0 for backward direction
-*
-*/
-void stepperDriverEnable(boolean enable = true, byte direction = 1, boolean toggle_direction = false) {
-
-  if (enable) {
-    mcp.digitalWrite(step_enable, LOW);
-    if (toggle_direction) {
-      direction = previous_direction;
-    }
-    digitalWrite(step_dir, direction);
-    stepperDriverMicroStepping();
-    previous_direction = direction;
-  } else if (step_disabled) {
-    mcp.digitalWrite(step_enable, HIGH);
-  }
-
-}
-
-
-
 /* CLEAN UP AFTER FOCUS STACK COMPLETION
 *
 * Optionally return the stage to its starting position
@@ -1105,9 +1153,9 @@ void stackEnd() {
 
   screenUpdate();
   if(start_stack == false){
-    screenPrint(sprintf_P(char_buffer, PSTR("Stack cancelled")), char_buffer);
+    screenPrint(sprintf_P(char_buffer, PSTR("Stack cancelled")), char_buffer, 2);
   } else {
-    screenPrint(sprintf_P(char_buffer, PSTR("Stack completed")), char_buffer);
+    screenPrint(sprintf_P(char_buffer, PSTR("Stack completed")), char_buffer, 2);
   }
 
   delay(2000);
@@ -1116,24 +1164,15 @@ void stackEnd() {
 
     stepperDriverEnable(true, 0);
 
-    byte slice_size = settings[0].value;
-    byte hardware = active_hardware_calibration_setting;
-    byte unit_of_measure = uom_multipliers[settings[6].value];
-    byte micro_steps = micro_stepping[0][settings[8].value][0];
-
-    //TODO Check this figure is correct
-    unsigned int rounded_return_steps = (slice_size * slice_count * hardware * unit_of_measure * micro_steps) - 0.5;
-
     screenUpdate();
     screenPrint(sprintf_P(char_buffer, PSTR("Returning")), char_buffer);
     delay(2000);
 
     stepperDriverEnable(true, 1);
 
-    for (int i; i < rounded_return_steps; i++) {
+    for (int i; i < slice_count; i++) {
 
-      stepperDriverStep();
-      if (!stepperDriverInBounds()) break;
+      stepperMoveOneSlice();
 
     }
 
@@ -1157,7 +1196,7 @@ void stepperDriverClearLimitSwitch() {
 
   screenUpdate();
   
-  screenPrint(sprintf_P(char_buffer, PSTR("Limit hit")), char_buffer);
+  screenPrint(sprintf_P(char_buffer, PSTR("Limit hit")), char_buffer, 2);
   screenPrint(sprintf_P(char_buffer, PSTR("Returning")), char_buffer);
 
   stepperDriverEnable(true, 0, true); //reverse stepper motor direction
@@ -1195,31 +1234,23 @@ boolean stepperDriverInBounds() {
 
 
 
-/* MOVE STAGE BACKWARD AND FORWARD */
-void stepperDriverManualControl(byte direction) {
+/* MOVE STAGE FORWARD BY ONE SLICE */
+void stepperMoveOneSlice(){
 
-  char* manual_ctl_strings[2][2] = {{"Back", "<"}, {"For", ">"}};
+  byte slice_size = settings[1].value;
+  byte slices = settings[2].value;
+  byte hardware = active_hardware_calibration_setting;
+  byte unit_of_measure = uom_multipliers[settings[7].value];
+  byte micro_steps = micro_stepping[0][settings[9].value][0];
 
-  if (mcp.digitalRead(direction) == LOW && stepperDriverInBounds()) {
-    screenUpdate();
-    screenPrint(sprintf_P(char_buffer, PSTR("Moving %cward"), manual_ctl_strings[direction][0]), char_buffer);
-    screen.setPrintPos(0, 4);
-    for (byte i = 0; i < 16; i++) {
-      screen.print(manual_ctl_strings[direction][1]);
-    }
+  unsigned int rounded_steps = (slice_size * hardware * unit_of_measure * micro_steps) - 0.5;
 
-    stepperDriverEnable(true, direction);
+  for (unsigned int i = 0; i < rounded_steps; i++) {
 
-    while (mcp.digitalRead(direction) == LOW && stepperDriverInBounds()) {
-      stepperDriverStep();
-    }
+    stepperDriverStep(); // Send a step signal to the stepper driver
+    if (stackCancelled() || !stepperDriverInBounds()) break; // Exit early if the stack has been cancelled or a limit switch is hit
 
   }
-
-  stepperDriverEnable(false);
-
-  if (!stepperDriverInBounds()) stepperDriverClearLimitSwitch();
-  update = true; // Go back to displaying the active menu item once manual control button is no longer pressed
 
 }
 
@@ -1313,7 +1344,7 @@ void menuInteractions() {
     switch (menu_item) { // The menu options
 
       case 0:
-        string_length = sprintf(char_buffer, "%s", "Setup");
+        string_length = sprintf_P(char_buffer, PSTR("Setup"));
         break;
 
       case 1: // Change the number of increments to move each time
@@ -1325,7 +1356,7 @@ void menuInteractions() {
         break;
 
       case 3: // Change the number of seconds to wait for the camera to capture an image before continuing
-        string_length = sprintf(char_buffer, "%ds", menu_var);
+        string_length = sprintf_P(char_buffer, PSTR("%ds"), menu_var);
         break;
 
       case 4: // Toggle mirror lockup for the camera
@@ -1347,12 +1378,12 @@ void menuInteractions() {
       case 8: // Adjust the stepper motor speed (delay in microseconds between slice_size)
         // A smaller number gives faster motor speed but reduces torque
         // Setting this too low may cause the motor to miss steps or stall
-        string_length = sprintf(char_buffer, "%d000uS", menu_var);
+        string_length = sprintf_P(char_buffer, PSTR("%d000uS"), menu_var);
         break;
 
       case 9: // Adjust the degree of microstepping made by the a4988 stepper driver
         // More microsteps give the best stepping resolution but may require more power for consistency and accuracy
-        string_length = sprintf(char_buffer, "1/%d", micro_stepping[0][menu_var][0]);
+        string_length = sprintf_P(char_buffer, PSTR("1/%d"), micro_stepping[0][menu_var][0]);
         break;
 
       case 10: // Toggle power to an external 3.3v bluetooth board e.g. HC-05
@@ -1378,11 +1409,12 @@ void menuInteractions() {
     }
 
     screenPrint(string_len, flashString.title, 2); // Print the menu setting title
+
     if (!traverse_menus) { // Invert the colour of the current menu item to indicate it is editable
       byte boxWidth = (string_length * 8) + 2;
       byte leftPos = ((128 - boxWidth) / 2);
       screen.setMode('~');
-      screen.drawBox(leftPos, 50, boxWidth, 20);
+      screen.drawBox(leftPos, 48, boxWidth, 22);
       screenPrint(string_length, char_buffer); // Print the menu setting value
     } else {
       screenPrint(string_length, char_buffer); // Print the menu setting value
@@ -1430,16 +1462,10 @@ void loop() {
 
     byte slice_size = settings[1].value;
     byte slices = settings[2].value;
-    byte hardware = active_hardware_calibration_setting;
-    byte unit_of_measure = uom_multipliers[settings[7].value];
-    byte micro_steps = micro_stepping[0][settings[9].value][0];
 
     slice_count = 1; // Register the first image(s) of the stack is being taken
     screenPrintPositionInStack(); // Print the current position in the stack
     captureImages(); // Take the image(s) for the first slice of the stack
-
-    //TODO Check this figure is correct
-    unsigned int rounded_steps = (slice_size * hardware * unit_of_measure * micro_steps) - 0.5;
 
     for (unsigned int i = 1; i < slices; i++) { // For each subsequent focus slice in the stack
 
@@ -1454,13 +1480,7 @@ void loop() {
       if (stackCancelled()) break; // Exit early if the stack has been cancelled
 
       stepperDriverEnable(true, 1); // Enable the A4988 stepper driver
-
-      for (unsigned int i = 0; i < rounded_steps; i++) {
-
-        stepperDriverStep(); // Send a step signal to the stepper driver
-        if (stackCancelled() || !stepperDriverInBounds()) break; // Exit early if the stack has been cancelled or a limit switch is hit
-
-      }
+      stepperMoveOneSlice(); // Move forward by one focus slice
 
       if (!stepperDriverInBounds()) stepperDriverClearLimitSwitch(); // Clear hit limit switch
       if (stackCancelled()) break; // Exit early if the stack has been cancelled
