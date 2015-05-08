@@ -1,4 +1,4 @@
-/*////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  STACKDUINO 2 (BETA)                                                                                 //
 //                                                                                                      //
 //  https://github.com/ReallySmall/Stackduino-2                                                         //
@@ -55,14 +55,14 @@ char uom_chars[3] = {'u', 'm', 'c'};
 struct Settings { // A struct type for storing settings
 
   int value; // The setting value
-  int lower; // The lowest value the setting may have
+  byte lower; // The lowest value the setting may have
   int upper; // The highest value the setting may have
-  int multiplier; // Any multiplier to apply when the setting is incremented
+  byte multiplier; // Any multiplier to apply when the setting is incremented
 
 } settings[] = { // A struct of user menu settings
-  {}, // The home screen - not actually used by any functions but the placeholder array must exist
-  {10, 10, 250, 1}, // "Slice size"
-  {10, 10, 250, 10}, // "Number of slices"
+  {}, // The home screen - not actually used by any functions at the moment, but the placeholder array must exist to maintain the correct indexing
+  {10, 10, 500, 1}, // "Slice size"
+  {10, 10, 500, 10}, // "Number of slices"
   {5, 1, 60, 1}, // "Pause time"
   {0, 0, 1, 1}, // "Mirror lockup"
   {1, 1, 10, 1}, // "Bracketing"
@@ -140,8 +140,6 @@ float calc_volts = 0.00; // The actual battery voltage as calculated through the
 
 int menu_item = 0; // The active menu item
 int increments = 0; // Count increments the active menu setting should be changed by on the next poll
-int serial_in; // Store latest byte from incoming serial stream
-
 byte sys_off = 20; // Minutes of inactivity to wait until controller switches itself off - set to 0 to disable
 byte slice_count = 0; // Count of number of focus slices made so far in the stack
 
@@ -225,7 +223,7 @@ void screenUpdate() { /* WIPE THE SCREEN, PRINT THE HEADER AND SET THE CURSOR PO
   screenPrintBluetooth(); // Display an icon for current bluetooth connection state
   screenPrintPowerSource(); // Display the current power source in top right corner
 
-  screen.drawBox(1, 15, 128, 1); // Draw a horizontal line to mark out the header section
+  screen.drawBox(1, 17, 128, 1); // Draw a horizontal line to mark out the header section
   screen.setPrintPos(0, 2); // Set text position to beginning of content area
   idle = false; // Flag that the system was recently used
 
@@ -293,7 +291,7 @@ void loadSettings() {
 
   // If a connection to the SD card couldn't be established
   if (!SD.begin(sd_ss)) {
-    screenPrint(sprintf_P(char_buffer, PSTR("SD error")), char_buffer);
+    screenPrint(sprintf_P(char_buffer, PSTR("SD error")), char_buffer, 4);
     delay(1000);
     return;
   }
@@ -309,9 +307,9 @@ void loadSettings() {
   // If there was an issue attempting to open the file
   if (!settings_file) {
 
-    screenPrint(sprintf_P(char_buffer, PSTR("SD file error")), char_buffer);
+    screenPrint(sprintf_P(char_buffer, PSTR("SD file error")), char_buffer, 4);
     delay(1000);
-    screenPrint(sprintf_P(char_buffer, PSTR("Using defaults")), char_buffer);
+    screenPrint(sprintf_P(char_buffer, PSTR("Using defaults")), char_buffer, 4);
     delay(1000);
     
   // Otherwise start copying the settings from the file into memory  
@@ -463,7 +461,7 @@ void progressBar(byte width, byte progress){
 void sysOff() {
 
   screenUpdate();
-  screenPrint(sprintf_P(char_buffer, PSTR("System off")), char_buffer);
+  screenPrint(sprintf_P(char_buffer, PSTR("System off")), char_buffer, 2);
   delay(1000);
   mcp.digitalWrite(switch_off, LOW);
 
@@ -610,14 +608,14 @@ void captureImages() {
 
     if (settings[5].value > 1) { // If more than one image is being taken, display the current position in the bracket
       screenPrintPositionInStack();
-      screenPrint(sprintf_P(char_buffer, PSTR("Bracket %d/%d"), i, settings[5].value), char_buffer);
+      screenPrint(sprintf_P(char_buffer, PSTR("Bracket %d/%d"), i, settings[5].value), char_buffer, 4);
       pause(1500);
     }
 
     screenPrintPositionInStack();
     shutter(); // Take the image
     screenPrintPositionInStack();
-    screenPrint(sprintf_P(char_buffer, PSTR("Pause")), char_buffer);
+    screenPrint(sprintf_P(char_buffer, PSTR("Pause")), char_buffer, 4);
     pause(1000);
     screenPrintPositionInStack();
 
@@ -645,22 +643,17 @@ void captureImages() {
 */
 void shutter() {
 
-  screenPrintPositionInStack();
-
   for (byte i = 0; i <= settings[4].value; i++) {
 
-    if (settings[4].value) {
-      screenPrintPositionInStack();
-      if(i == 0){
-        screenPrint(sprintf_P(char_buffer, PSTR("Mirror up")), char_buffer);
-      } else {
-        screenPrint(sprintf_P(char_buffer, PSTR("Shutter")), char_buffer);
-      }
-      pause(500);
+    screenPrintPositionInStack();
+    
+    if (settings[4].value && i == 0) {
+      screenPrint(sprintf_P(char_buffer, PSTR("Mirror up")), char_buffer, 4);
     } else {
-      screenPrint(sprintf_P(char_buffer, PSTR("Shutter")), char_buffer);
-      pause(500);
+      screenPrint(sprintf_P(char_buffer, PSTR("Shutter")), char_buffer, 4);
     }
+    
+    pause(500);
 
     digitalWrite(cam_focus, HIGH); // Trigger camera autofocus - camera may not take picture in some modes if this is not triggered first
     digitalWrite(cam_shutter, HIGH); // Trigger camera shutter
@@ -714,17 +707,18 @@ void stepperDriverManualControl(byte direction, boolean serial_control = false, 
   if(!stepper_active){
 
     stepper_active = true;
-    char* manual_ctl_strings[2][2] = {{"Back", "<"}, {"For", ">"}};
+    char* manual_ctl_strings[2] = {"<", ">"};
 
     if ((mcp.digitalRead(direction) == LOW || serial_control == true) && stepperDriverInBounds()) {
+      
       screenUpdate();
-      screenPrint(sprintf_P(char_buffer, PSTR("Moving %cward"), manual_ctl_strings[direction][0]), char_buffer, 2);
-      screen.setPrintPos(0, 4);
-      for (byte i = 0; i < 16; i++) {
-        screen.print(manual_ctl_strings[direction][1]);
+      screenPrint(sprintf_P(char_buffer, PSTR("Moving stage")), char_buffer, 2);
+      screen.setPrintPos(4, 4);
+      for (byte i = 0; i < 8; i++) {
+        screen.print(manual_ctl_strings[direction]);
       }
 
-      if(!short_press){
+      if(!short_press && !serial_control){
         while(millis() < button_down + 500){
           if(mcp.digitalRead(direction) == HIGH){
             short_press = true;
@@ -738,7 +732,7 @@ void stepperDriverManualControl(byte direction, boolean serial_control = false, 
       if(short_press){ // Move the stage by one focus slice
         stepperMoveOneSlice();
       } else { // Move the stage for as long as the control button is pressed
-        while ((mcp.digitalRead(direction) == LOW || serial_control == true) && stepperDriverInBounds()) {
+        while ((mcp.digitalRead(direction) == LOW || serial_control == true) && stepperDriverInBounds() && Serial.available() == 0) {
           stepperDriverStep();
         }
       }
@@ -820,8 +814,8 @@ void sysTasks(boolean reset = false) {
 int8_t encoderRead() {
 
   static int8_t enc_states[] = {
-    //0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0
-    0, 1, -1, 0, -1, 0, 0, 1, 1, 0, 0, -1, 0, -1, 1, 0 // Use this line instead to increment encoder in the opposite direction
+    //0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0 // Use this line instead to increment encoder in the opposite direction
+    0, 1, -1, 0, -1, 0, 0, 1, 1, 0, 0, -1, 0, -1, 1, 0
   };
 
   static uint8_t old_AB = 0;
@@ -893,7 +887,7 @@ void handleMcpInterrupt() {
   }
 
   if ((pin == step_bwd || pin == step_fwd) && start_stack == false) { // If a manual stage control button was pressed
-    //stepperDriverManualControl(pin);
+    stepperDriverManualControl(pin);
   }
 
   if (pin == btn_rotary) { // Check the current state of the rotary encoder button
@@ -1152,11 +1146,7 @@ boolean stackCancelled() {
 void stackEnd() {
 
   screenUpdate();
-  if(start_stack == false){
-    screenPrint(sprintf_P(char_buffer, PSTR("Stack cancelled")), char_buffer, 2);
-  } else {
-    screenPrint(sprintf_P(char_buffer, PSTR("Stack completed")), char_buffer, 2);
-  }
+  screenPrint(sprintf_P(char_buffer, start_stack == false ? PSTR("Stack cancelled") : PSTR("Stack completed")), char_buffer, 2);
 
   delay(2000);
 
@@ -1165,7 +1155,7 @@ void stackEnd() {
     stepperDriverEnable(true, 0);
 
     screenUpdate();
-    screenPrint(sprintf_P(char_buffer, PSTR("Returning")), char_buffer);
+    screenPrint(sprintf_P(char_buffer, PSTR("Returning")), char_buffer, 4);
     delay(2000);
 
     stepperDriverEnable(true, 1);
@@ -1197,7 +1187,7 @@ void stepperDriverClearLimitSwitch() {
   screenUpdate();
   
   screenPrint(sprintf_P(char_buffer, PSTR("Limit hit")), char_buffer, 2);
-  screenPrint(sprintf_P(char_buffer, PSTR("Returning")), char_buffer);
+  screenPrint(sprintf_P(char_buffer, PSTR("Returning")), char_buffer, 4);
 
   stepperDriverEnable(true, 0, true); //reverse stepper motor direction
 
@@ -1248,7 +1238,7 @@ void stepperMoveOneSlice(){
   for (unsigned int i = 0; i < rounded_steps; i++) {
 
     stepperDriverStep(); // Send a step signal to the stepper driver
-    if (stackCancelled() || !stepperDriverInBounds()) break; // Exit early if the stack has been cancelled or a limit switch is hit
+    if (!stepperDriverInBounds()) break; // Exit early if the stack has been cancelled or a limit switch is hit
 
   }
 
@@ -1415,9 +1405,9 @@ void menuInteractions() {
       byte leftPos = ((128 - boxWidth) / 2);
       screen.setMode('~');
       screen.drawBox(leftPos, 48, boxWidth, 22);
-      screenPrint(string_length, char_buffer); // Print the menu setting value
+      screenPrint(string_length, char_buffer, 4); // Print the menu setting value
     } else {
-      screenPrint(string_length, char_buffer); // Print the menu setting value
+      screenPrint(string_length, char_buffer, 4); // Print the menu setting value
     }
     update = false;
 
@@ -1475,7 +1465,7 @@ void loop() {
 
       screenPrintPositionInStack(); // Print the current position in the stack
       // Print that the stage is being advanced by x units
-      screenPrint(sprintf_P(char_buffer, PSTR("Advance %d%c%c"), slice_size, uom_chars[settings[7].value], uom_chars[1]), char_buffer);
+      screenPrint(sprintf_P(char_buffer, PSTR("Advance %d%c%c"), slice_size, uom_chars[settings[7].value], uom_chars[1]), char_buffer, 4);
 
       if (stackCancelled()) break; // Exit early if the stack has been cancelled
 
