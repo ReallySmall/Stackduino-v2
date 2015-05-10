@@ -316,7 +316,6 @@ void loadSettings() {
   } else {
     
     byte setting_index = 0; // Which menu setting to populate
-    byte progress = 0; // Number of setting properties copied so far
     byte property_index = 0; // Index of the menu setting property to populate next
     byte char_buffer_index = 0; // Index of the char buffer to add next character from the sd read buffer
     char file_character; // The character currently in the sd read buffer
@@ -341,6 +340,8 @@ void loadSettings() {
           char_buffer_index++; // Advance to next index of char buffer to store any subsequent character for this setting property
           char_buffer[char_buffer_index] = '\0'; // Null terminate the string 
         }
+        //settings_file.readBytesUntil(',' || '}', char_buffer, 4);
+
 
         // When all the characters for the current setting property have been captured, copy the char buffer contents to the settings struct in memory
         if (file_character == ',' || file_character == '}') {
@@ -362,7 +363,6 @@ void loadSettings() {
           memset(char_buffer, 0, sizeof(char_buffer)); // Clear the char buffer for the next property
           char_buffer_index = 0; // Reset the char buffer indexer
           property_index++; // Move to the next property of the current setting
-          progressBar((settings_count * settings_elements), progress++); // Update the progress bar
 
           // Once all properties of a setting have been copied
           if (file_character == '}') { 
@@ -401,7 +401,6 @@ void saveSettings(boolean sleep = false) {
   
   screenUpdate();
   screenPrint(sprintf_P(char_buffer, PSTR("Saving settings")), char_buffer, 2);
-  byte progress = 0;
 
   // Loop through settings in memory and write back to the file
   for (byte i = 0; i < settings_count; i++) {
@@ -412,16 +411,12 @@ void saveSettings(boolean sleep = false) {
     settings_file.write(thisSettingTitle.title);    
     settings_file.write(" = {");
     settings_file.write(settings[i].value);
-    progressBar((settings_count * settings_elements), progress++); // Register that a property has been copied
     settings_file.write(",");
     settings_file.write(settings[i].lower);
-    progressBar((settings_count * settings_elements), progress++); // Register that a property has been copied
     settings_file.write(",");
     settings_file.write(settings[i].upper);
-    progressBar((settings_count * settings_elements), progress++); // Register that a property has been copied
     settings_file.write(",");
     settings_file.write(settings[i].multiplier);
-    progressBar((settings_count * settings_elements), progress++); // Register that a property has been copied
     settings_file.write("};");
     settings_file.println();
         
@@ -432,26 +427,6 @@ void saveSettings(boolean sleep = false) {
 }
 
 
-
-/* PROGRESS BAR
-*
-* Pretty self explanatory
-* 
-*/
-void progressBar(byte width, byte progress){
- 
-  // Default bar width in pixels equals number of steps to complete passed by calling function
-  // But make the bar as wide as possible within the space available (with a bit of padding either side)
-  byte progress_segment_width = 100 / width;
-  
-  byte leftPos = ((128 - (width * progress_segment_width)) / 2) - 1; //Start position from left for centred bar
-  
-  screen.drawFrame(leftPos, 46, (width * progress_segment_width) + 6, 16); // Draw a horizontally centred frame
-  screen.drawBox(leftPos + 3, 48, (progress * progress_segment_width), 11); // Draw the progress bar 
-  
-  delay(15); //Short pause for change in progress to be visible on the screen
-  
-}
 
 /* POWER OFF
 *
@@ -546,11 +521,22 @@ void appConnection() {
 */
 void btnMain() {
 
+  boolean short_press = false;
   byte btn_debounce = 250;
   btn_main_reading = digitalRead(btn_main);
 
   if (btn_main_reading == LOW && btn_main_previous == HIGH && millis() - btn_main_time > btn_debounce) {
-    startStack();
+    if(start_stack){
+      startStack();
+    } else {
+      while(millis() < btn_main_time + 500){
+        if(btn_main_reading == HIGH){
+          short_press = true;
+          break;
+        }
+      }
+      short_press == true ? captureImages() : startStack();
+    }
     btn_main_time = millis();
   }
 
@@ -622,8 +608,6 @@ void captureImages() {
     for (byte i = 1; i <= settings[3].value; i++) {
 
       pause(1000);
-      progressBar(settings[3].value, i);
-
       if (stackCancelled()) break; // Exit early if the stack has been cancelled
 
     }
@@ -782,7 +766,6 @@ void sysTasks(boolean reset = false) {
   }
 
   if (seconds % 5 == 0) { // Every 5 seconds
-    update = true;
     if (!conn_stat_polled) {
       appConnection();
       conn_stat_polled = true;
@@ -1093,7 +1076,7 @@ void serialCommunications() {
         break;
 
       case 'i': // Take a test image
-        shutter();
+        captureImages();
         break;
 
       case 'j': // Switch Bluetooth on or off
