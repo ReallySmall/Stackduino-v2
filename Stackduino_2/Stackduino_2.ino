@@ -286,11 +286,9 @@ void loadSettings() {
   
   boolean tmp_data_present = false;
 
-  screenUpdate();
-  screenPrint(sprintf_P(char_buffer, PSTR("Loading settings")), char_buffer, 2);
-
   // If a connection to the SD card couldn't be established
   if (!SD.begin(sd_ss)) {
+    screenUpdate();
     screenPrint(sprintf_P(char_buffer, PSTR("SD error")), char_buffer, 4);
     delay(1000);
     return;
@@ -526,17 +524,7 @@ void btnMain() {
   btn_main_reading = digitalRead(btn_main);
 
   if (btn_main_reading == LOW && btn_main_previous == HIGH && millis() - btn_main_time > btn_debounce) {
-    if(start_stack){
-      startStack();
-    } else {
-      while(millis() < btn_main_time + 500){
-        if(btn_main_reading == HIGH){
-          short_press = true;
-          break;
-        }
-      }
-      short_press == true ? captureImages() : startStack();
-    }
+    startStack();
     btn_main_time = millis();
   }
 
@@ -600,18 +588,16 @@ void captureImages() {
 
     screenPrintPositionInStack();
     shutter(); // Take the image
-    screenPrintPositionInStack();
-    screenPrint(sprintf_P(char_buffer, PSTR("Pause")), char_buffer, 4);
-    pause(1000);
-    screenPrintPositionInStack();
+    
+    for (byte i = 0; i < settings[3].value; i++) {
 
-    for (byte i = 1; i <= settings[3].value; i++) {
-
+      screenPrintPositionInStack();
+      screenPrint(sprintf_P(char_buffer, PSTR("Resume in %ds"), settings[3].value - i), char_buffer, 4);
       pause(1000);
+      
       if (stackCancelled()) break; // Exit early if the stack has been cancelled
 
     }
-    pause(250);
 
     if (stackCancelled()) break; // Exit early if the stack has been cancelled
 
