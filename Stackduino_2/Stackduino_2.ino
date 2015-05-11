@@ -186,7 +186,7 @@ void setup() {
 
   /* SET UP INTERRUPTS */
   attachInterrupt(0, mcpInterrupt, FALLING); // ATMega external interrupt 0
-  attachInterrupt(1, btnMain, FALLING); // ATMega external interrupt 1
+  attachInterrupt(1, cancelStack, FALLING); // ATMega external interrupt 1
 
   pciSetup(ENC_A); // ATMega pin change interrupt
   pciSetup(ENC_B); // ATMegapin change interrupt
@@ -195,7 +195,7 @@ void setup() {
   mcp.setupInterruptPin(step_bwd, FALLING);
   mcp.setupInterruptPin(step_fwd, FALLING);
   mcp.setupInterruptPin(switch_off_flag, FALLING);
-  mcp.setupInterruptPin(btn_rotary, FALLING);
+  mcp.setupInterruptPin(pwr_stat, FALLING);
 
   /* FINAL PRE-START CHECKS AND SETUP */
   Serial.begin(9600); // Start serial (always initialise at 9600 for compatibility with OLED)
@@ -538,6 +538,17 @@ void startStack() {
 
 }
 
+// This is designed to flag a running stack as cancelled
+// It's set with an interrupt with an emphasis on speed of execution
+// So there's no debouncing or toggling of state
+void cancelStack(){
+  
+  if(start_stack){
+    start_stack = false; 
+  }
+  
+}
+
 /* ROTARY ENCODER BUTTON
 *
 * Toggles between menu navigation and variable editing
@@ -858,9 +869,9 @@ void handleMcpInterrupt() {
   if ((pin == step_bwd || pin == step_fwd) && start_stack == false) { // If a manual stage control button was pressed
     stepperDriverManualControl(pin);
   }
-
-  if (pin == btn_rotary) { // Check the current state of the rotary encoder button
-    btnRotary();
+  
+  if (pin == pwr_stat) { // If a manual stage control button was pressed
+    Serial.print("pwr");
   }
 
   EIFR = 0x01; // Clear interrupts
@@ -1096,6 +1107,11 @@ void serialCommunications() {
 /* CHECK IF THE FOCUS STACK HAS BEEN CANCELLED */
 boolean stackCancelled() {
 
+  if (Serial.available() > 0) {
+    int serial_in = Serial.read(); // Read the incoming byte:
+    if(serial_in == 'a') startStack(); // Stop stack
+  }
+  
   if (!start_stack) {
     return true;
   }
@@ -1404,6 +1420,8 @@ void loop() {
   if (!start_stack) { // User settings menus and manual stage control
 
     if (mcp_int_fired) handleMcpInterrupt(); // Catch interrupts and run any required functions
+    btnMain(); // Catch any main button presses
+    btnRotary(); // Catch any rotary encoder button presses
     serialCommunications();  // Check for commands via serial
     menuInteractions(); // Change menu options and update the screen when changed
     sysTasks(); // Run timer driven tasks such as battery level checks and auto switch off
