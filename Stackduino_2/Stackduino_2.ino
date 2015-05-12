@@ -14,10 +14,12 @@
 
 /* DEFINES AND DEPENDENCIES */
 #define _Digole_Serial_I2C_ // OLED screen configured with solder jumper to run in I2C mode
+#define OLED_ROWS 4 // OLED text rows
+#define OLED_COLS 16 // OLED text columns
 #define ENC_A A0 // Rotary encoder
 #define ENC_B A1 // Rotary encoder
 #define ENC_PORT PINC // Rotary encoder
-#define settings_elements 4 // Number of struct elements in Settings
+#define settings_elements 4 // Number of properties in each settings
 
 #include "DigoleSerial.h" // https://github.com/chouckz/HVACX10Arduino/blob/master/1.0.1_libraries/DigoleSerial/DigoleSerial.h
 #include "Wire.h" //
@@ -33,7 +35,7 @@ Adafruit_MCP23017 mcp; // 16 pin IO port expander
 DigoleSerialDisp screen(&Wire, '\x27'); // Digole OLED in i2c mode
 
 typedef struct { // A struct type for storing char arrays
-  char title [16];
+  char title [OLED_COLS + 1];
 } stringConstants;
 
 const stringConstants settings_titles[] PROGMEM = { // A struct of char arrays stored in Flash
@@ -74,7 +76,7 @@ struct Settings { // A struct type for storing settings
 };
 
 byte settings_count = sizeof(settings) / sizeof(Settings); // The number of settings
-char char_buffer[16 + 1]; // make sure this is large enough for the largest string it must hold
+char char_buffer[OLED_COLS + 1]; // make sure this is large enough for the largest string it must hold
 
 
 
@@ -243,7 +245,7 @@ void screenUpdate() { /* WIPE THE SCREEN, PRINT THE HEADER AND SET THE CURSOR PO
 void screenPrint(byte char_length, char* text, byte print_pos_y = 4) {
 
   // Calculate the start point on x axis for the number of characters in the string to print it centrally
-  byte print_pos_x = (16 - char_length) / 2;
+  byte print_pos_x = (OLED_COLS - char_length) / 2;
   
   screen.setPrintPos(print_pos_x, print_pos_y); // Set the start point for printing
   
