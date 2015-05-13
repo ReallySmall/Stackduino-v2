@@ -145,6 +145,8 @@ int increments = 0; // Count increments the active menu setting should be change
 byte sys_off = 20; // Minutes of inactivity to wait until controller switches itself off - set to 0 to disable
 byte slice_count = 0; // Count of number of focus slices made so far in the stack
 
+unsigned long time_stack_started;
+
 char* app_conn_icon = "";
 
 File settings_file;
@@ -514,6 +516,86 @@ void appConnection() {
 
 
 
+/* SIGNAL CAMERA TO TAKE IMAGE(S)
+*
+* Optionally sends multiple delay seperated signals for exposure bracketing each focus slice
+*
+*/
+void screenPrintTestImage(){
+  screenPrint(sprintf_P(char_buffer, PSTR("Test image")), char_buffer, 2);
+}
+
+void captureImages(boolean test_image = false) {
+
+  for (byte i = 1; i <= settings[5].value; i++) {
+
+    pause(1000); // Allow vibrations to settle
+
+    if (settings[5].value > 1) { // If more than one image is being taken, display the current position in the bracket
+      test_image == false ? screenPrintPositionInStack() : screenPrintTestImage();
+      screenPrint(sprintf_P(char_buffer, PSTR("Bracket %d/%d"), i, settings[5].value), char_buffer, 4);
+      pause(1500);
+    }
+
+    test_image == false ? screenPrintPositionInStack() : screenPrintTestImage();
+    shutter(); // Take the image
+    
+    for (byte i = 0; i < settings[3].value; i++) {
+
+      test_image == false ? screenPrintPositionInStack() : screenPrintTestImage();
+      screenPrint(sprintf_P(char_buffer, PSTR("Resume in %ds"), settings[3].value - i), char_buffer, 4);
+      pause(1000);
+      
+      if (stackCancelled()) break; // Exit early if the stack has been cancelled
+
+    }
+
+    if (stackCancelled()) break; // Exit early if the stack has been cancelled
+
+  }
+  
+}
+
+
+
+/* TRIGGER THE CAMERA SHUTTER
+*
+* Optionally sends two delay seperated signals to support mirror lockup
+*
+*/
+void shutter() {
+
+  for (byte i = 0; i <= settings[4].value; i++) {
+
+    screenPrintPositionInStack();
+    
+    if (settings[4].value && i == 0) {
+      screenPrint(sprintf_P(char_buffer, PSTR("Mirror up")), char_buffer, 4);
+    } else {
+      screenPrint(sprintf_P(char_buffer, PSTR("Shutter")), char_buffer, 4);
+    }
+    
+    pause(500);
+
+    digitalWrite(cam_focus, HIGH); // Trigger camera autofocus - camera may not take picture in some modes if this is not triggered first
+    digitalWrite(cam_shutter, HIGH); // Trigger camera shutter
+
+    pause(200); //Small delay needed for camera to process above signals
+
+    digitalWrite(cam_shutter, LOW); // Switch off camera trigger signal
+    digitalWrite(cam_focus, LOW); // Switch off camera focus signal
+
+    if (settings[4].value && i == 0) {
+      pause(2000); // Pause between mirror up and shutter actuation
+    }
+
+    if (stackCancelled()) break; // Exit early if the stack has been cancelled
+
+  }
+}
+
+
+
 /* MAIN BUTTON
 *
 * Starts or stops a focus stack
@@ -521,13 +603,25 @@ void appConnection() {
 */
 void btnMain() {
 
-  boolean short_press = false;
   byte btn_debounce = 250;
   btn_main_reading = digitalRead(btn_main);
 
-  if (btn_main_reading == LOW && btn_main_previous == HIGH && millis() - btn_main_time > btn_debounce) {
-    startStack();
+  if (btn_main_reading == LOW && btn_main_previous == HIGH && millis() - btn_main_time > 250) {
+    
+    boolean short_press = false;
+    unsigned long btn_down_time = millis();
+    
+    while(millis() < btn_down_time + 1000){
+      if(digitalRead(btn_main) == HIGH){
+        short_press = true;
+        break; 
+      } 
+    }
+    
     btn_main_time = millis();
+    
+    short_press == true ? captureImages(true) : startStack();
+    
   }
 
   btn_main_previous = btn_main_reading;
@@ -578,81 +672,6 @@ void menuNav() {
 
   update = true;
 
-}
-
-
-
-/* SIGNAL CAMERA TO TAKE IMAGE(S)
-*
-* Optionally sends multiple delay seperated signals for exposure bracketing each focus slice
-*
-*/
-void captureImages() {
-
-  for (byte i = 1; i <= settings[5].value; i++) {
-
-    pause(1000); // Allow vibrations to settle
-
-    if (settings[5].value > 1) { // If more than one image is being taken, display the current position in the bracket
-      screenPrintPositionInStack();
-      screenPrint(sprintf_P(char_buffer, PSTR("Bracket %d/%d"), i, settings[5].value), char_buffer, 4);
-      pause(1500);
-    }
-
-    screenPrintPositionInStack();
-    shutter(); // Take the image
-    
-    for (byte i = 0; i < settings[3].value; i++) {
-
-      screenPrintPositionInStack();
-      screenPrint(sprintf_P(char_buffer, PSTR("Resume in %ds"), settings[3].value - i), char_buffer, 4);
-      pause(1000);
-      
-      if (stackCancelled()) break; // Exit early if the stack has been cancelled
-
-    }
-
-    if (stackCancelled()) break; // Exit early if the stack has been cancelled
-
-  }
-}
-
-
-
-/* TRIGGER THE CAMERA SHUTTER
-*
-* Optionally sends two delay seperated signals to support mirror lockup
-*
-*/
-void shutter() {
-
-  for (byte i = 0; i <= settings[4].value; i++) {
-
-    screenPrintPositionInStack();
-    
-    if (settings[4].value && i == 0) {
-      screenPrint(sprintf_P(char_buffer, PSTR("Mirror up")), char_buffer, 4);
-    } else {
-      screenPrint(sprintf_P(char_buffer, PSTR("Shutter")), char_buffer, 4);
-    }
-    
-    pause(500);
-
-    digitalWrite(cam_focus, HIGH); // Trigger camera autofocus - camera may not take picture in some modes if this is not triggered first
-    digitalWrite(cam_shutter, HIGH); // Trigger camera shutter
-
-    pause(200); //Small delay needed for camera to process above signals
-
-    digitalWrite(cam_shutter, LOW); // Switch off camera trigger signal
-    digitalWrite(cam_focus, LOW); // Switch off camera focus signal
-
-    if (settings[4].value && i == 0) {
-      pause(2000); // Pause between mirror up and shutter actuation
-    }
-
-    if (stackCancelled()) break; // Exit early if the stack has been cancelled
-
-  }
 }
 
 
@@ -873,11 +892,14 @@ void handleMcpInterrupt() {
   }
   
   if (pin == pwr_stat) { // If a manual stage control button was pressed
-    Serial.print("pwr");
+    //update = true;
+    Serial.print("1");
   }
 
-  EIFR = 0x01; // Clear interrupts
-  mcp_int_fired = false; // Reset the flag
+  //while(!(mcp.digitalRead(switch_off_flag) && mcp.digitalRead(step_bwd) && mcp.digitalRead(step_fwd) && mcp.digitalRead(pwr_stat))){
+    EIFR = 0x01; // Clear interrupts
+    mcp_int_fired = false; // Reset the flag
+  //}
   attachInterrupt(0, mcpInterrupt, FALLING); // Re-attach the interrupt
 
 }
@@ -1108,16 +1130,17 @@ void serialCommunications() {
 
 /* CHECK IF THE FOCUS STACK HAS BEEN CANCELLED */
 boolean stackCancelled() {
-
+  
   if (Serial.available() > 0) {
     int serial_in = Serial.read(); // Read the incoming byte:
     if(serial_in == 'a') startStack(); // Stop stack
   }
   
-  if (!start_stack) {
+  if (!start_stack && millis() > time_stack_started + 1000) {
     return true;
   }
 
+  start_stack = true;
   return false;
 
 }
@@ -1134,16 +1157,22 @@ void stackEnd() {
 
   screenUpdate();
   screenPrint(sprintf_P(char_buffer, start_stack == false ? PSTR("Stack cancelled") : PSTR("Stack completed")), char_buffer, 2);
+  
+  int seconds = (millis() - time_stack_started) / 1000;
+  div_t divresult;
+   
+  divresult = div (seconds, 60);
+    
+  screenPrint(sprintf_P(char_buffer, PSTR("%02dm:%02ds"), divresult.quot, divresult.rem), char_buffer, 4);
+  time_stack_started;
 
-  delay(2000);
+  delay(3000);
 
   if (settings[5].value) {
 
     stepperDriverEnable(true, 0);
 
-    screenUpdate();
     screenPrint(sprintf_P(char_buffer, PSTR("Returning")), char_buffer, 4);
-    delay(2000);
 
     stepperDriverEnable(true, 1);
 
@@ -1372,20 +1401,8 @@ void menuInteractions() {
 
     stringConstants flashString; //Retrieve the setting title from progmem
     memcpy_P(&flashString, &settings_titles[menu_item], sizeof flashString);
-
-    //Loop through retrieved title and count characters
-    //TODO - there has to be a more efficient way of doing this...
-    byte string_len = 0;
-
-    for (byte i = 0; i < sizeof flashString; i++) {
-      if (flashString.title[i] != '\0') {
-        string_len = i + 1;
-      } else {
-        break;
-      }
-    }
-
-    screenPrint(string_len, flashString.title, 2); // Print the menu setting title
+    
+    screenPrint(strlen(flashString.title), flashString.title, 2); // Print the menu setting title
 
     if (!traverse_menus) { // Invert the colour of the current menu item to indicate it is editable
       byte boxWidth = (string_length * 8) + 2;
@@ -1441,6 +1458,8 @@ void loop() {
 
     byte slice_size = settings[1].value;
     byte slices = settings[2].value;
+    
+    time_stack_started = millis();
 
     slice_count = 1; // Register the first image(s) of the stack is being taken
     screenPrintPositionInStack(); // Print the current position in the stack
