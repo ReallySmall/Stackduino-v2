@@ -1,4 +1,4 @@
-////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  STACKDUINO 2 (BETA)                                                                                 //
 //                                                                                                      //
 //  https://github.com/ReallySmall/Stackduino-2                                                         //
@@ -131,9 +131,9 @@ volatile byte btn_main_previous = LOW, btn_rotary_previous = LOW; // The previou
 volatile long btn_main_time = 0, btn_rotary_time = 0; // The last time the button was toggled
 
 boolean app_connected = false; // Whether a remote application is actively communicating with the controller
-boolean step_disabled = true; // Whether to disable the A4988 stepper driver when possible to save power and heat
+boolean can_disable_stepper = true; // Whether to disable the A4988 stepper driver when possible to save power and heat
 boolean idle = true; // True until the controller is interacted with
-boolean update = true; // True whenever functions are called which change a setting's value
+boolean update_display = true; // True whenever functions are called which change a setting's value
 boolean update_header = true; // True whenever the value of an item in the header changes
 boolean home_screen = true;
 boolean previous_direction;
@@ -199,7 +199,7 @@ void setup() {
   mcp.setupInterruptPin(step_bwd, FALLING);
   mcp.setupInterruptPin(step_fwd, FALLING);
   mcp.setupInterruptPin(switch_off_flag, FALLING);
-  mcp.setupInterruptPin(pwr_stat, FALLING);
+  mcp.setupInterruptPin(pwr_stat, CHANGE);
 
   /* FINAL PRE-START CHECKS AND SETUP */
   Serial.begin(9600); // Start serial (always initialise at 9600 for compatibility with OLED)
@@ -505,7 +505,7 @@ void appConnection() {
   //app_conn_icon = app_connected == true ? : ;
 
   if (app_connected != last_app_conn_stat) {
-    update = true;
+    update_display = true;
   }
 
   last_app_conn_stat = app_connected;
@@ -526,6 +526,8 @@ void screenPrintTestImage(){
 }
 
 void captureImages(boolean test_image = false) {
+  
+  screenUpdate();
 
   for (byte i = 1; i <= settings[5].value; i++) {
 
@@ -603,10 +605,9 @@ void shutter() {
 */
 void btnMain() {
 
-  byte btn_debounce = 250;
   btn_main_reading = digitalRead(btn_main);
 
-  if (btn_main_reading == LOW && btn_main_previous == HIGH && millis() - btn_main_time > 250) {
+  if ((btn_main_reading == LOW) && (btn_main_previous == HIGH) && (millis() - btn_main_time > 250)) {
     
     boolean short_press = false;
     unsigned long btn_down_time = millis();
@@ -617,9 +618,8 @@ void btnMain() {
         break; 
       } 
     }
-    
-    btn_main_time = millis();
-    
+        
+    btn_main_time = millis();    
     short_press == true ? captureImages(true) : startStack();
     
   }
@@ -670,7 +670,7 @@ void menuNav() {
     traverse_menus = traverse_menus == true ? false : true;
   }
 
-  update = true;
+  update_display = true;
 
 }
 
@@ -680,19 +680,24 @@ void menuNav() {
 *
 * enable => Enables the stepper driver if true, Disables if false and option set
 * direction => Set as 1 for forward direction, 0 for backward direction
+* toggle_direction => Toggle the direction to be the opposite of its current state
 *
 */
 void stepperDriverEnable(boolean enable = true, byte direction = 1, boolean toggle_direction = false) {
 
   if (enable) {
-    mcp.digitalWrite(step_enable, LOW);
-    if (toggle_direction) {
+    mcp.digitalWrite(step_enable, LOW); // Enable the stepper driver
+    
+    if (toggle_direction) { // Toggle the direction
       direction = previous_direction;
     }
-    digitalWrite(step_dir, direction);
-    stepperDriverMicroStepping();
-    previous_direction = direction;
-  } else if (step_disabled) {
+    
+    digitalWrite(step_dir, direction); // Set the direction
+    stepperDriverMicroStepping(); // Set the degree of microstepping
+    previous_direction = direction; // Set the new direction for future toggle_direction calls
+  } 
+  
+  else if (can_disable_stepper) {
     mcp.digitalWrite(step_enable, HIGH);
   }
 
@@ -706,9 +711,9 @@ void stepperDriverManualControl(byte direction, boolean serial_control = false, 
   static boolean stepper_active = false;
   unsigned long button_down = millis();
 
-  if(!stepper_active){
+  if(!stepper_active){ //if the stepper isn't already stepping
 
-    stepper_active = true;
+    stepper_active = true; // flag that the stepper is stepping
     char* manual_ctl_strings[2] = {"<", ">"};
 
     if ((mcp.digitalRead(direction) == LOW || serial_control == true) && stepperDriverInBounds()) {
@@ -720,32 +725,30 @@ void stepperDriverManualControl(byte direction, boolean serial_control = false, 
         screen.print(manual_ctl_strings[direction]);
       }
 
-      if(!short_press && !serial_control){
+      if(!short_press && !serial_control){ // If the function was called by the press of a physical button, time how long it remains pressed
         while(millis() < button_down + 500){
-          if(mcp.digitalRead(direction) == HIGH){
+          if(mcp.digitalRead(direction) == HIGH){ // If the button is released within 0.5s it's a short press
             short_press = true;
             break;
           }
         }
       }
 
-      stepperDriverEnable(true, direction);
+      stepperDriverEnable(true, direction); // Enable the stepper driver and set the direction
       
-      if(short_press){ // Move the stage by one focus slice
+      if(short_press){ // Move the stage by one focus slice - useful for adding extra slices to the front and end of a stack
         stepperMoveOneSlice();
       } else { // Move the stage for as long as the control button is pressed
         while ((mcp.digitalRead(direction) == LOW || serial_control == true) && stepperDriverInBounds() && Serial.available() == 0) {
           stepperDriverStep();
+          if (!stepperDriverInBounds()) stepperDriverClearLimitSwitch();
         }
       }
 
     }
 
-    stepperDriverEnable(false);
-
-    if (!stepperDriverInBounds()) stepperDriverClearLimitSwitch();
-
-    update = true; // Go back to displaying the active menu item once manual control button is no longer pressed
+    stepperDriverEnable(false); // Disable the stepper driver
+    update_display = true; // Go back to displaying the active menu item once manual control button is no longer pressed
     stepper_active = false;
 
   }
@@ -868,6 +871,7 @@ ISR (PCINT1_vect) {
 /* FLAG NEW INTERRUPTS FROM THE MCP23017 */
 void mcpInterrupt() {
 
+  detachInterrupt(0); // Detach the interrupt while the current instance is dealt with
   mcp_int_fired = true;
   idle = false;
 
@@ -877,8 +881,6 @@ void mcpInterrupt() {
 
 /* PROCESS FLAGGED INTERRUPTS FROM THE MCP23017 */
 void handleMcpInterrupt() {
-
-  detachInterrupt(0); // Detach the interrupt while the current instance is dealt with
 
   byte pin = mcp.getLastInterruptPin(); // Find out which pin on the mcp created the interrupt
   byte val = mcp.getLastInterruptPinValue(); // And get its current state
@@ -892,15 +894,13 @@ void handleMcpInterrupt() {
   }
   
   if (pin == pwr_stat) { // If a manual stage control button was pressed
-    //update = true;
-    Serial.print("1");
+    battMonitor();
+    update_display = true;
   }
 
-  //while(!(mcp.digitalRead(switch_off_flag) && mcp.digitalRead(step_bwd) && mcp.digitalRead(step_fwd) && mcp.digitalRead(pwr_stat))){
-    EIFR = 0x01; // Clear interrupts
-    mcp_int_fired = false; // Reset the flag
-  //}
-  attachInterrupt(0, mcpInterrupt, FALLING); // Re-attach the interrupt
+  EIFR = 0x01; // Clear interrupts
+  mcp_int_fired = false; // Reset the flag
+  attachInterrupt(0, mcpInterrupt, LOW); // Re-attach the interrupt
 
 }
 
@@ -1102,7 +1102,7 @@ void serialCommunications() {
 
       case 'j': // Switch Bluetooth on or off
         settings[10].value = settings[10].value == 1 ? 0 : 1;
-        update = true;
+        update_display = true;
         break;
 
       case 'k':
@@ -1117,10 +1117,7 @@ void serialCommunications() {
         app_connected = true;
         break;
 
-      default: // Unmatched character - send error then pretend the function call never happened
-        Serial.println("");
-        Serial.print(F("Invalid character: "));
-        Serial.print(serial_in);
+      default: // Unmatched character - pretend the function call never happened
         idle = true;
     }
   }
@@ -1136,8 +1133,8 @@ boolean stackCancelled() {
     if(serial_in == 'a') startStack(); // Stop stack
   }
   
-  if (!start_stack && millis() > time_stack_started + 1000) {
-    return true;
+  if (!start_stack && time_stack_started && (millis() > time_stack_started + 2000)) {
+    return true; // Stack is cancelled if has been running for over 2 seconds (debouncing interrupt without using a delay)
   }
 
   start_stack = true;
@@ -1158,23 +1155,21 @@ void stackEnd() {
   screenUpdate();
   screenPrint(sprintf_P(char_buffer, start_stack == false ? PSTR("Stack cancelled") : PSTR("Stack completed")), char_buffer, 2);
   
-  int seconds = (millis() - time_stack_started) / 1000;
-  div_t divresult;
-   
-  divresult = div (seconds, 60);
+  // Calculate how many minutes and seconds the stack ran for before it completed or was cancelled
+  unsigned int seconds = (millis() - time_stack_started) / 1000; // Number of seconds since stack was started
+  
+  div_t mins_secs = div (seconds, 60); // Number of minutes and seconds since stack was started
     
-  screenPrint(sprintf_P(char_buffer, PSTR("%02dm:%02ds"), divresult.quot, divresult.rem), char_buffer, 4);
-  time_stack_started;
+  screenPrint(sprintf_P(char_buffer, PSTR("%02dm:%02ds"), mins_secs.quot, mins_secs.rem), char_buffer, 4);
 
   delay(3000);
 
-  if (settings[5].value) {
+  if (settings[6].value == 1) { // If return stage to start position option is enabled
 
-    stepperDriverEnable(true, 0);
+    stepperDriverEnable(true, 0); // Enable the stepper driver and set the direction to backwards
 
     screenPrint(sprintf_P(char_buffer, PSTR("Returning")), char_buffer, 4);
-
-    stepperDriverEnable(true, 1);
+    pause(1000);
 
     for (int i; i < slice_count; i++) {
 
@@ -1183,7 +1178,7 @@ void stackEnd() {
     }
 
     if (!stepperDriverInBounds()) stepperDriverClearLimitSwitch();
-    stepperDriverEnable(false);
+    stepperDriverEnable(false); // Disable the stepper driver
 
   }
 
@@ -1191,7 +1186,7 @@ void stackEnd() {
   home_screen = true; // Reinstate the home screen
   slice_count = 0; // Reset pic counter
   start_stack = false; // Return to menu options section
-  update = true; // Write the first menu item to the screen
+  update_display = true; // Write the first menu item to the screen
 
 }
 
@@ -1205,7 +1200,7 @@ void stepperDriverClearLimitSwitch() {
   screenPrint(sprintf_P(char_buffer, PSTR("Limit hit")), char_buffer, 2);
   screenPrint(sprintf_P(char_buffer, PSTR("Returning")), char_buffer, 4);
 
-  stepperDriverEnable(true, 0, true); //reverse stepper motor direction
+  stepperDriverEnable(true, 0, true); // Enable the stepper driver and toggle the direction
 
   while (mcp.digitalRead(limit_switch_front) == LOW || mcp.digitalRead(limit_switch_back) == LOW) { //turn stepper motor for as long as  the limit switch remains pressed
 
@@ -1213,10 +1208,10 @@ void stepperDriverClearLimitSwitch() {
 
   }
 
-  stepperDriverEnable(true, 0, true); //restore normal stepper motor direction
+  stepperDriverEnable(true, 0, true); // Enable stepper driver and toggle the direction
 
-  update = true;
-  stepperDriverEnable(false);
+  update_display = true;
+  stepperDriverEnable(false); // Disable the stepper driver
 
   if (start_stack) { // If a stack was in progress, cancel it
     start_stack = false;
@@ -1254,7 +1249,7 @@ void stepperMoveOneSlice(){
   for (unsigned int i = 0; i < rounded_steps; i++) {
 
     stepperDriverStep(); // Send a step signal to the stepper driver
-    if (!stepperDriverInBounds()) break; // Exit early if the stack has been cancelled or a limit switch is hit
+    if (!stepperDriverInBounds() || stackCancelled()) break; // Exit early if the stack has been cancelled or a limit switch is hit
 
   }
 
@@ -1310,7 +1305,7 @@ void settingUpdate(int &setting_value, int setting_lower, int setting_upper, int
   if (increments != 0) { // If the variable's value was changed at least once since the last check
     setting_value += (setting_multiplier * increments); // Add or subtract from variable
     increments = 0; // Reset for next check
-    update = true; // Update menus
+    update_display = true;
   }
 
 }
@@ -1340,7 +1335,7 @@ void menuInteractions() {
 
   if (menu_item != 0) home_screen = false; // Remove homescreen from the menu loop once navigation begun
 
-  if (update) { // Refresh menu content if the active variable has changed
+  if (update_display) { // Refresh menu content if the active variable has changed
 
     int menu_var = settings[menu_item].value;
     byte string_length;
@@ -1413,7 +1408,7 @@ void menuInteractions() {
     } else {
       screenPrint(string_length, char_buffer, 4); // Print the menu setting value
     }
-    update = false;
+    update_display = false;
 
   }
 
@@ -1477,13 +1472,13 @@ void loop() {
 
       if (stackCancelled()) break; // Exit early if the stack has been cancelled
 
-      stepperDriverEnable(true, 1); // Enable the A4988 stepper driver
+      stepperDriverEnable(true, 1); // Enable the stepper driver and set the direction to forwards
       stepperMoveOneSlice(); // Move forward by one focus slice
 
       if (!stepperDriverInBounds()) stepperDriverClearLimitSwitch(); // Clear hit limit switch
       if (stackCancelled()) break; // Exit early if the stack has been cancelled
 
-      stepperDriverEnable(false); // Disable the stepper driver when not in use to save power
+      stepperDriverEnable(false); // Disable the stepper driver
       captureImages(); // Take image(s)
 
     }
