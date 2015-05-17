@@ -521,30 +521,24 @@ void appConnection() {
 * Optionally sends multiple delay seperated signals for exposure bracketing each focus slice
 *
 */
-void screenPrintTestImage(){
-  screenPrint(sprintf_P(char_buffer, PSTR("Test image")), char_buffer, 2);
-}
-
-void captureImages(boolean test_image = false) {
+void captureImages() {
   
   screenUpdate();
 
   for (byte i = 1; i <= settings[5].value; i++) {
 
-    pause(1000); // Allow vibrations to settle
+    screenPrintPositionInStack();
 
     if (settings[5].value > 1) { // If more than one image is being taken, display the current position in the bracket
-      test_image == false ? screenPrintPositionInStack() : screenPrintTestImage();
       screenPrint(sprintf_P(char_buffer, PSTR("Bracket %d/%d"), i, settings[5].value), char_buffer, 4);
-      pause(1500);
     }
-
-    test_image == false ? screenPrintPositionInStack() : screenPrintTestImage();
+    
+    pause(1500); // Allow vibrations to settle
     shutter(); // Take the image
     
     for (byte i = 0; i < settings[3].value; i++) {
 
-      test_image == false ? screenPrintPositionInStack() : screenPrintTestImage();
+      screenPrintPositionInStack();
       screenPrint(sprintf_P(char_buffer, PSTR("Resume in %ds"), settings[3].value - i), char_buffer, 4);
       pause(1000);
       
@@ -556,6 +550,8 @@ void captureImages(boolean test_image = false) {
 
   }
   
+  update_display = true;
+    
 }
 
 
@@ -590,9 +586,6 @@ void shutter() {
     if (settings[4].value && i == 0) {
       pause(2000); // Pause between mirror up and shutter actuation
     }
-
-    if (stackCancelled()) break; // Exit early if the stack has been cancelled
-
   }
 }
 
@@ -620,7 +613,7 @@ void btnMain() {
     }
         
     btn_main_time = millis();    
-    short_press == true ? captureImages(true) : startStack();
+    short_press == true ? captureImages() : startStack();
     
   }
 
@@ -801,8 +794,8 @@ void sysTasks(boolean reset = false) {
 
   // If enabled after n minutes switch off the controller
   if (sys_off && (minutes >= sys_off)) {
-    saveSettings(true); // Save current settings to a temp file to resume when controller is switched on again
-    sysOff();
+    //saveSettings(true); // Save current settings to a temp file to resume when controller is switched on again
+    //sysOff();
   }
 
 }
@@ -1042,8 +1035,11 @@ void screenPrintPowerSource() {
 void screenPrintPositionInStack() {
 
   screenUpdate();
-  screenPrint(sprintf_P(char_buffer, PSTR("Slice %d/%d"), slice_count, settings[2].value), char_buffer, 2);
-  screen.setPrintPos(0, 4);
+  if(slice_count > 0){ // Default behaviour in a running stack
+    screenPrint(sprintf_P(char_buffer, PSTR("Slice %d/%d"), slice_count, settings[2].value), char_buffer, 2);
+  } else { // If called by a function when in setup
+    screenPrint(sprintf_P(char_buffer, PSTR("Single slice")), char_buffer, 2);
+  }
 
 }
 
@@ -1097,23 +1093,27 @@ void serialCommunications() {
         break;
 
       case 'i': // Take a test image
+        
+        break;
+        
+      case 'j': // Take a test image
         captureImages();
         break;
 
-      case 'j': // Switch Bluetooth on or off
+      case 'k': // Switch Bluetooth on or off
         settings[10].value = settings[10].value == 1 ? 0 : 1;
         update_display = true;
         break;
 
-      case 'k':
+      case 'l':
         saveSettings();
         break;
 
-      case 'l': // Switch off controller
+      case 'm': // Switch off controller
         sysOff();
         break;
 
-      case 'm': // Keep connection alive
+      case 'n': // Keep connection alive
         app_connected = true;
         break;
 
@@ -1128,16 +1128,19 @@ void serialCommunications() {
 /* CHECK IF THE FOCUS STACK HAS BEEN CANCELLED */
 boolean stackCancelled() {
   
-  if (Serial.available() > 0) {
-    int serial_in = Serial.read(); // Read the incoming byte:
-    if(serial_in == 'a') startStack(); // Stop stack
+  if(slice_count){
+    if (Serial.available() > 0) {
+      int serial_in = Serial.read(); // Read the incoming byte:
+      if(serial_in == 'a') startStack(); // Stop stack
+    }
+    
+    if (!start_stack && time_stack_started && (millis() > time_stack_started + 2000)) {
+      return true; // Stack is cancelled if has been running for over 2 seconds (debouncing interrupt without using a delay)
+    }
+  
+    start_stack = true;
   }
   
-  if (!start_stack && time_stack_started && (millis() > time_stack_started + 2000)) {
-    return true; // Stack is cancelled if has been running for over 2 seconds (debouncing interrupt without using a delay)
-  }
-
-  start_stack = true;
   return false;
 
 }
