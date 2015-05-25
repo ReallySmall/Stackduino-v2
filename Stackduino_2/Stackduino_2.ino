@@ -126,9 +126,9 @@ float active_hardware_calibration_setting;
 volatile boolean start_stack = false; // False when in the menu, true when stacking
 volatile boolean traverse_menus = true; // True when scrolling through menus, false when changing a menu item's value
 volatile boolean mcp_int_fired = false; // True whenever a pin on the mcp23017 with a listener went low
-volatile byte btn_main_reading, btn_rotary_reading; // The current reading from the button
-volatile byte btn_main_previous = LOW, btn_rotary_previous = LOW; // The previous reading from the button
-volatile long btn_main_time = 0, btn_rotary_time = 0; // The last time the button was toggled
+volatile byte btn_reading; // The current reading from the button
+volatile byte btn_previous = LOW; // The previous reading from the button
+volatile long btn_time = 0; // The last time the button was toggled
 
 boolean app_connected = false; // Whether a remote application is actively communicating with the controller
 boolean can_disable_stepper = true; // Whether to disable the A4988 stepper driver when possible to save power and heat
@@ -193,13 +193,11 @@ void setup() {
   attachInterrupt(1, cancelStack, FALLING); // ATMega external interrupt 1
 
   pciSetup(ENC_A); // ATMega pin change interrupt
-  pciSetup(ENC_B); // ATMegapin change interrupt
+  pciSetup(ENC_B); // ATMega pin change interrupt
 
   mcp.setupInterrupts(true, false, LOW); // MCP23017 interupts (trigger ATMega external interrupt 0)
-  mcp.setupInterruptPin(step_bwd, FALLING);
-  mcp.setupInterruptPin(step_fwd, FALLING);
   mcp.setupInterruptPin(switch_off_flag, FALLING);
-  mcp.setupInterruptPin(pwr_stat, CHANGE);
+  mcp.setupInterruptPin(pwr_stat, CHANGE); //Need to catch both changes from LOW to HIGH and HIGH to LOW
 
   /* FINAL PRE-START CHECKS AND SETUP */
   Serial.begin(9600); // Start serial (always initialise at 9600 for compatibility with OLED)
@@ -239,8 +237,8 @@ void screenUpdate() { /* WIPE THE SCREEN, PRINT THE HEADER AND SET THE CURSOR PO
 *
 * Assumes the default font is in use (allowing 4 rows of 16 characters)
 *
+* char_length => The length of the string in the char buffer
 * text => The string to be centered and printed
-* string_length => The length of the string in the char buffer
 * print_pos_y => The text line to print on
 *
 */
@@ -254,7 +252,7 @@ void screenPrint(byte char_length, char* text, byte print_pos_y = 4) {
   byte offset_x = char_length % 2 != 0 ? 4 : 0; // If the string to print is an odd number in length, apply an offset to centralise it
   byte offset_y = print_pos_y == 4 ? -2 : 0; // If printing on line 4, nudge upwards a bit to prevent lower parts of characters like 'g' being cut off
 
-  screen.setTextPosOffset(offset_x, offset_y); // So the text needs to be nudged to the right a bit on a pixel level to centre it properly
+  screen.setTextPosOffset(offset_x, offset_y); // Set the required positioning offsets defined above
   
   screen.print(text); // Finally, print the centered text to the screen
   
@@ -288,8 +286,6 @@ void getHardware() {
 */
 void loadSettings() {
   
-  boolean tmp_data_present = false;
-
   // If a connection to the SD card couldn't be established
   if (!SD.begin(sd_ss)) {
     screenUpdate();
@@ -299,12 +295,7 @@ void loadSettings() {
   }
 
   // Otherwise attempt to get the settings string from the SD card
-  if(SD.exists("tmpdata.txt")){
-    tmp_data_present = true;
-    settings_file = SD.open("tmpdata.txt", FILE_READ); // The system has resumed from sleep and should use the settings it saved before shutting down
-  } else {
-    settings_file = SD.open("settings.txt", FILE_READ); // The system has started normally and should use the default saved settings
-  }
+  settings_file = SD.exists("tmpdata.txt") ? SD.open("tmpdata.txt", FILE_READ) : SD.open("settings.txt", FILE_READ);
   
   // If there was an issue attempting to open the file
   if (!settings_file) {
@@ -382,9 +373,7 @@ void loadSettings() {
     }
     
     settings_file.close(); // Close the file once it has been read
-    if(tmp_data_present){
-      SD.remove("tmpdata.txt"); // Delete the temporary settings file  
-    }
+    SD.remove("tmpdata.txt"); // Delete the temporary settings file if it exists  
     
   }
 
@@ -395,18 +384,13 @@ void loadSettings() {
 void saveSettings(boolean sleep = false) {
 
   //Open and empty the settings file if it exists, otherwise create it
-  if(sleep){
-    settings_file = SD.open("tmpdata.txt", O_WRITE | O_CREAT | O_TRUNC);
-  } else {
-    settings_file = SD.open("settings.txt", O_WRITE | O_CREAT | O_TRUNC);
-  }
+  settings_file = sleep == true ? SD.open("tmpdata.txt", O_WRITE | O_CREAT | O_TRUNC) : SD.open("settings.txt", O_WRITE | O_CREAT | O_TRUNC);
   
   screenUpdate();
   screenPrint(sprintf_P(char_buffer, PSTR("Saving settings")), char_buffer, 2);
 
   // Loop through settings in memory and write back to the file
   for (byte i = 0; i < settings_count; i++) {
-    
     
     stringConstants thisSettingTitle; //Retrieve the setting title from progmem
     memcpy_P (&thisSettingTitle, &settings_titles[i], sizeof thisSettingTitle);
@@ -491,7 +475,97 @@ void blueToothPower() {
 
 
 
+/* ENABLE OR DISABLE THE STEPPER DRIVER AND SET DIRECTION
+*
+* enable => Enables the stepper driver if true, Disables if false and option set
+* direction => Set as 1 for forward direction, 0 for backward direction
+* toggle_direction => Toggle the direction to be the opposite of its current state
+*
+*/
+void stepperDriverEnable(boolean enable = true, byte direction = 1, boolean toggle_direction = false) {
+
+  if (enable) {
+    mcp.digitalWrite(step_enable, LOW); // Enable the stepper driver
+    
+    if (toggle_direction) { // Toggle the direction
+      direction = previous_direction;
+    }
+    
+    digitalWrite(step_dir, direction); // Set the direction
+    stepperDriverMicroStepping(); // Set the degree of microstepping
+    previous_direction = direction; // Set the new direction for future toggle_direction calls
+  } 
+  
+  else if (can_disable_stepper) {
+    mcp.digitalWrite(step_enable, HIGH);
+  }
+
+}
+
+
+
+/* MOVE STAGE FORWARD BY ONE SLICE */
+void stepperMoveOneSlice(byte direction = 1){
+
+  byte slice_size = settings[1].value;
+  byte hardware = active_hardware_calibration_setting;
+  byte unit_of_measure = uom_multipliers[settings[7].value];
+  byte micro_steps = micro_stepping[0][settings[9].value][0];
+
+  unsigned int rounded_steps = (slice_size * hardware * unit_of_measure * micro_steps) - 0.5;
+  
+  stepperDriverEnable(true, direction, false);
+
+  for (unsigned int i = 0; i < rounded_steps; i++) {
+
+    stepperDriverStep(); // Send a step signal to the stepper driver
+    if (!stepperDriverInBounds() || stackCancelled()) break; // Exit early if the stack has been cancelled or a limit switch is hit
+
+  }
+  
+  stepperDriverEnable(false);
+
+}
+
+
+/* MOVE STAGE BACKWARD AND FORWARD */
+void stepperDriverManualControl(byte direction = 1, boolean serial_control = false, boolean short_press = false) {
+
+    if ((mcp.digitalRead(0) == LOW || mcp.digitalRead(1) == LOW || serial_control == true) && stepperDriverInBounds()) {
+      
+      unsigned long button_down = millis();
+      char* manual_ctl_strings[2] = {"<", ">"};
+      
+      screenUpdate();
+      screenPrint(sprintf_P(char_buffer, PSTR("Moving stage")), char_buffer, 2);
+      screen.setPrintPos(4, 4);
+      for (byte i = 0; i < 8; i++) {
+        screen.print(manual_ctl_strings[direction]);
+      }
+
+      stepperDriverEnable(true, direction); // Enable the stepper driver and set the direction
+      
+      if(short_press){ // Move the stage by one focus slice - useful for adding extra slices to the front and end of a stack
+        stepperMoveOneSlice(1);
+      } else { // Move the stage for as long as the control button is pressed
+        while ((mcp.digitalRead(direction) == LOW || serial_control == true) && stepperDriverInBounds() && Serial.available() == 0) {
+          stepperDriverStep();
+          if (!stepperDriverInBounds()) stepperDriverClearLimitSwitch();
+        }
+      }
+
+    }
+
+    stepperDriverEnable(false); // Disable the stepper driver
+    update_display = true; // Go back to displaying the active menu item once manual control button is no longer pressed
+
+}
+
+
+
 /* APPLICATION CONNECTION STATUS
+*
+* NOT CURRENTLY USED
 *
 * Sends a keep-alive token and expects one back the next time it is called
 * Otherwise assumes the connection with the remote application has been lost
@@ -525,7 +599,7 @@ void captureImages() {
   
   screenUpdate();
 
-  for (byte i = 1; i <= settings[5].value; i++) {
+  for (byte i = 1; i <= settings[5].value; i++) { // Number of brackets to take per focus slice
 
     screenPrintPositionInStack();
 
@@ -536,7 +610,7 @@ void captureImages() {
     pause(1500); // Allow vibrations to settle
     shutter(); // Take the image
     
-    for (byte i = 0; i < settings[3].value; i++) {
+    for (byte i = 0; i < settings[3].value; i++) { // Count down the pause for camera on the screen
 
       screenPrintPositionInStack();
       screenPrint(sprintf_P(char_buffer, PSTR("Resume in %ds"), settings[3].value - i), char_buffer, 4);
@@ -567,7 +641,7 @@ void shutter() {
 
     screenPrintPositionInStack();
     
-    if (settings[4].value && i == 0) {
+    if (settings[4].value && i == 0) { // If mirror lockup enabled
       screenPrint(sprintf_P(char_buffer, PSTR("Mirror up")), char_buffer, 4);
     } else {
       screenPrint(sprintf_P(char_buffer, PSTR("Shutter")), char_buffer, 4);
@@ -583,7 +657,7 @@ void shutter() {
     digitalWrite(cam_shutter, LOW); // Switch off camera trigger signal
     digitalWrite(cam_focus, LOW); // Switch off camera focus signal
 
-    if (settings[4].value && i == 0) {
+    if (settings[4].value && i == 0) { // If mirror lockup enabled
       pause(2000); // Pause between mirror up and shutter actuation
     }
   }
@@ -596,28 +670,39 @@ void shutter() {
 * Starts or stops a focus stack
 *
 */
-void btnMain() {
+void btnPress(byte btn_pin) {
 
-  btn_main_reading = digitalRead(btn_main);
+  btn_reading = btn_pin == 3 ? digitalRead(btn_pin) : mcp.digitalRead(btn_pin);
+  
 
-  if ((btn_main_reading == LOW) && (btn_main_previous == HIGH) && (millis() - btn_main_time > 250)) {
+  if ((btn_reading == LOW) && (btn_previous == HIGH) && (millis() - btn_time > 250)) {
     
     boolean short_press = false;
     unsigned long btn_down_time = millis();
     
-    while(millis() < btn_down_time + 1000){
-      if(digitalRead(btn_main) == HIGH){
+    while(millis() < btn_down_time + 500){ // Press and hold to start a stack
+      if(btn_pin == 3 ? digitalRead(btn_pin) : mcp.digitalRead(btn_pin) == HIGH){ // Press and immedeately release to take test images
         short_press = true;
         break; 
       } 
     }
         
-    btn_main_time = millis();    
-    short_press == true ? captureImages() : startStack();
-    
+    btn_time = millis();  
+  
+    switch(btn_pin){
+      case 0: case 1:
+        short_press == true ? stepperMoveOneSlice(btn_pin) : stepperDriverManualControl(btn_pin);
+        break;
+      case 3:
+        short_press == true ? captureImages() : startStack();
+        break;
+      case 10:
+        short_press == true ? menuNav() : saveSettings();
+    }
+        
   }
 
-  btn_main_previous = btn_main_reading;
+  btn_previous = btn_reading;
 
 }
 
@@ -638,25 +723,6 @@ void cancelStack(){
   
 }
 
-/* ROTARY ENCODER BUTTON
-*
-* Toggles between menu navigation and variable editing
-*
-*/
-void btnRotary() {
-
-  byte btn_debounce = 250;
-  btn_rotary_reading = mcp.digitalRead(btn_rotary);
-
-  if (btn_rotary_reading == LOW && btn_rotary_previous == HIGH && millis() - btn_rotary_time > btn_debounce) {
-    menuNav();
-    btn_rotary_time = millis();
-  }
-
-  btn_rotary_previous = btn_rotary_reading;
-
-}
-
 void menuNav() {
 
   if (menu_item != 0) {
@@ -666,88 +732,6 @@ void menuNav() {
   update_display = true;
 
 }
-
-
-
-/* ENABLE OR DISABLE THE STEPPER DRIVER AND SET DIRECTION
-*
-* enable => Enables the stepper driver if true, Disables if false and option set
-* direction => Set as 1 for forward direction, 0 for backward direction
-* toggle_direction => Toggle the direction to be the opposite of its current state
-*
-*/
-void stepperDriverEnable(boolean enable = true, byte direction = 1, boolean toggle_direction = false) {
-
-  if (enable) {
-    mcp.digitalWrite(step_enable, LOW); // Enable the stepper driver
-    
-    if (toggle_direction) { // Toggle the direction
-      direction = previous_direction;
-    }
-    
-    digitalWrite(step_dir, direction); // Set the direction
-    stepperDriverMicroStepping(); // Set the degree of microstepping
-    previous_direction = direction; // Set the new direction for future toggle_direction calls
-  } 
-  
-  else if (can_disable_stepper) {
-    mcp.digitalWrite(step_enable, HIGH);
-  }
-
-}
-
-
-
-/* MOVE STAGE BACKWARD AND FORWARD */
-void stepperDriverManualControl(byte direction, boolean serial_control = false, boolean short_press = false) {
-
-  static boolean stepper_active = false;
-  unsigned long button_down = millis();
-
-  if(!stepper_active){ //if the stepper isn't already stepping
-
-    stepper_active = true; // flag that the stepper is stepping
-    char* manual_ctl_strings[2] = {"<", ">"};
-
-    if ((mcp.digitalRead(direction) == LOW || serial_control == true) && stepperDriverInBounds()) {
-      
-      screenUpdate();
-      screenPrint(sprintf_P(char_buffer, PSTR("Moving stage")), char_buffer, 2);
-      screen.setPrintPos(4, 4);
-      for (byte i = 0; i < 8; i++) {
-        screen.print(manual_ctl_strings[direction]);
-      }
-
-      if(!short_press && !serial_control){ // If the function was called by the press of a physical button, time how long it remains pressed
-        while(millis() < button_down + 500){
-          if(mcp.digitalRead(direction) == HIGH){ // If the button is released within 0.5s it's a short press
-            short_press = true;
-            break;
-          }
-        }
-      }
-
-      stepperDriverEnable(true, direction); // Enable the stepper driver and set the direction
-      
-      if(short_press){ // Move the stage by one focus slice - useful for adding extra slices to the front and end of a stack
-        stepperMoveOneSlice();
-      } else { // Move the stage for as long as the control button is pressed
-        while ((mcp.digitalRead(direction) == LOW || serial_control == true) && stepperDriverInBounds() && Serial.available() == 0) {
-          stepperDriverStep();
-          if (!stepperDriverInBounds()) stepperDriverClearLimitSwitch();
-        }
-      }
-
-    }
-
-    stepperDriverEnable(false); // Disable the stepper driver
-    update_display = true; // Go back to displaying the active menu item once manual control button is no longer pressed
-    stepper_active = false;
-
-  }
-
-}
-
 
 
 
@@ -880,10 +864,6 @@ void handleMcpInterrupt() {
 
   if (pin == switch_off_flag) { // If a switchoff signal was recieved from the pushbutton controller
     sysOff();
-  }
-
-  if ((pin == step_bwd || pin == step_fwd) && start_stack == false) { // If a manual stage control button was pressed
-    stepperDriverManualControl(pin);
   }
   
   if (pin == pwr_stat) { // If a manual stage control button was pressed
@@ -1093,10 +1073,10 @@ void serialCommunications() {
         break;
 
       case 'i': // Take a test image
-        
+        shutter();
         break;
         
-      case 'j': // Take a test image
+      case 'j': // Take a suite of test images
         captureImages();
         break;
 
@@ -1176,7 +1156,7 @@ void stackEnd() {
 
     for (int i; i < slice_count; i++) {
 
-      stepperMoveOneSlice();
+      stepperMoveOneSlice(1);
 
     }
 
@@ -1238,28 +1218,6 @@ boolean stepperDriverInBounds() {
 
 
 
-/* MOVE STAGE FORWARD BY ONE SLICE */
-void stepperMoveOneSlice(){
-
-  byte slice_size = settings[1].value;
-  byte slices = settings[2].value;
-  byte hardware = active_hardware_calibration_setting;
-  byte unit_of_measure = uom_multipliers[settings[7].value];
-  byte micro_steps = micro_stepping[0][settings[9].value][0];
-
-  unsigned int rounded_steps = (slice_size * hardware * unit_of_measure * micro_steps) - 0.5;
-
-  for (unsigned int i = 0; i < rounded_steps; i++) {
-
-    stepperDriverStep(); // Send a step signal to the stepper driver
-    if (!stepperDriverInBounds() || stackCancelled()) break; // Exit early if the stack has been cancelled or a limit switch is hit
-
-  }
-
-}
-
-
-
 /* SET DEGREE OF MICROSTEPPING FOR A4988 STEPPER DRIVER TO USE
 *
 * Loops through the active microstepping subarray and writes the A4988's MSx pins HIGH or LOW accordingly
@@ -1285,7 +1243,7 @@ void stepperDriverStep() {
 
   digitalWrite(do_step, LOW); // This LOW to HIGH change is what creates the
   digitalWrite(do_step, HIGH); // "Rising Edge" so the driver knows when to step
-  delayMicroseconds(settings[7].value * 1000); // Delay time between steps, too short and motor may stall or miss steps
+  delayMicroseconds(settings[8].value * 1000); // Delay time between steps, too short and motor may stall or miss steps
 
 }
 
@@ -1437,8 +1395,10 @@ void loop() {
   if (!start_stack) { // User settings menus and manual stage control
 
     if (mcp_int_fired) handleMcpInterrupt(); // Catch interrupts and run any required functions
-    btnMain(); // Catch any main button presses
-    btnRotary(); // Catch any rotary encoder button presses
+    btnPress(3);
+    btnPress(10);
+    btnPress(0);
+    btnPress(1);
     serialCommunications();  // Check for commands via serial
     menuInteractions(); // Change menu options and update the screen when changed
     sysTasks(); // Run timer driven tasks such as battery level checks and auto switch off
@@ -1476,7 +1436,7 @@ void loop() {
       if (stackCancelled()) break; // Exit early if the stack has been cancelled
 
       stepperDriverEnable(true, 1); // Enable the stepper driver and set the direction to forwards
-      stepperMoveOneSlice(); // Move forward by one focus slice
+      stepperMoveOneSlice(1); // Move forward by one focus slice
 
       if (!stepperDriverInBounds()) stepperDriverClearLimitSwitch(); // Clear hit limit switch
       if (stackCancelled()) break; // Exit early if the stack has been cancelled
