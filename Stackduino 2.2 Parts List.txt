@@ -1,6 +1,6 @@
 Partlist
 
-Exported from Stackduino-SMD.sch at 26/02/2015 19:54:02
+Exported from Stackduino-SMD.sch at 13/06/2015 14:22:47
 
 EAGLE Version 7.2.0 Copyright (c) 1988-2014 CadSoft
 
@@ -72,5 +72,5 @@ R11           10K                     R                   R0805              eag
 R12           100K                    R                   R0805              eagle-ltspice            1
 R13           100K                    R                   R0805              eagle-ltspice            1
 R14           100K                    R                   R0805              eagle-ltspice            1
-R15           100K                    R                   R0805              eagle-ltspice            1
+R15           600K                    R                   R0805              eagle-ltspice            1
 USB           USBSMD                  USBSMD              USB-MINIB          SparkFun-Connectors      1
