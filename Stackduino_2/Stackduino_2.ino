@@ -513,6 +513,7 @@ void stepperMoveOneSlice(byte direction = 1){
   byte micro_steps = micro_stepping[0][settings[9].value][0];
 
   unsigned int rounded_steps = (slice_size * hardware * unit_of_measure * micro_steps) - 0.5;
+  Serial.print(rounded_steps);
   
   stepperDriverEnable(true, direction, false);
 

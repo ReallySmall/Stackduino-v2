@@ -1,0 +1,1 @@
+Incomplete Sketchup files for the Stackduino v2 board, created to aid enclosure design.
